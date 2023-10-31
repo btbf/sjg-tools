@@ -13,7 +13,7 @@ The following languages and combinations were selected as candidates for technol
 
 Python has a complete framework for TUI and a terminal app production environment.
 
-[ Textual ](https://textual.textualize.io/)
+[ Textual ](https://textual.textualize.io/)  
 [ Rich ](https://github.com/Textualize/rich)
 
 **__Pros__**
@@ -31,7 +31,7 @@ Python has a complete framework for TUI and a terminal app production environmen
 
 To solve the complexity of the terminal command code in Python, we considered the idea of writing the terminal command part in BASH and calling it on the Python side.
 
-![./python-poc.png]
+![](./python-poc.png)
 
 **__Pros__**
 
@@ -83,6 +83,6 @@ When we ran the sample program as a proof of concept, we were able to obtain the
 
 
 Sample Products version demonstration video
-![./poc-sampleApp.mp4]
+![](./poc-sampleApp.mp4)
 
 
