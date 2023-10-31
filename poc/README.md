@@ -83,6 +83,4 @@ When we ran the sample program as a proof of concept, we were able to obtain the
 
 
 Sample Products version demonstration video
-![](./poc-sampleApp.mp4)
-
-
+<div><video controls src="https://github.com/btbf/sjg-tools/raw/main/poc/poc-sampleApp.mp4" muted="false"></video></div>
