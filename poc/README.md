@@ -83,4 +83,7 @@ When we ran the sample program as a proof of concept, we were able to obtain the
 
 
 Sample Products version demonstration video
-https://github.com/btbf/sjg-tools/assets/37224549/3b050544-24af-479b-8a0b-8773636c3260
+
+https://github.com/btbf/sjg-tools/assets/37224549/0705ec36-ac7e-4ca1-80ad-15e1b06aead2
+
+
