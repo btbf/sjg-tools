@@ -26,6 +26,8 @@ BASH,dialog,whiptail
     * プール名
     * プール概要
     * IPアドレス、ポート
+* 使用ネットワーク選択
+* P2Pモード選択
 
 #### プール構築
 
@@ -38,6 +40,7 @@ BASH,dialog,whiptail
     * ノードインストール
     * systemd設置
     * gLiveviewインストール
+    * Mithril DBブートストラップ
 
 * プール設定・登録
     * BPキー作成
@@ -54,6 +57,8 @@ BASH,dialog,whiptail
 * ブロック生成ステータス通知セットアップ
 
 #### プール運用・管理
+
+* ノードアップデート
 
 * 資金管理
     * payment.addr残高確認
