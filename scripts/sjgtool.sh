@@ -3,19 +3,19 @@ title="SJG TOOL V2"
 backtitle="SPO JAPAN GUILD"
 version="0.1.0-α"
 
-# Display menu results in a msgbox
-display_result() {
-  dialog --title "$1" \
-    --backtitle "System Information" \
-    --no-collapse \
-    --msgbox "$result" 0 0
-}
+# # Display menu results in a msgbox
+# display_result() {
+#   dialog --title "$1" \
+#     --backtitle "System Information" \
+#     --no-collapse \
+#     --msgbox "$result" 0 0
+# }
 
-command_result() {
-  dialog --title "$1" \
-    --backtitle "System Information" \
-    --programbox "$result" 30 100
-}
+# command_result() {
+#   dialog --title "$1" \
+#     --backtitle "System Information" \
+#     --programbox "$result" 30 100
+# }
 
 
 #############################
@@ -47,7 +47,9 @@ node_install(){
 
 
   #Libsodium Install
+  echo
   echo "Libsodiumインストール..."
+  echo
   sleep 2
   mkdir $HOME/git
   cd $HOME/git
@@ -60,7 +62,9 @@ node_install(){
   echo "$password" | sudo -S make install
 
   #Secp256k1 Install
+  echo
   echo "Secp256k1インストール..."
+  echo
   sleep 2
   cd $HOME/git
   git clone https://github.com/bitcoin-core/secp256k1.git
@@ -72,7 +76,9 @@ node_install(){
   echo "$password" | sudo -S make install
 
   #blst Install
+  echo
   echo "blstインストール..."
+  echo
   sleep 2
   cd $HOME/git
   git clone https://github.com/supranational/blst
@@ -100,7 +106,9 @@ node_install(){
   echo "$password" | sudo -S chmod u=rw,go=r /usr/local/{lib/{libblst.a,pkgconfig/libblst.pc},include/{blst.{h,hpp},blst_aux.h}}
 
   #GHCUP Install
+  echo
   echo "GHCUPインストール..."
+  echo
   sleep 2
   cd $HOME
   BOOTSTRAP_HASKELL_NONINTERACTIVE=1
@@ -126,7 +134,7 @@ node_install(){
 
   echo
   echo "ノードインストール"
-
+  echo
   mkdir $HOME/git/cardano-node
   cd $HOME/git/cardano-node
   wget https://github.com/IntersectMBO/cardano-node/releases/download/8.7.3/cardano-node-8.7.3-linux.tar.gz
@@ -139,9 +147,9 @@ node_install(){
 
   cardano-cli version
   cardano-node version
-
+  echo
   echo "設定ファイルダウンロード..."
-
+  echo
   mkdir $NODE_HOME
   cd $NODE_HOME
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/byron-genesis.json -O ${NODE_CONFIG}-byron-genesis.json
@@ -150,9 +158,9 @@ node_install(){
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/alonzo-genesis.json -O ${NODE_CONFIG}-alonzo-genesis.json
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/conway-genesis.json -O ${NODE_CONFIG}-conway-genesis.json
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/config.json -O ${NODE_CONFIG}-config.json
-
+  echo
   echo "設定ファイルダウンロードしました"
-
+  echo
 
   sed -i ${NODE_CONFIG}-config.json \
       -e 's!"AlonzoGenesisFile": "alonzo-genesis.json"!"AlonzoGenesisFile": "'${NODE_CONFIG}'-alonzo-genesis.json"!' \
@@ -217,6 +225,11 @@ node_install(){
 	echo "gliveViewをインストールしました..."
 	echo
 
+
+  echo
+	echo "Mithrilクライアントをインストールします..."
+	echo
+
   #Rustインストール
   mkdir -p $HOME/.cargo/bin
   chown -R $USER\: $HOME/.cargo
@@ -239,15 +252,26 @@ node_install(){
   make build
   echo "$password" | sudo -S mv mithril-client /usr/local/bin/mithril-client
 
+  echo
+	echo "Mithrilクライアントをインストールしました..."
+	echo
   export NETWORK=${NODE_CONFIG}
   export AGGREGATOR_ENDPOINT=https://aggregator.release-mainnet.api.mithril.network/aggregator
   export GENESIS_VERIFICATION_KEY=$(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/genesis.vkey)
   export SNAPSHOT_DIGEST=latest
 
+  echo
+	echo "DBスナップショットをダウンロードします..."
+	echo
   mithril-client snapshot download --download-dir $NODE_HOME latest
 
-
+  echo
+	echo "DBスナップショットをダウンロードしました..."
 	echo
+}
+
+node_service(){
+  echo
   echo "サービスファイルを作成します"
   echo
 
@@ -286,7 +310,6 @@ node_install(){
 		echo
 		echo "サービスファイルを作成しました"
 		echo
-
 }
 
 
@@ -313,6 +336,12 @@ while true; do
         1 )
           input_password
           node_install | dialog --programbox "Dependency Install" 50 200
+          input_password
+          node_service | dialog --programbox "Dependency Install" 50 200
+          echo
+          echo "カルダノノードを起動します"
+          echo
+          glive
         ;;
         esac
       ;;
