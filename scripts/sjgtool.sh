@@ -1,56 +1,44 @@
-#!/bin/bash
-title="SJG TOOL V2"
-backtitle="SPO JAPAN GUILD"
-version="0.1.0-α"
+#!/usr/bin/env bash
 
-# # Display menu results in a msgbox
-# display_result() {
-#   dialog --title "$1" \
-#     --backtitle "System Information" \
-#     --no-collapse \
-#     --msgbox "$result" 0 0
-# }
+source $HOME/.bashrc
 
-# command_result() {
-#   dialog --title "$1" \
-#     --backtitle "System Information" \
-#     --programbox "$result" 30 100
-# }
+style(){
+  echo '{{ Color "15" "0" " '$1' " }}''{{ Color "11" "0" " '$2' " }}' \
+    | gum format -t template
+}
 
+yellow_style(){
+  echo '{{ Color "11" "0" " '$1' " }}' \
+    | gum format -t template
+}
 
-#############################
-# OS/ノード関連関数
-#############################
-
-#システムアップデート
 system_update(){
-  echo "$password" | sudo -S apt update -y && sudo apt upgrade -y
+  yellow_style "システムアップデート..."
+  echo
+  gum input --password | sudo -S apt update -y && sudo apt upgrade -y
+  yellow_style "アップデートしました"
   sleep 3
 }
 
-input_password(){
-  password=$(dialog --stdout --title "sudoパスワード" \
-  --clear \
-  --insecure \
-  --passwordbox "sudoパスワードを入力してください" 10 30 2)
-}
+style "対象ネットワーク:" "$NODE_CONFIG"
+
 
 
 #ノードインストール
 node_install(){
 
-  echo "システムアップデート..."
-  sleep 2
-  system_update
+  #依存関係インストール
+  sudo apt install git jq bc automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev -y
 
-  echo "$password" | sudo -S apt install git jq bc automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev -y
-
+  echo
+  yellow_style "依存関係をインストールしました..."
+  echo
 
   #Libsodium Install
   echo
-  echo "Libsodiumインストール..."
+  yellow_style "Libsodiumインストール..."
   echo
-  sleep 2
+  sleep 3
   mkdir $HOME/git
   cd $HOME/git
   git clone https://github.com/IntersectMBO/libsodium
@@ -59,13 +47,13 @@ node_install(){
   ./autogen.sh
   ./configure
   make
-  echo "$password" | sudo -S make install
+  sudo make install
 
   #Secp256k1 Install
   echo
-  echo "Secp256k1インストール..."
+  yellow_style "Secp256k1インストール..."
   echo
-  sleep 2
+  sleep 3
   cd $HOME/git
   git clone https://github.com/bitcoin-core/secp256k1.git
   cd secp256k1/
@@ -73,13 +61,13 @@ node_install(){
   ./autogen.sh
   ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental
   make
-  echo "$password" | sudo -S make install
+  sudo make install
 
   #blst Install
   echo
-  echo "blstインストール..."
+  yellow_style "blstインストール..."
   echo
-  sleep 2
+  sleep 3
   cd $HOME/git
   git clone https://github.com/supranational/blst
   cd blst
@@ -100,20 +88,19 @@ node_install(){
 		Libs: -L\${libdir} -lblst
 		EOF
 
-  echo "$password" | sudo -S cp libblst.pc /usr/local/lib/pkgconfig/
-  echo "$password" | sudo -S cp bindings/blst_aux.h bindings/blst.h bindings/blst.hpp  /usr/local/include/
-  echo "$password" | sudo -S cp libblst.a /usr/local/lib
-  echo "$password" | sudo -S chmod u=rw,go=r /usr/local/{lib/{libblst.a,pkgconfig/libblst.pc},include/{blst.{h,hpp},blst_aux.h}}
+  sudo cp libblst.pc /usr/local/lib/pkgconfig/
+  sudo cp bindings/blst_aux.h bindings/blst.h bindings/blst.hpp  /usr/local/include/
+  sudo cp libblst.a /usr/local/lib
+  sudo chmod u=rw,go=r /usr/local/{lib/{libblst.a,pkgconfig/libblst.pc},include/{blst.{h,hpp},blst_aux.h}}
 
-  #GHCUP Install
+  GHCUP Install
   echo
-  echo "GHCUPインストール..."
+  yellow_style "GHCUPインストール..."
   echo
-  sleep 2
+  sleep 3
   cd $HOME
   BOOTSTRAP_HASKELL_NONINTERACTIVE=1
   BOOTSTRAP_HASKELL_NO_UPGRADE=1
-  BOOTSTRAP_HASKELL_INSTALL_NO_STACK=yes
   BOOTSTRAP_HASKELL_ADJUST_BASHRC=1
   unset BOOTSTRAP_HASKELL_INSTALL_HLS
   export BOOTSTRAP_HASKELL_NONINTERACTIVE BOOTSTRAP_HASKELL_INSTALL_STACK BOOTSTRAP_HASKELL_ADJUST_BASHRC
@@ -133,8 +120,9 @@ node_install(){
   ghc --version
 
   echo
-  echo "ノードインストール"
+  yellow_style "ノードインストール"
   echo
+  sleep 3
   mkdir $HOME/git/cardano-node
   cd $HOME/git/cardano-node
   wget https://github.com/IntersectMBO/cardano-node/releases/download/8.7.3/cardano-node-8.7.3-linux.tar.gz
@@ -148,8 +136,9 @@ node_install(){
   cardano-cli version
   cardano-node version
   echo
-  echo "設定ファイルダウンロード..."
+  yellow_style "設定ファイルダウンロード..."
   echo
+  sleep 3
   mkdir $NODE_HOME
   cd $NODE_HOME
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/byron-genesis.json -O ${NODE_CONFIG}-byron-genesis.json
@@ -159,7 +148,7 @@ node_install(){
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/conway-genesis.json -O ${NODE_CONFIG}-conway-genesis.json
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/config.json -O ${NODE_CONFIG}-config.json
   echo
-  echo "設定ファイルダウンロードしました"
+  yellow_style "設定ファイルダウンロードしました"
   echo
 
   sed -i ${NODE_CONFIG}-config.json \
@@ -176,12 +165,13 @@ node_install(){
       -e "s/127.0.0.1/0.0.0.0/g"
 
   echo
-  echo "設定ファイルを書き換えました"
+  yellow_style "設定ファイルを書き換えました"
   echo
 
-	echo
-  echo "起動スクリプトを作成します"
   echo
+  yellow_style "起動スクリプトを作成します"
+  echo
+  sleep 3
 	PORT=6000
 	cat <<-EOF > ${NODE_HOME}/startBlockProducingNode.sh
 	#!/bin/bash
@@ -199,37 +189,37 @@ node_install(){
   chmod +x startBlockProducingNode.sh
 
 	echo
-  echo "起動スクリプトを作成しました"
+  yellow_style "起動スクリプトを作成しました"
   echo
 
-	echo
-	echo "gliveViewをインストールします..."
-	echo
+  echo
+  yellow_style "gliveViewをインストールします..."
+  echo
+  sleep 3
+  mkdir $NODE_HOME/scripts
+  cd $NODE_HOME/scripts
+  sudo sudo apt install bc tcptraceroute -y
 
-	mkdir $NODE_HOME/scripts
-	cd $NODE_HOME/scripts
-	echo "$password" | sudo -S sudo apt install bc tcptraceroute -y
+  curl -s -o gLiveView.sh https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/gLiveView.sh
+  curl -s -o env https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/env
+  chmod 755 gLiveView.sh
 
-	curl -s -o gLiveView.sh https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/gLiveView.sh
-	curl -s -o env https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/env
-	chmod 755 gLiveView.sh
+  sed -i $NODE_HOME/scripts/env \
+  -e '1,73s!#CNODE_HOME="/opt/cardano/cnode"!CNODE_HOME=${NODE_HOME}!' \
+  -e '1,73s!#CNODE_PORT=6000!CNODE_PORT='${PORT}'!' \
+  -e '1,73s!#UPDATE_CHECK="Y"!UPDATE_CHECK="N"!' \
+  -e '1,73s!#CONFIG="${CNODE_HOME}/files/config.json"!CONFIG="${CNODE_HOME}/'${NODE_CONFIG}'-config.json"!' \
+  -e '1,73s!#SOCKET="${CNODE_HOME}/sockets/node0.socket"!SOCKET="${CNODE_HOME}/db/socket"!'
 
-	sed -i $NODE_HOME/scripts/env \
-	-e '1,73s!#CNODE_HOME="/opt/cardano/cnode"!CNODE_HOME=${NODE_HOME}!' \
-	-e '1,73s!#CNODE_PORT=6000!CNODE_PORT='${PORT}'!' \
-	-e '1,73s!#UPDATE_CHECK="Y"!UPDATE_CHECK="N"!' \
-	-e '1,73s!#CONFIG="${CNODE_HOME}/files/config.json"!CONFIG="${CNODE_HOME}/'${NODE_CONFIG}'-config.json"!' \
-	-e '1,73s!#SOCKET="${CNODE_HOME}/sockets/node0.socket"!SOCKET="${CNODE_HOME}/db/socket"!'
-
-	echo
-	echo "gliveViewをインストールしました..."
-	echo
+  echo
+  yellow_style "gliveViewをインストールしました..."
+  echo
 
 
   echo
-	echo "Mithrilクライアントをインストールします..."
-	echo
-
+  yellow_style "Mithrilクライアントをインストールします..."
+  echo
+  sleep 3
   #Rustインストール
   mkdir -p $HOME/.cargo/bin
   chown -R $USER\: $HOME/.cargo
@@ -242,39 +232,39 @@ node_install(){
   rustup default stable
   rustup update
 
-  echo "$password" | sudo -S apt install -y libssl-dev build-essential m4 jq
+  sudo apt install -y libssl-dev build-essential m4 jq
   cd $HOME/git
   git clone https://github.com/input-output-hk/mithril.git
   cd mithril
   git fetch --all --prune
-  git checkout tags/2347.0
+  git checkout tags/2403.1
   cd mithril-client-cli
   make build
-  echo "$password" | sudo -S mv mithril-client /usr/local/bin/mithril-client
+  sudo mv mithril-client /usr/local/bin/mithril-client
 
   echo
-	echo "Mithrilクライアントをインストールしました..."
-	echo
+  yellow_style "Mithrilクライアントをインストールしました..."
+  echo
+
   export NETWORK=${NODE_CONFIG}
   export AGGREGATOR_ENDPOINT=https://aggregator.release-mainnet.api.mithril.network/aggregator
   export GENESIS_VERIFICATION_KEY=$(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/genesis.vkey)
   export SNAPSHOT_DIGEST=latest
 
   echo
-	echo "DBスナップショットをダウンロードします..."
-	echo
+  yellow_style "DBスナップショットをダウンロードします..."
+  echo
+  sleep 3
   mithril-client snapshot download --download-dir $NODE_HOME latest
 
   echo
-	echo "DBスナップショットをダウンロードしました..."
-	echo
-}
-
-node_service(){
-  echo
-  echo "サービスファイルを作成します"
+  yellow_style "DBスナップショットをダウンロードしました..."
   echo
 
+  echo
+  yellow_style "サービスファイルを作成します"
+  echo
+  sleep 3
 	cat > $NODE_HOME/cardano-node.service <<-EOF
 		# The Cardano node service (part of systemd)
 		# file: /etc/systemd/system/cardano-node.service
@@ -301,57 +291,46 @@ node_service(){
 		WantedBy    = multi-user.target
 		EOF
 
-		echo "$password" | sudo -S cp $NODE_HOME/cardano-node.service /etc/systemd/system/cardano-node.service
-		sudo chmod 644 /etc/systemd/system/cardano-node.service
-		sudo systemctl daemon-reload
-		sudo systemctl enable cardano-node
-    sudo systemctl start cardano-node
+  gum input --password | sudo -S cp $NODE_HOME/cardano-node.service /etc/systemd/system/cardano-node.service
+  sudo chmod 644 /etc/systemd/system/cardano-node.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable cardano-node
+  sudo systemctl start cardano-node
 
-		echo
-		echo "サービスファイルを作成しました"
-		echo
+  echo
+  yellow_style "サービスファイルを作成しました"
+  echo
 }
 
+gum style \
+	--foreground 212 --border-foreground 212 --border double \
+	--align center --width 50 --margin "1 2" --padding "2 4" \
+	'SJGTOOL V2' 'v.0.1.0-alpha'
 
-while true; do
-  selection0=$(dialog --stdout --backtitle "$backtitle" --title "$title" \
-  --clear --cancel-label "Exit" --menu "Please select:" 0 0 5 \
-    "1" "プール構築" \
-    "2" "プール運用" \
-    "3" "ツール設定" \
-     )
-  exit_status=$?
-  if [ $exit_status == 1 ] ; then
-      clear
-      exit
-  fi
-  case $selection0 in
-    1 )
-      selection1=$(dialog --stdout --backtitle "$backtitle" --title "$title" \
-        --clear --cancel-label "戻る" --menu "Please select:" 0 0 5 \
-        "1" "ノードセットアップ" \
-        "2" "プール作成・登録" \
-        )
+
+selection0=$(gum choose "プール構築" "プール運用" "ツール設定")
+
+case $selection0 in
+    "プール構築" )
+      selection1=$(gum choose "ノードセットアップ" "プール作成・登録")
+
         case $selection1 in
-        1 )
-          input_password
-          node_install | dialog --programbox "Dependency Install" 50 200
-          input_password
-          node_service | dialog --programbox "Dependency Install" 50 200
+        "ノードセットアップ" )
+          echo "ノードセットアップをスタートします..."
           echo
-          echo "カルダノノードを起動します"
-          echo
-          glive
+          sleep 2
+          system_update
+          node_install
+          echo "gliveコマンドを実行してgLiveViewを起動してください..."
+          sleep 2
         ;;
         esac
       ;;
-    2 )
-      result=$(df -h)
-      display_result "Disk Space"
+    "プール運用" )
+        echo "プール運用します"
       ;;
-    3 )
-      result=$(vmstat --stats)
-      display_result "Memory Stats"
+    "ツール設定" )
+        echo "ツール設定します"
+
       ;;
   esac
-done

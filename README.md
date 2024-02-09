@@ -1,24 +1,40 @@
 # New SJG-Tools
 
-環境変数設定
+SJGTOOL V2 α
+※現時点では初回インストールのみ対応しています。
+
+前提条件
 ```
-echo PATH="$HOME/.local/bin:$PATH" >> $HOME/.bashrc
-echo export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" >> $HOME/.bashrc
-echo export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> $HOME/.bashrc
-echo export NODE_HOME=$HOME/cnode >> $HOME/.bashrc
-echo export CARDANO_NODE_SOCKET_PATH="$NODE_HOME/db/socket" >> $HOME/.bashrc
-
-echo export NODE_CONFIG=mainnet >> $HOME/.bashrc
-echo export NODE_NETWORK='"--mainnet"' >> $HOME/.bashrc
-echo export CARDANO_NODE_NETWORK_ID=mainnet >> $HOME/.bashrc
-
-echo alias cnode='"journalctl -u cardano-node -f"' >> $HOME/.bashrc
-echo alias cnstart='"sudo systemctl start cardano-node"' >> $HOME/.bashrc
-echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> $HOME/.bashrc
-echo alias cnstop='"sudo systemctl stop cardano-node"' >> $HOME/.bashrc
-echo alias glive="'cd $NODE_HOME/scripts; ./gLiveView.sh'" >> $HOME/.bashrc
+- OS:Ubuntu20.04/22.04
+- sudo権限を持つ任意ユーザーでログイン
 ```
 
+環境設定
 ```
-source $HOME/.bashrc
+cat > ~/.tmux.conf << EOF
+set -g default-terminal "screen-256color"
+EOF
+```
+
+ライブラリインストール
+# Debian/Ubuntu
+```
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
+sudo apt update && sudo apt install gum
+```
+
+ダウンロード
+```
+git clone https://github.com/btbf/sjg-tools.git
+git fetch --all --recurse-submodules --tags
+git checkout tags/0.1.0-alpha
+```
+
+```
+cd sjg-tools/scripts
+chmod 755 start.sh
+chmod 755 sjgtool.sh
+./start.sh
 ```
