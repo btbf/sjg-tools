@@ -305,7 +305,7 @@ node_install(){
 gum style \
 	--foreground 212 --border-foreground 212 --border double \
 	--align center --width 50 --margin "1 2" --padding "2 4" \
-	'SJGTOOL V2' 'v.0.1.0-alpha'
+	'SJGTOOL V2' 'v.0.1.1-alpha'
 
 
 selection0=$(gum choose "プール構築" "プール運用" "ツール設定")

@@ -28,12 +28,13 @@ sudo apt update && sudo apt install gum
 ダウンロード
 ```
 git clone https://github.com/btbf/sjg-tools.git
+cd sjg-tools
 git fetch --all --recurse-submodules --tags
-git checkout tags/0.1.0-alpha
+git checkout tags/0.1.1-alpha
 ```
 
 ```
-cd sjg-tools/scripts
+cd scripts
 chmod 755 start.sh
 chmod 755 sjgtool.sh
 ./start.sh
