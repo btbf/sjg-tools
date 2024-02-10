@@ -18,6 +18,6 @@ echo alias glive="'cd $HOME/cnode/scripts; ./gLiveView.sh'" >> $HOME/.bashrc
 
 tmux new-session -d -s session
 
-tmux send-keys -t session:0 $HOME/sjg-tool/sjgtool.sh Enter
+tmux send-keys -t session:0 $HOME/sjg-tool/scripts/sjgtool.sh Enter
 
 tmux a -t session
