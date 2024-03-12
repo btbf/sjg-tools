@@ -209,7 +209,7 @@ Cli_TxSubmit(){
 #----------モジュール関数----------------
 
 FilePathAndHash(){
-  echo "${1} >> ${YELLOW}$(sha256sum ${1} | awk '{ print $1 }')${NC}"
+  echo -e "${1} >> ${YELLOW}$(sha256sum ${1} | awk '{ print $1 }')${NC}\n"
 }
 
 

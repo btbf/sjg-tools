@@ -451,7 +451,7 @@ KesCreate(){
         KesCleanupFiles "$oldKesvKey" "$kesfolder"
         KesCleanupFiles "$oldNodecertKey" "$kesfolder"
 
-        MagentaStyle "${FG_MAGENTA}■旧KESファイルの削除...${NC}"
+        MagentaStyle "${MAGENTA}■旧KESファイルの削除...${NC}"
         sleep 2
         rm ${NODE_HOME}/${KES_VKEY_FILENAME}
         YellowStyle "${NODE_HOME}/${KES_VKEY_FILENAME} を削除しました"
@@ -482,7 +482,7 @@ KesCreate(){
       echo
       sleep 2
       echo
-      echo -e "${FG_YELLOW}1. BPの${KES_VKEY_FILENAME}と${KES_SKEY_FILENAME} をエアギャップのcnodeディレクトリにコピーしてください${NC}"
+      echo -e "${YELLOW}1. BPの${KES_VKEY_FILENAME}と${KES_SKEY_FILENAME} をエアギャップのcnodeディレクトリにコピーしてください${NC}"
       echo '----------------------------------------'
       echo ">> [BP] ⇒ ${KES_VKEY_FILENAME} / ${KES_SKEY_FILENAME} ⇒ [エアギャップ]"
       echo '----------------------------------------'
@@ -522,7 +522,7 @@ KesCreate(){
       sleep 2
       echo
       echo
-      echo -e "${FG_YELLOW}6. エアギャップの ${NODE_CERT_FILENAME} をBPのcnodeディレクトリにコピーしてください${NC}"
+      echo -e "${YELLOW}6. エアギャップの ${NODE_CERT_FILENAME} をBPのcnodeディレクトリにコピーしてください${NC}"
       echo '----------------------------------------'
       echo ">> [エアギャップ] ⇒ ${NODE_CERT_FILENAME} ⇒ [BP]"
       echo '----------------------------------------'
@@ -544,8 +544,8 @@ KesCreate(){
             case ${restartnum} in
               1) 
                 sudo systemctl reload-or-restart cardano-node
-                echo "\n${FG_GREEN}ノードを再起動しました。${NC}\nglive viewを起動して同期状況を確認してください\n\n"
-                echo "${FG_RED}ノード同期完了後、当ツールの[2] ブロック生成状態チェックを実行してください${NC}\n\n"
+                echo "\n${GREEN}ノードを再起動しました。${NC}\nglive viewを起動して同期状況を確認してください\n\n"
+                echo "${RED}ノード同期完了後、当ツールの[2] ブロック生成状態チェックを実行してください${NC}\n\n"
                 break
                 ;;
               2) 
@@ -571,9 +571,9 @@ KesCreate(){
       while :
       do
         echo
-        echo -e "${FG_YELLOW}2. ファイルハッシュ値確認${NC}"
+        echo -e "${YELLOW}2. ファイルハッシュ値確認${NC}"
         echo
-        echo -e "${FG_YELLOW}ブロックプロデューサーに表示されているハッシュ値と同じであることを確認してください${NC}"
+        echo -e "${YELLOW}ブロックプロデューサーに表示されているハッシュ値と同じであることを確認してください${NC}"
         echo '----------------------------------------'
         FilePathAndHash "${NODE_HOME}/${KES_VKEY_FILENAME}"
         FilePathAndHash "${NODE_HOME}/${KES_SKEY_FILENAME}"
@@ -590,7 +590,7 @@ KesCreate(){
       done
       read -p "操作が終わったらEnterを押してください"
 
-      echo -e "${FG_YELLOW}3. カウンターファイル生成${NC} "
+      echo -e "${YELLOW}3. カウンターファイル生成${NC} "
       echo
       inputCounterNum=$(gum input --char-limit=3 --width=100 --header="ブロックプロデューサー側に表示されているカウンター番号を入力してください" --header.foreground="99" --placeholder "Counter Number")
 
@@ -600,17 +600,17 @@ KesCreate(){
 
       sleep 1
       echo
-      echo -e "${FG_YELLOW}4. カウンター番号確認${NC}"
+      echo -e "${YELLOW}4. カウンター番号確認${NC}"
       echo '----------------------------------------'
       echo
       echo "入力カウンター番号:$inputCounterNum"
       echo "カウンターファイル番号:$(cardano-cli text-view decode-cbor --in-file  $COLDKEYS_DIR/$COUNTER_FILENAME | grep int | head -1 | cut -d"(" -f2 | cut -d")" -f1)"
       echo 
-      echo -e "${FG_RED}上記コマンド実行の戻り値が ${FG_YELLOW}$inputCounterNum ${FG_RED}であることを確認してください${NC}"
+      echo -e "${RED}上記コマンド実行の戻り値が ${YELLOW}$inputCounterNum ${RED}であることを確認してください${NC}"
       echo
       Gum_Confirm_YesNo "カウンター番号は同じですか？" "Yes" "新しいKESファイルを${NODE_HOME}にコピーしてください"
 
-      echo -e "${FG_YELLOW}5. ${NODE_CERT_FILENAME}ファイルを作成する${NC}"
+      echo -e "${YELLOW}5. ${NODE_CERT_FILENAME}ファイルを作成する${NC}"
       echo
       inputStartKesPeriod=$(gum input --char-limit=3 --width=100 --header="ブロックプロデューサー側に表示されているstartKesPerod番号を入力してください" --header.foreground="99" --placeholder "startKesPeriod")
 
@@ -623,7 +623,7 @@ KesCreate(){
       fi
 
       echo
-      echo -e "${FG_YELLOW}6. エアギャップの ${NODE_CERT_FILENAME} をBPのcnodeディレクトリにコピーしてください${NC}"
+      echo -e "${YELLOW}6. エアギャップの ${NODE_CERT_FILENAME} をBPのcnodeディレクトリにコピーしてください${NC}"
       echo '----------------------------------------'
       echo ">> [エアギャップ] ⇒ ${NODE_CERT_FILENAME} ⇒ [BP]"
       echo '----------------------------------------'
