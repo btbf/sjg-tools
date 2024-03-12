@@ -165,8 +165,8 @@ NodeInstall(){
   sleep 3
   mkdir ${HOME}/git/cardano-node
   cd ${HOME}/git/cardano-node || exit
-  wget https://github.com/IntersectMBO/cardano-node/releases/download/8.7.3/cardano-node-8.7.3-linux.tar.gz
-  tar zxvf cardano-node-8.7.3-linux.tar.gz ./cardano-node ./cardano-cli
+  wget https://github.com/IntersectMBO/cardano-node/releases/download/8.9.3/cardano-node-8.9.3-linux.tar.gz
+  tar zxvf cardano-node-8.9.3-linux.tar.gz ./cardano-node ./cardano-cli
   $(find ${HOME}/git/cardano-node -type f -name "cardano-cli") version
   $(find ${HOME}/git/cardano-node -type f -name "cardano-node") version
 
@@ -660,23 +660,25 @@ case $selection0 in
         . "${envPath}"
 
         #完了チェック
-        installCheck=$(PathEnabledCheck "${nodeBynarlyPath}" "✅" "❌")
-        metaDataCheck=$(VariableEnabledCheck "${META_POOL_NAME}" "✅" "❌")
-        if [ "${checkPaymentFile}" == "Yes" ]; then
-          WalletBalance > /dev/null
-          if [ "${total_balance}" -ge 600000000 ]; then
-            walletCheck=" ✅"
+        if [[ $NODE_TYPE != "エアギャップ" ]]; then
+          installCheck=$(PathEnabledCheck "${nodeBynarlyPath}" "✅" "❌")
+          metaDataCheck=$(VariableEnabledCheck "${META_POOL_NAME}" "✅" "❌")
+          if [ "${checkPaymentFile}" == "Yes" ]; then
+            WalletBalance > /dev/null
+            if [ "${total_balance}" -ge 600000000 ]; then
+              walletCheck=" ✅"
+            else
+              walletCheck=" ❌"
+            fi
           else
             walletCheck=" ❌"
           fi
-        else
-          walletCheck=" ❌"
-        fi
 
-        if [ -e "${NODE_HOME}"/"${KES_SKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${KES_VKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${NODE_CERT_FILENAME}" ] && [ -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${VRF_VKEY_FILENAME}" ]; then
-          bpKeyCreateCheck=" ✅"
-        else
-          bpKeyCreateCheck=" ❌"
+          if [ -e "${NODE_HOME}"/"${KES_SKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${KES_VKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${NODE_CERT_FILENAME}" ] && [ -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${VRF_VKEY_FILENAME}" ]; then
+            bpKeyCreateCheck=" ✅"
+          else
+            bpKeyCreateCheck=" ❌"
+          fi
         fi
         
 

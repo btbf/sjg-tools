@@ -176,7 +176,7 @@ Cli_TxSubmit(){
       while :
         do
         koios_tx_status=$(curl -s -X POST "$KOIOS_API/tx_status" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_tx_hashes\":[\"${txId}\"]}" | jq -r '.[].num_confirmations')
-        if [ $koios_tx_status != "null" ] && [ $koios_tx_status -gt 1 ]; then
+        if [[ ${koios_tx_status} != "null" ]] && [ $koios_tx_status -gt 1 ]; then
           printf "確認済みブロック:$koios_tx_status ${FG_GREEN}Txが承認されました${NC}\n\n"
           sleep 3s
           break
