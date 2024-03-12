@@ -686,12 +686,12 @@ case $selection0 in
         Header
 
         if [ "${NODE_TYPE}" == "ブロックプロデューサー" ]; then
-          selection1=$(gum choose --header="" --height=8 --no-show-help "ノードインストール ${installCheck}" "プールメタデータ作成 ${metaDataCheck}" "プールウォレット確認${walletCheck}" "BP用キー作成${bpKeyCreateCheck}" "ステークアドレス登録" "メインメニュー")
+          selection1=$(gum choose --header="" --height=10 --no-show-help "ノードインストール ${installCheck}" "プールメタデータ作成 ${metaDataCheck}" "プールウォレット確認${walletCheck}" "BP用キー作成${bpKeyCreateCheck}" "ステークアドレス登録" "メインメニュー")
         elif [ "${NODE_TYPE}" == "リレー" ]; then
           selection1=$(gum choose --header="" --height=4 --no-show-help "ノードインストール" "メインメニュー")
         elif [ "${NODE_TYPE}" == "エアギャップ" ]; then
           walletKeyCheck=$(PathEnabledCheck "${NODE_HOME}/${PAYMENT_SKEY_FILENAME}" "✅" "❌")
-          selection1=$(gum choose --header="" --height=7 --no-show-help "CLIインストール" "プールウォレット作成 ${walletKeyCheck}" "BP用キー作成" "トランザクション署名" "メインメニュー")
+          selection1=$(gum choose --header="" --height=10 --no-show-help "CLIインストール" "プールウォレット作成 ${walletKeyCheck}" "BP用キー作成" "トランザクション署名" "メインメニュー")
         else
           echo "ノードタイプ設定値が無効です"
           sleep 3
@@ -861,7 +861,7 @@ case $selection0 in
             fi
           fi
 
-          if [ -e "${NODE_HOME}"/"${KES_SKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${KES_VKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${NODE_CERT_FILENAME}" ] && [ -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${VRF_VKEY_FILENAME}" ]; then
+          if [[ ${NODE_TYPE} == "ブロックプロデューサー" ]] && [ -e "${NODE_HOME}"/"${KES_SKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${KES_VKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${NODE_CERT_FILENAME}" ] && [ -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${VRF_VKEY_FILENAME}" ]; then
             echo
             echo "以下のBP用ファイルが存在します"
             FilePathAndHash ${NODE_HOME}/${KES_SKEY_FILENAME}
