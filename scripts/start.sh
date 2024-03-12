@@ -1,7 +1,7 @@
 #!/bin/bash
 
 style(){
-  echo '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' \
+  echo -e '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' "\n" \
     | gum format -t template
 }
 
@@ -12,6 +12,28 @@ cat <<-EOF > ./env
 
 NODE_TYPE="${1}"
 SYNC_NETWORK="${2}"
+
+NODE_TYPE="ブロックプロデューサー"
+SYNC_NETWORK="PreProd-testnet"
+COLDKEYS_DIR="${HOME}/cold-keys"
+COLD_SKEY_FILENAME="node.skey"
+COLD_VKEY_FILENAME="node.vkey"
+COUNTER_FILENAME="node.counter"
+KES_SKEY_FILENAME="kes.skey"
+KES_VKEY_FILENAME="kes.vkey"
+VRF_SKEY_FILENAME="vrf.skey"
+VRF_VKEY_FILENAME="vrf.vkey"
+NODE_CERT_FILENAME="node.cert"
+POOL_CERT_FILENAME="pool.cert"
+PAYMENT_SKEY_FILENAME="payment.skey"
+PAYMENT_VKEY_FILENAME="payment.vkey"
+PAYMENT_ADDR_FILENAME="payment.addr"
+STAKE_SKEY_FILENAME="stake.skey"
+STAKE_VKEY_FILENAME="stake.vkey"
+STAKE_ADDR_FILENAME="stake.addr"
+STAKE_CERT_FILENAME="stake.cert"
+POOL_META_FILENAME="poolMetaData.json"
+KOIOS_API="https://preview.koios.rest/"
 EOF
 }
 
@@ -22,12 +44,13 @@ DotSpinner3(){
 
 
 currentDir=$(pwd)
-nodeHome=$(echo $NODE_HOME)
+envPath="${currentDir}"/env
+
 
 ##------初期設定
-
-if [ ! -e "${currentDir}/env" ]; then
-    if [ -z "${nodeHome}" ]; then
+clear
+if [ ! -e "${envPath}" ]; then
+    if [ -z "${NODE_HOME}" ]; then
         gum style \
             --foreground 212 --border-foreground 212 --border double \
             --align center --width 50 --margin "1 2" --padding "2 4" \
@@ -67,7 +90,7 @@ if [ ! -e "${currentDir}/env" ]; then
         style "ノードタイプ:" "${nodeType}"
         style "ネットワーク:" "${syncNetwork}"
         style "作業ディレクトリ:" "${workDir}"
-
+        echo
         gum confirm "この設定でよろしいですか？" --default=false --affirmative="はい" --negative="いいえ" && iniSettings="Yes" || iniSettings="最初からやり直す場合はツールを再実行してください"
 
         if [ "${iniSettings}" == "Yes" ]; then
@@ -97,7 +120,6 @@ if [ ! -e "${currentDir}/env" ]; then
             echo
 
             DotSpinner3 "初期設定を終了します"
-
         else
             clear
             echo
@@ -131,13 +153,12 @@ if [ ! -e "${currentDir}/env" ]; then
             exit
         fi
     fi
-
 fi
 
 # #------初期設定
 
-tmux new-session -d -s sjgtool "${HOME}"/sjg-tools/scripts/sjgtool.sh
+tmux new-session -d -s sjgtool
 
-#tmux send-keys -t session:0 "${HOME}"/sjg-tools/scripts/sjgtool.sh Enter
+tmux send-keys -t sjgtool $HOME/sjg-tools/scripts/sjgtool.sh Enter
 
 tmux a -t sjgtool
