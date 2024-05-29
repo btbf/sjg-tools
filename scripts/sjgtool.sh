@@ -27,7 +27,7 @@ Header(){
 SystemUpdate(){
   YellowStyle "システムアップデート..."
   echo
-  gum input --password | sudo -S apt update -y && sudo apt upgrade -y
+  gum input --password --no-show-help | sudo -S apt update -y && sudo apt upgrade -y
   YellowStyle "アップデートしました"
   sleep 3
 }
@@ -338,7 +338,7 @@ SyslogIdentifier=cardano-node
 WantedBy    = multi-user.target
 EOF
 
-    gum input --password | sudo -S cp ${NODE_CONFIG}/cardano-node.service /etc/systemd/system/cardano-node.service
+    gum input --password --no-show-help | sudo -S cp ${NODE_CONFIG}/cardano-node.service /etc/systemd/system/cardano-node.service
     sudo chmod 644 /etc/systemd/system/cardano-node.service
     sudo systemctl daemon-reload
     sudo systemctl enable cardano-node
@@ -592,7 +592,7 @@ KesCreate(){
 
       echo -e "${YELLOW}3. カウンターファイル生成${NC} "
       echo
-      inputCounterNum=$(gum input --char-limit=3 --width=100 --header="ブロックプロデューサー側に表示されているカウンター番号を入力してください" --header.foreground="99" --placeholder "Counter Number")
+      inputCounterNum=$(gum input --char-limit=3 --width=100 --header="ブロックプロデューサー側に表示されているカウンター番号を入力してください" --header.foreground="99" --no-show-help --placeholder "Counter Number")
 
 
       chmod u+rwx $COLDKEYS_DIR
@@ -612,7 +612,7 @@ KesCreate(){
 
       echo -e "${YELLOW}5. ${NODE_CERT_FILENAME}ファイルを作成する${NC}"
       echo
-      inputStartKesPeriod=$(gum input --char-limit=3 --width=100 --header="ブロックプロデューサー側に表示されているstartKesPerod番号を入力してください" --header.foreground="99" --placeholder "startKesPeriod")
+      inputStartKesPeriod=$(gum input --char-limit=3 --width=100 --header="ブロックプロデューサー側に表示されているstartKesPerod番号を入力してください" --header.foreground="99" --no-show-help --placeholder "startKesPeriod")
 
       cardano-cli node issue-op-cert --kes-verification-key-file ${NODE_HOME}/${KES_VKEY_FILENAME} --cold-signing-key-file $COLDKEYS_DIR/$COLD_SKEY_FILENAME --operational-certificate-issue-counter $COLDKEYS_DIR/$COUNTER_FILENAME --kes-period ${inputStartKesPeriod} --out-file ${NODE_HOME}/${NODE_CERT_FILENAME}
       if [ $? -eq 0 ]; then
@@ -660,8 +660,8 @@ case $selection0 in
         . "${envPath}"
 
         #完了チェック
-        if [[ $NODE_TYPE != "エアギャップ" ]]; then
-          installCheck=$(PathEnabledCheck "${nodeBynarlyPath}" "✅" "❌")
+        installCheck=$(PathEnabledCheck "${nodeBynarlyPath}" "✅" "❌")
+        if [[ $NODE_TYPE == "ブロックプロデューサー" ]]; then
           metaDataCheck=$(VariableEnabledCheck "${META_POOL_NAME}" "✅" "❌")
           if [ "${checkPaymentFile}" == "Yes" ]; then
             WalletBalance > /dev/null
@@ -686,12 +686,12 @@ case $selection0 in
         Header
 
         if [ "${NODE_TYPE}" == "ブロックプロデューサー" ]; then
-          selection1=$(gum choose --header="" --height=10 --no-show-help "ノードインストール ${installCheck}" "プールメタデータ作成 ${metaDataCheck}" "プールウォレット確認${walletCheck}" "BP用キー作成${bpKeyCreateCheck}" "ステークアドレス登録" "メインメニュー")
+          selection1=$(gum choose --header="" --height=10 --no-show-help "ノードインストール ${installCheck}" "プールメタデータ作成 ${metaDataCheck}" "プールウォレット確認${walletCheck}" "BP用キー作成${bpKeyCreateCheck}" "ステークアドレス登録" "プール登録" "メインメニュー")
         elif [ "${NODE_TYPE}" == "リレー" ]; then
           selection1=$(gum choose --header="" --height=4 --no-show-help "ノードインストール" "メインメニュー")
         elif [ "${NODE_TYPE}" == "エアギャップ" ]; then
           walletKeyCheck=$(PathEnabledCheck "${NODE_HOME}/${PAYMENT_SKEY_FILENAME}" "✅" "❌")
-          selection1=$(gum choose --header="" --height=10 --no-show-help "CLIインストール" "プールウォレット作成 ${walletKeyCheck}" "BP用キー作成" "トランザクション署名" "メインメニュー")
+          selection1=$(gum choose --header="" --height=10 --no-show-help "CLIインストール" "プールウォレット作成 ${walletKeyCheck}" "BP用キー作成" "プール登録証明書作成" "トランザクション署名" "メインメニュー")
         else
           echo "ノードタイプ設定値が無効です"
           sleep 3
@@ -718,10 +718,10 @@ case $selection0 in
           ;;
           "プールメタデータ作成 ${metaDataCheck}" )
             if [ -z "${META_POOL_NAME}" ]; then
-              metaPoolName=$(gum input --width=0 --header="プール名を入力してください(日本語可)" --char-limit=100 --header.foreground="99" --placeholder "Pool Name")
-              metaTicker=$(gum input --width=0 --header="プールティッカーを3～5文字で入力してください。(A-Zと0-9の組み合わせのみ)" --char-limit=5 --header.foreground="99" --placeholder "Ticker")
-              metaDirscription=$(gum input --width=0 --header="プール説明を入力してください（255文字以内(255byte)※ただし日本語は2byte扱い)" --char-limit=255 --header.foreground="99" --placeholder "Discription")
-              metaHomepageUrl=$(gum input --width=0 --header="プールホームページURLを入力してください（64byte以内)" --char-limit=64 --header.foreground="99" --placeholder "Pool Homepage URL")
+              metaPoolName=$(gum input --width=0 --header="プール名を入力してください(日本語可)" --char-limit=100 --header.foreground="99" --no-show-help --placeholder "Pool Name")
+              metaTicker=$(gum input --width=0 --header="プールティッカーを3～5文字で入力してください。(A-Zと0-9の組み合わせのみ)" --char-limit=5 --header.foreground="99" --no-show-help --placeholder "Ticker")
+              metaDirscription=$(gum input --width=0 --header="プール説明を入力してください（255文字以内(255byte)※ただし日本語は2byte扱い)" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Discription")
+              metaHomepageUrl=$(gum input --width=0 --header="プールホームページURLを入力してください（64byte以内)" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "Pool Homepage URL")
 
               style "プール名:" "${metaPoolName}"
               style "ティッカー:" "${metaTicker}"
@@ -749,7 +749,7 @@ case $selection0 in
 
                 while :
                 do
-                  poolMetaurl=$(gum input --width=0 --header="${POOL_META_FILENAME}のホストURLを入力してください" --char-limit=64 --header.foreground="99" --placeholder "${POOL_META_FILENAME} URL")
+                  poolMetaurl=$(gum input --width=0 --header="${POOL_META_FILENAME}をアップロードしたフルURLを入力してください" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "${POOL_META_FILENAME} URL")
                   httpResponsCode=$(curl -LI "${poolMetaurl}" -o /dev/null -w '%{http_code}\n' -s)
                   
                   if [ "${httpResponsCode}" == "200" ]; then
@@ -766,6 +766,11 @@ case $selection0 in
                         
                         if [ "${iniSettings}" == "Yes" ]; then
                           echo "正常"
+                          echo "POOL_METADATA_URL=\"${poolMetaurl}\"" >> ${currentDir}/env
+                          wget -q -O ${NODE_HOME}/${POOL_META_FILENAME} ${poolMetaurl}
+                          cardano-cli stake-pool metadata-hash --pool-metadata-file ${NODE_HOME}/${POOL_META_FILENAME} > ${NODE_HOME}/poolMetaDataHash.txt
+                          echo "${NODE_HOME}/poolMetaDataHash.txtを作成しました"
+                          echo
                           break
                         else
                           echo
@@ -972,31 +977,38 @@ case $selection0 in
             Gum_DotSpinner3 "トランザクションを構築しています"
             cardano-cli transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.raw
             if [ $? -eq 0 ]; then
-              echo "トランザクションファイルを作成しました (${NODE_HOME}/tx.raw)"
-              echo
-              echo "1.tx.rawをエアギャップの作業ディレクトリにコピーしてください"
-              echo "2.コピーしたらエアギャップ側で署名ファイル(tx.signed)を作成してください"
-              echo "3.エアギャップで署名ファイルを作成したらBPの${NODE_HOME}にコピーしてください"
-              echo
-              while :
-              do
-                Gum_OneSelect "1～3が完了したらEnterを押して下さい"
-                echo
-                if [ -e ${NODE_HOME}/tx.signed ]; then
-                  Cli_TxSubmit
-                else
-                  echo "tx.signedが見つかりません。正しいディレクトリにコピーしてください"
-                  echo
-                  break
-                fi
-              done
+              Cli_TxRawCheck
             else
-              echo "Txファイルの生成に失敗しました"
-              echo
-              Gum_OneSelect "戻る"
+            echo "Txファイルの生成に失敗しました"
+            echo
+            Gum_OneSelect "戻る"
             fi
-
           ;;
+
+          "プール登録" )
+            if [ -e ${NODE_HOME}/pool.cert ] && [ -e ${NODE_HOME}/deleg.cert ]; then
+              CheckWallet
+              poolDeposit=$(cat ${NODE_HOME}/params.json | jq -r '.stakePoolDeposit')
+              cardano-cli transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/payment.addr)+$(( ${total_balance} - ${poolDeposit}))  --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 0 --certificate-file ${NODE_HOME}/pool.cert --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.tmp
+              fee=$(cardano-cli transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --tx-in-count ${txcnt} --tx-out-count 1 $NODE_NETWORK --witness-count 3 --byron-witness-count 0 --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
+              txOut=$((${total_balance}-${poolDeposit}-${fee}))
+              Gum_DotSpinner3 "トランザクションを構築しています"
+              cardano-cli transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/payment.addr)+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/pool.cert --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.raw
+              if [ $? -eq 0 ]; then
+                echo -e "プール登録料: ${poolDeposit}"
+                echo -e トランザクション手数料: $fee
+                echo
+                Cli_TxRawCheck
+              else
+                echo "Txファイルの生成に失敗しました"
+                echo
+                Gum_OneSelect "戻る"
+              fi
+            else
+              echo "登録用ファイルが見つかりません"
+            fi
+          ;;
+
           "トランザクション署名" )
             cardano-cli transaction sign --tx-body-file ${NODE_HOME}/tx.raw --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file ${NODE_HOME}/tx.signed
             echo
@@ -1004,6 +1016,12 @@ case $selection0 in
             echo "${NODE_HOME}/tx.signed をBPの作業ディレクトリにコピーしてください"
             echo
             Gum_OneSelect "コピーしたらEnterを押して下さい"
+          ;;
+
+          "プール登録証明書作成" )
+          CreatePoolCert
+          echo
+          Gum_OneSelect "完了したらEnterを押して下さい"
           ;;
 
           "メインメニュー" )

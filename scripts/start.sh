@@ -12,9 +12,6 @@ cat <<-EOF > ./env
 
 NODE_TYPE="${1}"
 SYNC_NETWORK="${2}"
-
-NODE_TYPE="ブロックプロデューサー"
-SYNC_NETWORK="PreProd-testnet"
 COLDKEYS_DIR="${HOME}/cold-keys"
 COLD_SKEY_FILENAME="node.skey"
 COLD_VKEY_FILENAME="node.vkey"
@@ -33,7 +30,7 @@ STAKE_VKEY_FILENAME="stake.vkey"
 STAKE_ADDR_FILENAME="stake.addr"
 STAKE_CERT_FILENAME="stake.cert"
 POOL_META_FILENAME="poolMetaData.json"
-KOIOS_API="https://preview.koios.rest/"
+KOIOS_API="${3}"
 EOF
 }
 
@@ -54,7 +51,7 @@ if [ ! -e "${envPath}" ]; then
         gum style \
             --foreground 212 --border-foreground 212 --border double \
             --align center --width 50 --margin "1 2" --padding "2 4" \
-            'SJGTOOL V2' 'v.0.1.2' '' 'ツール初期設定'
+            'SJGTOOL V2' 'v.0.2.0' '' 'ツール初期設定'
 
         nodeType=$(gum choose --header="当サーバーにセットアップするノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ")
 
@@ -69,21 +66,25 @@ if [ ! -e "${envPath}" ]; then
                 NODE_CONFIG=mainnet
                 NODE_NETWORK='"--mainnet"'
                 CARDANO_NODE_NETWORK_ID=mainnet
+                koios_domain="https://api.koios.rest"
             ;;
             "Preview-testnet" )
                 NODE_CONFIG=preview
                 NODE_NETWORK='"--testnet-magic 2"'
                 CARDANO_NODE_NETWORK_ID=2
+                koios_domain="https://preview.koios.rest"
             ;;
             "PreProd-testnet" )
                 NODE_CONFIG=preprod
                 NODE_NETWORK='"--testnet-magic 1"'
                 CARDANO_NODE_NETWORK_ID=1
+                koios_domain="https://preprod.koios.rest"
             ;;
             "Sancho-net" )
                 NODE_CONFIG=sanchonet
                 NODE_NETWORK='"--testnet-magic 4"'
                 CARDANO_NODE_NETWORK_ID=4
+                koios_domain="https://sancho.koios.rest"
             ;;
         esac
 
@@ -113,7 +114,7 @@ if [ ! -e "${envPath}" ]; then
             echo alias glive="'cd ${HOME}/cnode/scripts; ./gLiveView.sh'" >> "${HOME}"/.bashrc
             
             #設定ファイル作成
-            CreateEnv "${nodeType}" "${syncNetwork}"
+            CreateEnv "${nodeType}" "${syncNetwork}" "${koios_domain}"
 
             echo
             style "設定ファイルを作成しました" "${currentDir}/env"

@@ -9,6 +9,7 @@ BLUE='\e[34m'
 PURPLE='\e[35m'
 CYAN='\e[36m'
 WHITE='\e[37m'
+GRAY='\033[1;30m'
 
 # 太字のフォアグラウンドカラー
 B_BLACK='\e[30;1m'
@@ -113,7 +114,7 @@ WalletBalance(){
       total_balance=$((${total_balance}+${utxo_balance}))
       tx_in="${tx_in} --tx-in ${in_addr}#${idx}"
   done < ${NODE_HOME}/balance.out
-  txcnt=$(cat balance.out | wc -l)
+  txcnt=$(cat ${NODE_HOME}/balance.out | wc -l)
   style "ADA残高:" "$(scale1 ${total_balance})"
   style "未使用UTXO:" ${txcnt}
 }
@@ -142,6 +143,28 @@ CheckWallet(){
   cat ${NODE_HOME}/balance.out
   echo
   WalletBalance
+}
+
+Cli_TxRawCheck(){
+echo "トランザクションファイルを作成しました (${NODE_HOME}/tx.raw)"
+echo
+echo "1.tx.rawをエアギャップの作業ディレクトリにコピーしてください"
+echo "2.コピーしたらエアギャップ側で署名ファイル(tx.signed)を作成してください"
+echo "3.エアギャップで署名ファイルを作成したらBPの${NODE_HOME}にコピーしてください"
+echo
+while :
+do
+  Gum_OneSelect "1～3が完了したらEnterを押して下さい"
+  echo
+  if [ -e ${NODE_HOME}/tx.signed ]; then
+    Cli_TxSubmit
+    break
+  else
+    echo "tx.signedが見つかりません。正しいディレクトリにコピーしてください"
+    echo
+    break
+  fi
+done
 }
 
 #トランザクション送信
@@ -210,6 +233,131 @@ Cli_TxSubmit(){
 
 FilePathAndHash(){
   echo -e "${1} >> ${YELLOW}$(sha256sum ${1} | awk '{ print $1 }')${NC}\n"
+}
+
+
+CreatePoolCert(){
+  while :
+  do
+    inputPledge=$(gum input --width=0 --header="Pledge誓約ADAを整数で入力して下さい(1-1000000)" --char-limit=7 --header.foreground="99" --no-show-help --placeholder "Pledge")
+    inputFixCost=$(gum input --value="170" --width=0 --header="固定手数料を整数で入力してください(170以上)" --char-limit=5 --header.foreground="99" --no-show-help --placeholder "Fix Cost")
+    inputFixMargin=$(gum input --value="0.5" --width=0 --header="変動手数料を入力してください(%不要)" --char-limit=3 --header.foreground="99" --no-show-help --placeholder "0.5 or 1.5 or 3 etc...")
+
+    while :
+    do
+      inputRelayNum=$(gum input --value="2" --width=0 --header="チェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
+        # 入力が数字かどうかを確認
+      if [[ "$inputRelayNum" =~ ^[0-9]+$ ]]; then
+        # 配列を使用して変数を管理
+        declare -a inputRelays
+        declare -a inputPorts
+
+        # ループを実行
+        for ((i = 1; i <= $inputRelayNum; i++)); do
+          if [ "$i" -ge "2" ]; then poolRelaySet+="   "; fi
+          inputRelayAddress=$(gum input --width=0 --header="リレー${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
+          inputRelays[$i]=${inputRelayAddress}
+          inputRelayPort=$(gum input --value="6000" --width=0 --header="リレー${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Realy Port")
+          inputPorts[$i]=${inputRelayPort}
+
+          # 正規表現でIPv4アドレスの形式をチェック
+          if [[ $inputRelayAddress =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+              # 各オクテットが0〜255の範囲内であることをチェック
+              IFS='.' read -r -a octets <<< "$inputRelayAddress"
+              valid=true
+              for octet in "${octets[@]}"; do
+                  if (( octet < 0 || octet > 255 )); then
+                      valid=false
+                      break
+                  fi
+              done
+              if [ "$valid" = true ]; then
+                  poolRelaySet+="--pool-relay-ipv4 ${inputRelayAddress}   --pool-relay-port ${inputRelayPort}"
+              else
+                  echo "無効なIPアドレスです"
+                  break 1
+              fi
+          else
+              poolRelaySet+="--single-host-pool-relay ${inputRelayAddress}   --pool-relay-port ${inputRelayPort}"
+          fi
+        done
+        break 1
+      else
+        echo "数字を入力してください"
+        exit 1
+      fi
+    done
+    inputMetaUrl=$(gum input --value="http://xstakepool.com/poolMetaData.json" --width=0 --header="poolMetaData.jsonのホストURLを入力してください" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "Pool Homepage URL")
+
+    # ヘッダー行を出力
+    echo -e "誓約(Pledge)" ${B_YELLOW}"${inputPledge}ADA"${NC} >> table.out
+    echo -e "固定手数料" "${inputFixCost}ADA"  >> table.out
+    echo -e "変動手数料" "${inputFixMargin}%" >> table.out
+    echo -e "登録リレー数" "$inputRelayNum"  >> table.out
+
+    for ((i = 1; i <= $inputRelayNum; i++)); do
+      echo -e "リレー$iアドレス" "${inputRelays[$i]}"  >> table.out
+      echo -e "リレー$iポート" "${inputPorts[$i]}"  >> table.out
+    done
+    echo -e "メタデータURL" "${inputMetaUrl}"  >> table.out
+    column -t < table.out
+    rm table.out
+
+echo
+echo "pool.cert生成実行コマンド確認"
+echo "コマンド上の入力数字はLovelace形式です"
+cmdPoolCert=$(cat << EOF
+cardano-cli stake-pool registration-certificate \
+  --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} \
+  --vrf-verification-key-file ${NODE_HOME}/${VRF_VKEY_FILENAME} \
+  --pool-pledge $(echo "${inputPledge}000000") \
+  --pool-cost $(echo "${inputFixCost}000000") \
+  --pool-margin $(echo 0)$(echo "scale=3; ${inputFixMargin} / 100" | bc) \
+  --pool-reward-account-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+  --pool-owner-stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+  $NODE_NETWORK \
+  $poolRelaySet \
+  --metadata-url ${inputMetaUrl} \
+  --metadata-hash $(cat ${NODE_HOME}/poolMetaDataHash.txt) \
+  --out-file ${NODE_HOME}/${POOL_CERT_FILENAME}
+EOF
+)
+    echo
+    echo -e ${GRAY}"$cmdPoolCert"${NC} | sed 's/   / \\\n/g'
+    echo
+    Gum_Confirm_YesNo "この値で${POOL_CERT_FILENAME}を生成しますか？" "Yes" "再度入力してください"
+    if [[ ${iniSettings} == "Yes" ]]; then
+      echo
+      eval $cmdPoolCert
+      echo プール登録証明書 ${YELLOW}"${NODE_HOME}/${POOL_CERT_FILENAME}${NC} を生成しました"
+      echo
+      cardano-cli stake-address delegation-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --out-file ${NODE_HOME}/deleg.cert
+      chmod u+rwx ${COLDKEYS_DIR}
+      cardano-cli stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format bech32 --out-file ${NODE_HOME}/pool.id-bech32
+      cardano-cli stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format hex --out-file ${NODE_HOME}/pool.id
+      chmod a-rwx ${COLDKEYS_DIR}
+      echo -e "委任証明書 ${YELLOW}${NODE_HOME}/deleg.cert${NC} を生成しました"
+      echo -e "プールID(Bech32) ${YELLOW}${NODE_HOME}/pool.id-bech32${NC} を生成しました"
+      echo -e "プールID(hex) ${YELLOW}${NODE_HOME}/pool.id${NC} を生成しました"
+      echo
+      echo -e "以下のファイルをBPの作業ディレクトへコピーしてください${NC}"
+      echo "${NODE_HOME}/${POOL_CERT_FILENAME}"
+      echo "${NODE_HOME}/deleg.cert"
+      echo "${NODE_HOME}/pool.id-bech32"
+      echo "${NODE_HOME}/pool.id"
+      echo '----------------------------------------'
+      echo ">> [エアギャップ] ⇒ [BP作業ディレクトリ]"
+      echo '----------------------------------------'
+      echo
+      Gum_OneSelect "BPにコピーしたらEnterを押して下さい"
+      break 1
+    else
+      echo ${iniSettings}
+      echo
+    fi
+  done
+
+
 }
 
 
