@@ -1119,6 +1119,7 @@ EOF
           ;;
 
           "プール登録Tx署名" )
+            chmod u+rwx $HOME/cold-keys
             cardano-cli transaction sign --tx-body-file ${NODE_HOME}/tx.raw  --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file ${NODE_HOME}/tx.signed
             echo
             echo "プール登録Tx署名ファイルを生成しました"
