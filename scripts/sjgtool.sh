@@ -53,7 +53,7 @@ PathEnabledCheck(){
 
 
 CreatePoolMetaJson(){
-cat <<-EOF > ${NODE_CONFIG}/${POOL_META_FILENAME}
+cat <<-EOF > ${NODE_HOME}/${POOL_META_FILENAME}
 {
   "name": "$1",
   "description": "$2",
@@ -686,7 +686,7 @@ case $selection0 in
         Header
 
         if [ "${NODE_TYPE}" == "ブロックプロデューサー" ]; then
-          selection1=$(gum choose --header="" --height=10 --no-show-help "ノードインストール ${installCheck}" "プールメタデータ作成 ${metaDataCheck}" "トポロジー構成" "プールウォレット確認${walletCheck}" "BP用キー作成${bpKeyCreateCheck}" "ステークアドレス登録" "プール登録" "メインメニュー")
+          selection1=$(gum choose --header="" --height=12 --no-show-help "ノードインストール ${installCheck}" "プールメタデータ作成 ${metaDataCheck}" "トポロジー構成" "プールウォレット確認${walletCheck}" "BP用キー作成${bpKeyCreateCheck}" "ステークアドレス登録" "プール登録" "メインメニュー")
         elif [ "${NODE_TYPE}" == "リレー" ]; then
           selection1=$(gum choose --header="" --height=4 --no-show-help "ノードインストール" "メインメニュー")
         elif [ "${NODE_TYPE}" == "エアギャップ" ]; then
@@ -740,7 +740,7 @@ case $selection0 in
                 Gum_DotSpinner3 "${POOL_META_FILENAME}を作成しています"
                 echo
                 echo "以下のパスで${POOL_META_FILENAME}を作成しました"
-                CreatePoolMetaJson "${metaPoolName}" "${metaTicker}" "${metaDirscription}" "${metaHomepageUrl}"
+                CreatePoolMetaJson "${metaPoolName}" "${metaDirscription}" "${metaTicker}" "${metaHomepageUrl}"
                 echo
                 echo "${POOL_META_FILENAME}をGithubまたはホームページサーバーにアップロードしてください"
                 echo
@@ -764,7 +764,7 @@ case $selection0 in
                         echo
                         Gum_Confirm_YesNo "このデータでよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
                         
-                        if [ "${iniSettings}" == "Yes" ]; then
+                        if [[ ${iniSettings} == "Yes" ]]; then
                           echo "正常"
                           echo "POOL_METADATA_URL=\"${poolMetaurl}\"" >> ${currentDir}/env
                           wget -q -O ${NODE_HOME}/${POOL_META_FILENAME} ${poolMetaurl}
@@ -802,6 +802,7 @@ case $selection0 in
             fi
           ;;
           "プールウォレット確認${walletCheck}" )
+            checkPaymentFile=$(PathEnabledCheck "${NODE_HOME}/${PAYMENT_ADDR_FILENAME}" "Yes" "No")
             if [ "${NODE_TYPE}" == "ブロックプロデューサー" ]; then
               if [ "${checkPaymentFile}" == "Yes" ]; then
                 echo "${PAYMENT_ADDR_FILENAME}ファイルが見つかりました"
@@ -976,6 +977,7 @@ EOF
             echo
             Gum_OneSelect "戻る"
           elif [ ! -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${VRF_VKEY_FILENAME}" ]; then
+            cardano-cli query protocol-parameters $NODE_NETWORK --out-file ${NODE_HOME}/params.json
             cardano-cli node key-gen-VRF --verification-key-file ${NODE_HOME}/${VRF_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${VRF_SKEY_FILENAME}
             if [ $? -eq 0 ]; then
               echo "VRFキーを読み取り専用で生成しました"
@@ -1010,7 +1012,6 @@ EOF
               Gum_Confirm_YesNo "作成してよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
 
               if [ "${iniSettings}" == "Yes" ]; then
-                cardano-cli query protocol-parameters $NODE_NETWORK --out-file ${NODE_HOME}/params.json
                 cardano-cli address key-gen --verification-key-file ${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
                 cardano-cli stake-address key-gen --verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME}
                 cardano-cli address build --payment-verification-key-file ${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file ${NODE_HOME}/${PAYMENT_ADDR_FILENAME} ${NODE_NETWORK}

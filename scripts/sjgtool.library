@@ -199,8 +199,8 @@ Cli_TxSubmit(){
       printf "\n${FG_YELLOW}Tx承認を確認しています。このまましばらくお待ち下さい...${NC}\n\n"
       while :
         do
-        koios_tx_status=$(curl -s -X POST "$KOIOS_API/tx_status" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_tx_hashes\":[\"${txId}\"]}" | jq -r '.[].num_confirmations')
-        if [[ ${koios_tx_status} != "null" ]] && [ $koios_tx_status -gt 1 ]; then
+        koios_tx_status=$(curl -s -X POST "$KOIOS_API/api/v1/tx_status" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_tx_hashes\":[\"${txId}\"]}" | jq -r '.[].num_confirmations')
+        if [[ ${koios_tx_status} != "null" ]] && [ ${koios_tx_status} -gt 1 ]; then
           printf "確認済みブロック:$koios_tx_status ${FG_GREEN}Txが承認されました${NC}\n\n"
           sleep 3s
           break
@@ -329,6 +329,7 @@ EOF
     Gum_Confirm_YesNo "この値で${POOL_CERT_FILENAME}を生成しますか？" "Yes" "再度入力してください"
     if [[ ${iniSettings} == "Yes" ]]; then
       echo
+      chmod u+rwx $HOME/cold-keys
       eval $cmdPoolCert
       echo プール登録証明書 ${YELLOW}"${NODE_HOME}/${POOL_CERT_FILENAME}${NC} を生成しました"
       echo
