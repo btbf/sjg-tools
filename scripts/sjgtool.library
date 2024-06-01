@@ -172,7 +172,7 @@ done
 Cli_TxSubmit(){
   echo
   Gum_Confirm_YesNo "トランザクションを送信しますか？" "Yes" "再度トランザクション作成から実施してください"
-  if [ ${iniSettings} == "Yes" ]; then
+  if [[ ${iniSettings} == "Yes" ]]; then
     local txId=$(cardano-cli transaction txid --tx-body-file ${NODE_HOME}/tx.raw)
     local txResult=$(cardano-cli transaction submit --tx-file ${NODE_HOME}/tx.signed $NODE_NETWORK)
     echo
@@ -217,6 +217,7 @@ Cli_TxSubmit(){
       echo ${txResult}
       echo
       printf "${FG_RED}Tx送信に失敗しました${NC}\n"
+      Gum_OneSelect "戻る"
     fi
   else 
     echo

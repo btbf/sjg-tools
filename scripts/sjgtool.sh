@@ -691,7 +691,7 @@ case $selection0 in
           selection1=$(gum choose --header="" --height=4 --no-show-help "ノードインストール" "メインメニュー")
         elif [ "${NODE_TYPE}" == "エアギャップ" ]; then
           walletKeyCheck=$(PathEnabledCheck "${NODE_HOME}/${PAYMENT_SKEY_FILENAME}" "✅" "❌")
-          selection1=$(gum choose --header="" --height=10 --no-show-help "CLIインストール" "プールウォレット作成 ${walletKeyCheck}" "BP用キー作成" "プール登録証明書作成" "トランザクション署名" "メインメニュー")
+          selection1=$(gum choose --header="" --height=10 --no-show-help "CLIインストール" "プールウォレット作成 ${walletKeyCheck}" "BP用キー作成" "ステークアドレスTx署名" "プール登録証明書作成" "プール登録Tx署名" "メインメニュー")
         else
           echo "ノードタイプ設定値が無効です"
           sleep 3
@@ -1088,6 +1088,7 @@ EOF
             if [ -e ${NODE_HOME}/pool.cert ] && [ -e ${NODE_HOME}/deleg.cert ]; then
               CheckWallet
               poolDeposit=$(cat ${NODE_HOME}/params.json | jq -r '.stakePoolDeposit')
+              currentSlot=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
               cardano-cli transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/payment.addr)+$(( ${total_balance} - ${poolDeposit}))  --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 0 --certificate-file ${NODE_HOME}/pool.cert --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.tmp
               fee=$(cardano-cli transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --tx-in-count ${txcnt} --tx-out-count 1 $NODE_NETWORK --witness-count 3 --byron-witness-count 0 --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
               txOut=$((${total_balance}-${poolDeposit}-${fee}))
@@ -1108,10 +1109,19 @@ EOF
             fi
           ;;
 
-          "トランザクション署名" )
+          "ステークアドレスTx署名" )
             cardano-cli transaction sign --tx-body-file ${NODE_HOME}/tx.raw --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file ${NODE_HOME}/tx.signed
             echo
             echo "トランザクション署名ファイルを生成しました"
+            echo "${NODE_HOME}/tx.signed をBPの作業ディレクトリにコピーしてください"
+            echo
+            Gum_OneSelect "コピーしたらEnterを押して下さい"
+          ;;
+
+          "プール登録Tx署名" )
+            cardano-cli transaction sign --tx-body-file ${NODE_HOME}/tx.raw  --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file ${NODE_HOME}/tx.signed
+            echo
+            echo "プール登録Tx署名ファイルを生成しました"
             echo "${NODE_HOME}/tx.signed をBPの作業ディレクトリにコピーしてください"
             echo
             Gum_OneSelect "コピーしたらEnterを押して下さい"
