@@ -1,8 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck disable=SC1091,SC2086,SC1001,SC2317
 # shellcheck source="$HOME/.bashrc"
+# shellcheck source="${envPath}"
 
+currentDir=$(pwd)
 source ${HOME}/.bashrc
+source ${currentDir}/sjgtool.library
+
 
 style(){
   echo -e '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' "\n" \
