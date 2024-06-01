@@ -1,4 +1,8 @@
 #!/bin/bash
+# shellcheck disable=SC1091,SC2086,SC1001,SC2317
+# shellcheck source="$HOME/.bashrc"
+
+source ${HOME}/.bashrc
 
 style(){
   echo -e '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' "\n" \
@@ -47,55 +51,55 @@ envPath="${currentDir}"/env
 ##------初期設定
 clear
 if [ ! -e "${envPath}" ]; then
+    gum style \
+        --foreground 212 --border-foreground 212 --border double \
+        --align center --width 50 --margin "1 2" --padding "2 4" \
+        'SJGTOOL V2'  ${version} '' 'ツール初期設定'
+    if [ -n "${NODE_HOME}" ]; then echo -e "既存のネットワーク設定が見つかりました : ${NODE_CONFIG}\n";workDir=${NODE_HOME};syncNetwork=${NODE_CONFIG}; fi
+
+    nodeType=$(gum choose --header="当サーバーにセットアップするノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ")
+    
     if [ -z "${NODE_HOME}" ]; then
-        gum style \
-            --foreground 212 --border-foreground 212 --border double \
-            --align center --width 50 --margin "1 2" --padding "2 4" \
-            'SJGTOOL V2' 'v.0.2.0' '' 'ツール初期設定'
-
-        nodeType=$(gum choose --header="当サーバーにセットアップするノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ")
-
-        syncNetwork=$(gum choose --header="接続ネットワークを選択してください" "Mainnet" "Preview-testnet" "PreProd-testnet" "Sancho-net")
-
+        syncNetwork=$(gum choose --header="接続ネットワークを選択してください" "mainnet" "preview" "preprod" "Sancho-net")
         workDir=$(gum input --value "${HOME}/cnode" --width=0 --header="作業ディレクトリを作成します。任意のパスを指定可能です。デフォルトの場合はそのままEnterを押して下さい" --header.foreground="99" --placeholder "Please specify the working directory")
+    fi
 
+    echo
+    case "${syncNetwork}" in
+        "mainnet" )
+            NODE_CONFIG=mainnet
+            NODE_NETWORK='"--mainnet"'
+            CARDANO_NODE_NETWORK_ID=mainnet
+            koios_domain="https://api.koios.rest"
+        ;;
+        "preview" )
+            NODE_CONFIG=preview
+            NODE_NETWORK='"--testnet-magic 2"'
+            CARDANO_NODE_NETWORK_ID=2
+            koios_domain="https://preview.koios.rest"
+        ;;
+        "preprod" )
+            NODE_CONFIG=preprod
+            NODE_NETWORK='"--testnet-magic 1"'
+            CARDANO_NODE_NETWORK_ID=1
+            koios_domain="https://preprod.koios.rest"
+        ;;
+        "Sancho-net" )
+            NODE_CONFIG=sanchonet
+            NODE_NETWORK='"--testnet-magic 4"'
+            CARDANO_NODE_NETWORK_ID=4
+            koios_domain="https://sancho.koios.rest"
+        ;;
+    esac
 
-        echo
-        case "${syncNetwork}" in
-            "Mainnet" )
-                NODE_CONFIG=mainnet
-                NODE_NETWORK='"--mainnet"'
-                CARDANO_NODE_NETWORK_ID=mainnet
-                koios_domain="https://api.koios.rest"
-            ;;
-            "Preview-testnet" )
-                NODE_CONFIG=preview
-                NODE_NETWORK='"--testnet-magic 2"'
-                CARDANO_NODE_NETWORK_ID=2
-                koios_domain="https://preview.koios.rest"
-            ;;
-            "PreProd-testnet" )
-                NODE_CONFIG=preprod
-                NODE_NETWORK='"--testnet-magic 1"'
-                CARDANO_NODE_NETWORK_ID=1
-                koios_domain="https://preprod.koios.rest"
-            ;;
-            "Sancho-net" )
-                NODE_CONFIG=sanchonet
-                NODE_NETWORK='"--testnet-magic 4"'
-                CARDANO_NODE_NETWORK_ID=4
-                koios_domain="https://sancho.koios.rest"
-            ;;
-        esac
+    style "ノードタイプ:" "${nodeType}"
+    style "ネットワーク:" "${NODE_CONFIG}"
+    style "作業ディレクトリ:" "${workDir}"
+    echo
+    gum confirm "この設定でよろしいですか？" --default=false --affirmative="はい" --negative="いいえ" && iniSettings="Yes" || iniSettings="最初からやり直す場合はツールを再実行してください"
 
-        style "ノードタイプ:" "${nodeType}"
-        style "ネットワーク:" "${syncNetwork}"
-        style "作業ディレクトリ:" "${workDir}"
-        echo
-        gum confirm "この設定でよろしいですか？" --default=false --affirmative="はい" --negative="いいえ" && iniSettings="Yes" || iniSettings="最初からやり直す場合はツールを再実行してください"
-
-        if [ "${iniSettings}" == "Yes" ]; then
-            
+    if [ "${iniSettings}" == "Yes" ]; then
+        if [ -z "${NODE_HOME}" ]; then
             echo PATH="$HOME/.local/bin:$PATH" >> "${HOME}"/.bashrc
             echo export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" >> "${HOME}"/.bashrc
             echo export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> "${HOME}"/.bashrc
@@ -112,48 +116,23 @@ if [ ! -e "${envPath}" ]; then
             echo alias cnstop='"sudo systemctl stop cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnreload='"kill -HUP $(pidof cardano-node)"' >> "${HOME}"/.bashrc
             echo alias glive="'cd ${HOME}/cnode/scripts; ./gLiveView.sh'" >> "${HOME}"/.bashrc
-            
-            #設定ファイル作成
-            CreateEnv "${nodeType}" "${syncNetwork}" "${koios_domain}"
-
-            echo
-            style "設定ファイルを作成しました" "${currentDir}/env"
-            echo
-
-            DotSpinner3 "初期設定を終了します"
-        else
-            clear
-            echo
-            echo "${iniSettings}"
-            exit
         fi
+        
+        #設定ファイル作成
+        CreateEnv "${nodeType}" "${NODE_CONFIG}" "${koios_domain}"
+
+        echo
+        style "設定ファイルを作成しました" "${currentDir}/env"
+        echo
+
+        DotSpinner3 "初期設定を終了します"
     else
-        echo "既存のSJG設定を検知しました"
+        clear
         echo
-        echo "接続ネットワーク：${NODE_CONFIG}"
-        echo "作業ディレクトリ：${nodeHome}"
-        echo
-        nodeType=$(gum choose --header="このサーバーのノードタイプを選択してください" "ブロックプロデューサー" "リレー" "エアギャップ")
-        echo "ノードタイプ：${nodeType}" 
-        echo
-        gum confirm "ツール用設定ファイルを作成します。この値でよろしいですか？" --default=false --affirmative="はい" --negative="いいえ" && iniSettings="Yes" || iniSettings="最初からやり直す場合はツールを再実行してください"
-
-        if [ "${iniSettings}" == "Yes" ]; then
-            #設定ファイル作成
-            CreateEnv "${nodeType}" "${syncNetwork}"
-            echo
-            style "設定ファイルを作成しました" "${currentDir}/env"
-            echo
-
-            DotSpinner3 "初期設定を終了します"
-        else
-            clear
-            echo
-            echo "${iniSettings}"
-            echo
-            exit
-        fi
+        echo "${iniSettings}"
+        exit
     fi
+
 fi
 
 # #------初期設定
