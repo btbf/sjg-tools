@@ -982,7 +982,7 @@ EOF
             FilePathAndHash ${NODE_HOME}/${VRF_SKEY_FILENAME}
             echo
             Gum_OneSelect "戻る"
-          elif [ ! -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${VRF_VKEY_FILENAME}" ]; then
+          elif [[ ${NODE_TYPE} == "ブロックプロデューサー" ]] && [ ! -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${VRF_VKEY_FILENAME}" ]; then
             cardano-cli query protocol-parameters $NODE_NETWORK --out-file ${NODE_HOME}/params.json
             cardano-cli node key-gen-VRF --verification-key-file ${NODE_HOME}/${VRF_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${VRF_SKEY_FILENAME}
             if [ $? -eq 0 ]; then
@@ -1106,6 +1106,8 @@ EOF
                 echo -e トランザクション手数料: $fee
                 echo
                 Cli_TxRawCheck
+                echo
+                echo "プールID:$(cat ${NODE_HOME}/pool.id-bech32)"
               else
                 echo "Txファイルの生成に失敗しました"
                 echo
