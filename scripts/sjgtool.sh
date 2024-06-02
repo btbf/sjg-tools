@@ -966,6 +966,7 @@ EOF
               echo "このキーペアはプール運営で最も大切な鍵ファイルであり、紛失するとプール運営を継続できなくなりますのでご注意下さい"
               echo "複数のUSBドライブなどにバックアップを推奨します"
               chmod 400 ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME}; chmod 400 ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}
+              Gum_OneSelect "戻る"
             else
               echo "コールドキーの生成に失敗しました"
             fi
@@ -995,14 +996,16 @@ EOF
               chmod 400 ${NODE_HOME}/${VRF_VKEY_FILENAME}; chmod 400 ${NODE_HOME}/${VRF_VKEY_FILENAME}
               echo "ブロックプロデューサーで作成した${VRF_VKEY_FILENAME}と${VRF_VKEY_FILENAME}をエアギャップの作業ディレクトリにコピーしてください"
 
-              read -p "ハッシュ値が一致したらEnterを押してください"
+              read -p "コピーしたらEnterを押してください"
               KesCreate ${NODE_TYPE}
             else
               echo "VRFキーの生成に失敗しました"
+              Gum_OneSelect "戻る"
             fi
 
           else
             echo "キーが見つかりません"
+            Gum_OneSelect "戻る"
           fi
             # KES作成
             # node.cert作成
