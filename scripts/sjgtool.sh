@@ -771,6 +771,12 @@ case $selection0 in
                           cardano-cli stake-pool metadata-hash --pool-metadata-file ${NODE_HOME}/${POOL_META_FILENAME} > ${NODE_HOME}/poolMetaDataHash.txt
                           echo "${NODE_HOME}/poolMetaDataHash.txtを作成しました"
                           echo
+                          echo -e "${YELLOW}1. BPのpoolMetaDataHash.txtエアギャップのcnodeディレクトリにコピーしてください${NC}"
+                          echo '----------------------------------------'
+                          echo ">> [BP] ⇒ poolMetaDataHash.txt ⇒ [エアギャップ]"
+                          echo '----------------------------------------'
+                          echo
+                          Gum_OneSelect "コピーしたらEnterを押して下さい"
                           break
                         else
                           echo
@@ -990,12 +996,13 @@ EOF
               echo "ブロックプロデューサーで作成した${VRF_VKEY_FILENAME}と${VRF_VKEY_FILENAME}をエアギャップの作業ディレクトリにコピーしてください"
 
               read -p "ハッシュ値が一致したらEnterを押してください"
+              KesCreate ${NODE_TYPE}
             else
               echo "VRFキーの生成に失敗しました"
             fi
 
           else
-            KesCreate ${NODE_TYPE}
+            
           fi
             # KES作成
             # node.cert作成
@@ -1085,7 +1092,7 @@ EOF
           ;;
 
           "プール登録" )
-            if [ -e ${NODE_HOME}/pool.cert ] && [ -e ${NODE_HOME}/deleg.cert ]; then
+            if [ -e ${NODE_HOME}/${POOL_CERT_FILENAME} ] && [ -e ${NODE_HOME}/deleg.cert ]; then
               CheckWallet
               poolDeposit=$(cat ${NODE_HOME}/params.json | jq -r '.stakePoolDeposit')
               currentSlot=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
