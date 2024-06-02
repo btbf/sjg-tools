@@ -1002,7 +1002,7 @@ EOF
             fi
 
           else
-            
+            echo "キーが見つかりません"
           fi
             # KES作成
             # node.cert作成
