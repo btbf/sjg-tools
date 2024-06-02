@@ -691,7 +691,7 @@ case $selection0 in
           selection1=$(gum choose --header="" --height=4 --no-show-help "ノードインストール" "メインメニュー")
         elif [ "${NODE_TYPE}" == "エアギャップ" ]; then
           walletKeyCheck=$(PathEnabledCheck "${NODE_HOME}/${PAYMENT_SKEY_FILENAME}" "✅" "❌")
-          selection1=$(gum choose --header="" --height=10 --no-show-help "CLIインストール" "プールウォレット作成 ${walletKeyCheck}" "BP用キー作成" "ステークアドレスTx署名" "プール登録証明書作成" "プール登録Tx署名" "メインメニュー")
+          selection1=$(gum choose --header="" --height=10 --no-show-help "CLIインストール" "プールウォレット作成 ${walletKeyCheck}" "BP用キー作成" "ノード運用証明書作成" "ステークアドレスTx署名" "プール登録証明書作成" "プール登録Tx署名" "メインメニュー")
         else
           echo "ノードタイプ設定値が無効です"
           sleep 3
@@ -1013,6 +1013,9 @@ EOF
 
           ;;
 
+          "ノード運用証明書作成" )
+          KesCreate ${NODE_TYPE}
+          ;;
           
           "プールウォレット作成 ${walletKeyCheck}" )
             if [ "${NODE_TYPE}" == "エアギャップ" ] && [ "${walletKeyCheck}" == "❌" ] ; then
