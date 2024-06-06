@@ -1,0 +1,373 @@
+#!/bin/bash
+version="v.0.2.0"
+
+# フォアグラウンドカラー
+BLACK='\033[0;30m'
+RED='\e[31m'
+GREEN='\e[32m'
+YELLOW='\e[33m'
+BLUE='\e[34m'
+PURPLE='\e[35m'
+CYAN='\e[36m'
+WHITE='\e[37m'
+GRAY='\033[1;30m'
+
+# 太字のフォアグラウンドカラー
+B_BLACK='\e[30;1m'
+B_RED='\e[31;1m'
+B_GREEN='\e[32;1m'
+B_YELLOW='\e[33;1m'
+B_BLUE='\e[34;1m'
+B_PURPLE='\e[35;1m'
+B_CYAN='\e[36;1m'
+B_WHITE='\e[37;1m'
+
+# 下線
+U_BLACK='\e[30;4m'
+U_RED='\e[31;4m'
+U_GREEN='\e[32;4m'
+U_YELLOW='\e[33;4m'
+U_BLUE='\e[34;4m'
+U_PURPLE='\e[35;4m'
+U_CYAN='\e[36;4m'
+U_WHITE='\e[37;4m'
+
+# 点滅
+F_BLACK='\e[30;5m'
+F_RED='\e[31;5m'
+F_GREEN='\e[32;5m'
+F_YELLOW='\e[33;5m'
+F_BLUE='\e[34;5m'
+F_PURPLE='\e[35;5m'
+F_CYAN='\e[36;5m'
+F_WHITE='\e[37;5m'
+
+# 色リセット
+NC='\033[0m' # No Color
+
+
+## Gum関連関数
+
+style(){
+  echo -e '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' "\n" \
+    | gum format -t template
+}
+
+YellowStyle(){
+  echo -e '{{ Color "11" " '"$1"' " }}' "\n" \
+    | gum format -t template
+}
+
+MagentaStyle(){
+  echo -e '{{ Color "127" " '"$1"' " }}' "\n" \
+    | gum format -t template
+}
+
+GreenStyle(){
+  echo -e '{{ Color "2" " '"$1"' " }}' "\n" \
+    | gum format -t template
+}
+
+#spin
+Gum_DotSpinner3(){
+    gum spin --spinner dot --title ${1} -- sleep 3
+}
+
+Gum_DotSpinner(){
+    gum spin --spinner dot --title ${1} -- ${2}
+}
+
+Gum_Fnspin() {
+    local TITLE="${*: -1}"
+    local COMMANDO="${*:1:$(($# - 1))}"
+    gum spin --spinner="dot" --title="$TITLE" --show-output -- bash -c "source ./sjgtool.sh && $COMMANDO"
+}
+
+Gum_OneSelect(){
+  gum choose --header="" --height=1 --no-show-help "${1}"
+}
+
+Gum_Confirm_YesNo(){
+  gum confirm "${1}" --default=false --affirmative="はい" --negative="いいえ" --no-show-help && iniSettings="${2}" || iniSettings="${3}"
+}
+
+
+#----------支払い系関数----------------
+
+#loverace変換
+scale1(){
+  #r_amount=`echo "scale=1; $1 / 1000000" | bc`
+  echo "scale=6; $1 / 1000000" | bc
+}
+
+scale3(){
+  #r_amount=`echo "scale=3; $1 / 1000000" | bc | awk '{echo "%.5f\n", $0}'`
+  echo "scale=6; $1 / 1000000" | bc | awk '{echo "%.5f\n", $0}'
+}
+
+WalletBalance(){
+  tx_in=""
+  total_balance=0
+  while read -r utxo; do
+      in_addr=$(awk '{ print $1 }' <<< "${utxo}")
+      idx=$(awk '{ print $2 }' <<< "${utxo}")
+      utxo_balance=$(awk '{ print $3 }' <<< "${utxo}")
+      total_balance=$((${total_balance}+${utxo_balance}))
+      tx_in="${tx_in} --tx-in ${in_addr}#${idx}"
+  done < ${NODE_HOME}/balance.out
+  txcnt=$(cat ${NODE_HOME}/balance.out | wc -l)
+  style "ADA残高:" "$(scale1 ${total_balance})"
+  style "未使用UTXO:" ${txcnt}
+}
+
+Cli_FeeCal(){
+  fee=$(cardano-cli transaction calculate-min-fee \
+    --tx-body-file ${NODE_HOME}/tx.tmp \
+    --tx-in-count ${txcnt} \
+    --tx-out-count 1 \
+    $NODE_NETWORK \
+    --witness-count 2 \
+    --byron-witness-count 0 \
+    --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
+echo fee: $fee
+echo
+}
+
+#ウォレットUtxO確認
+CheckWallet(){
+  echo 
+  style "アドレス：" "$(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})"
+  echo 
+  gum spin --spinner dot --show-output --title "ウォレット残高を確認しています" -- cardano-cli query utxo --address "$(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})" $NODE_NETWORK > ${NODE_HOME}/fullUtxo.out
+  #echo $0 >> fullUtxo.out
+  tail -n +3 ${NODE_HOME}/fullUtxo.out | sort -k3 -nr > ${NODE_HOME}/balance.out
+  cat ${NODE_HOME}/balance.out
+  echo
+  WalletBalance
+}
+
+Cli_TxRawCheck(){
+echo "トランザクションファイルを作成しました (${NODE_HOME}/tx.raw)"
+echo
+echo "1.tx.rawをエアギャップの作業ディレクトリにコピーしてください"
+echo "2.コピーしたらエアギャップ側で署名ファイル(tx.signed)を作成してください"
+echo "3.エアギャップで署名ファイルを作成したらBPの${NODE_HOME}にコピーしてください"
+echo
+while :
+do
+  Gum_OneSelect "1～3が完了したらEnterを押して下さい"
+  echo
+  if [ -e ${NODE_HOME}/tx.signed ]; then
+    Cli_TxSubmit
+    break
+  else
+    echo "tx.signedが見つかりません。正しいディレクトリにコピーしてください"
+    echo
+    break
+  fi
+done
+}
+
+#トランザクション送信
+Cli_TxSubmit(){
+  echo
+  Gum_Confirm_YesNo "トランザクションを送信しますか？" "Yes" "再度トランザクション作成から実施してください"
+  if [[ ${iniSettings} == "Yes" ]]; then
+    local txId=$(cardano-cli transaction txid --tx-body-file ${NODE_HOME}/tx.raw)
+    local txResult=$(cardano-cli transaction submit --tx-file ${NODE_HOME}/tx.signed $NODE_NETWORK)
+    echo
+    if [[ ${txResult} == "Transaction"* ]]; then
+      echo '----------------------------------------'
+      echo 'Tx送信結果'
+      echo '----------------------------------------'
+      echo ${txResult}
+      echo
+      echo 'トランザクションURL'
+      if [ ${NODE_CONFIG} == 'mainnet' ]; then
+        echo "https://cardanoscan.io/transaction/${txId}"
+      elif [ ${NODE_CONFIG} == 'preprod' ]; then
+        echo "https://preprod.cardanoscan.io/transaction/${txId}"
+      elif [ ${NODE_CONFIG} == 'preview' ]; then
+        echo "https://preview.cardanoscan.io/transaction/${txId}"
+      else
+        echo "TxID:${txId}"
+      fi
+      
+      printf "\n${FG_GREEN}Tx送信に成功しました${NC}\n"
+      echo
+      #トランザクション確認
+      printf "\n${FG_YELLOW}Tx承認を確認しています。このまましばらくお待ち下さい...${NC}\n\n"
+      while :
+        do
+        koios_tx_status=$(curl -s -X POST "$KOIOS_API/api/v1/tx_status" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_tx_hashes\":[\"${txId}\"]}" | jq -r '.[].num_confirmations')
+        if [[ ${koios_tx_status} != "null" ]] && [ ${koios_tx_status} -gt 1 ]; then
+          printf "確認済みブロック:$koios_tx_status ${FG_GREEN}Txが承認されました${NC}\n\n"
+          sleep 3s
+          break
+        else
+          sleep 30s
+        fi
+      done
+      echo
+      Gum_OneSelect "戻る"
+    else
+      echo '----------------------------------------'
+      echo 'Tx送信結果'
+      echo '----------------------------------------'
+      echo ${txResult}
+      echo
+      printf "${FG_RED}Tx送信に失敗しました${NC}\n"
+      Gum_OneSelect "戻る"
+    fi
+  else 
+    echo
+    echo "送信をキャンセルしました"
+    echo
+    Gum_OneSelect "戻る"
+    echo
+  fi
+}
+
+
+
+
+#----------モジュール関数----------------
+
+FilePathAndHash(){
+  echo -e "${1} >> ${YELLOW}$(sha256sum ${1} | awk '{ print $1 }')${NC}\n"
+}
+
+
+CreatePoolCert(){
+  while :
+  do
+    inputPledge=$(gum input --width=0 --header="Pledge誓約ADAを整数で入力して下さい(1-1000000)" --char-limit=7 --header.foreground="99" --no-show-help --placeholder "Pledge")
+    inputFixCost=$(gum input --value="170" --width=0 --header="固定手数料を整数で入力してください(170以上)" --char-limit=5 --header.foreground="99" --no-show-help --placeholder "Fix Cost")
+    inputFixMargin=$(gum input --value="0.5" --width=0 --header="変動手数料を入力してください(%不要)" --char-limit=3 --header.foreground="99" --no-show-help --placeholder "0.5 or 1.5 or 3 etc...")
+
+    while :
+    do
+      inputRelayNum=$(gum input --value="2" --width=0 --header="チェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
+        # 入力が数字かどうかを確認
+      if [[ "$inputRelayNum" =~ ^[0-9]+$ ]]; then
+        # 配列を使用して変数を管理
+        declare -a inputRelays
+        declare -a inputPorts
+
+        # ループを実行
+        for ((i = 1; i <= $inputRelayNum; i++)); do
+          if [ "$i" -ge "2" ]; then poolRelaySet+="   "; fi
+          inputRelayAddress=$(gum input --width=0 --header="リレー${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
+          inputRelays[$i]=${inputRelayAddress}
+          inputRelayPort=$(gum input --value="6000" --width=0 --header="リレー${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Realy Port")
+          inputPorts[$i]=${inputRelayPort}
+
+          # 正規表現でIPv4アドレスの形式をチェック
+          if [[ $inputRelayAddress =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+              # 各オクテットが0〜255の範囲内であることをチェック
+              IFS='.' read -r -a octets <<< "$inputRelayAddress"
+              valid=true
+              for octet in "${octets[@]}"; do
+                  if (( octet < 0 || octet > 255 )); then
+                      valid=false
+                      break
+                  fi
+              done
+              if [ "$valid" = true ]; then
+                  poolRelaySet+="--pool-relay-ipv4 ${inputRelayAddress}   --pool-relay-port ${inputRelayPort}"
+              else
+                  echo "無効なIPアドレスです"
+                  break 1
+              fi
+          else
+              poolRelaySet+="--single-host-pool-relay ${inputRelayAddress}   --pool-relay-port ${inputRelayPort}"
+          fi
+        done
+        break 1
+      else
+        echo "数字を入力してください"
+        exit 1
+      fi
+    done
+    inputMetaUrl=$(gum input --value="http://xstakepool.com/poolMetaData.json" --width=0 --header="poolMetaData.jsonのホストURLを入力してください" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "Pool Homepage URL")
+
+    # ヘッダー行を出力
+    echo -e "誓約(Pledge)" ${B_YELLOW}"${inputPledge}ADA"${NC} >> table.out
+    echo -e "固定手数料" "${inputFixCost}ADA"  >> table.out
+    echo -e "変動手数料" "${inputFixMargin}%" >> table.out
+    echo -e "登録リレー数" "$inputRelayNum"  >> table.out
+
+    for ((i = 1; i <= $inputRelayNum; i++)); do
+      echo -e "リレー$iアドレス" "${inputRelays[$i]}"  >> table.out
+      echo -e "リレー$iポート" "${inputPorts[$i]}"  >> table.out
+    done
+    echo -e "メタデータURL" "${inputMetaUrl}"  >> table.out
+    column -t < table.out
+    rm table.out
+
+echo
+echo "pool.cert生成実行コマンド確認"
+echo "コマンド上の入力数字はLovelace形式です"
+cmdPoolCert=$(cat << EOF
+cardano-cli stake-pool registration-certificate \
+  --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} \
+  --vrf-verification-key-file ${NODE_HOME}/${VRF_VKEY_FILENAME} \
+  --pool-pledge $(echo "${inputPledge}000000") \
+  --pool-cost $(echo "${inputFixCost}000000") \
+  --pool-margin $(echo 0)$(echo "scale=3; ${inputFixMargin} / 100" | bc) \
+  --pool-reward-account-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+  --pool-owner-stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+  $NODE_NETWORK \
+  $poolRelaySet \
+  --metadata-url ${inputMetaUrl} \
+  --metadata-hash $(cat ${NODE_HOME}/poolMetaDataHash.txt) \
+  --out-file ${NODE_HOME}/${POOL_CERT_FILENAME}
+EOF
+)
+    echo
+    echo -e ${GRAY}"$cmdPoolCert"${NC} | sed 's/   / \\\n/g'
+    echo
+    Gum_Confirm_YesNo "この値で${POOL_CERT_FILENAME}を生成しますか？" "Yes" "再度入力してください"
+    if [[ ${iniSettings} == "Yes" ]]; then
+      echo
+      chmod u+rwx $HOME/cold-keys
+      eval $cmdPoolCert
+      echo プール登録証明書 ${YELLOW}"${NODE_HOME}/${POOL_CERT_FILENAME}${NC} を生成しました"
+      echo
+      cardano-cli stake-address delegation-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --out-file ${NODE_HOME}/deleg.cert
+      chmod u+rwx ${COLDKEYS_DIR}
+      cardano-cli stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format bech32 --out-file ${NODE_HOME}/pool.id-bech32
+      cardano-cli stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format hex --out-file ${NODE_HOME}/pool.id
+      chmod a-rwx ${COLDKEYS_DIR}
+      echo -e "委任証明書 ${YELLOW}${NODE_HOME}/deleg.cert${NC} を生成しました"
+      echo -e "プールID(Bech32) ${YELLOW}${NODE_HOME}/pool.id-bech32${NC} を生成しました"
+      echo -e "プールID(hex) ${YELLOW}${NODE_HOME}/pool.id${NC} を生成しました"
+      echo
+      echo -e "以下のファイルをBPの作業ディレクトへコピーしてください${NC}"
+      echo "${NODE_HOME}/${POOL_CERT_FILENAME}"
+      echo "${NODE_HOME}/deleg.cert"
+      echo "${NODE_HOME}/pool.id-bech32"
+      echo "${NODE_HOME}/pool.id"
+      echo '----------------------------------------'
+      echo ">> [エアギャップ] ⇒ [BP作業ディレクトリ]"
+      echo '----------------------------------------'
+      echo
+      Gum_OneSelect "BPにコピーしたらEnterを押して下さい"
+      break 1
+    else
+      echo ${iniSettings}
+      echo
+    fi
+  done
+
+
+}
+
+
+#----------CLI関数----------------
+
+Cli_CurrentSlot(){
+  currentSlot=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
+}
+
+
