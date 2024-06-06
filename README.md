@@ -1,7 +1,7 @@
 # New SJG-Tools
 
 SJGTOOL V2 α
-※現時点では初回インストールのみ対応しています。
+※現時点ではエラー処理が不十分です。既存で発見されるバグはすでに認知しています。ご利用の際はテストネットでご利用下さい
 
 前提条件
 ```
@@ -30,7 +30,7 @@ sudo apt update && sudo apt install gum
 git clone https://github.com/btbf/sjg-tools.git
 cd sjg-tools
 git fetch --all --recurse-submodules --tags
-git checkout tags/0.1.1-alpha
+git checkout tags/0.2.0-alpha
 ```
 
 ```
