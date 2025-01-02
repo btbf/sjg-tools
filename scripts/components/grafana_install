@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC1091,SC2086,SC1001,SC2317
+# shellcheck source="$HOME/.bashrc"
+
+
+
+## Relay1の場合
+grafanaInstall(){
+    echo "Grafanaをインストールします..."
+    sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
+
+    cd $HOME
+    echo $sudopass | sudo apt install -y prometheus prometheus-node-exporter
+    sudo apt-get install -y apt-transport-https software-properties-common
+    sudo wget -q -O /usr/share/keyrings/grafana.key https://apt.grafana.com/gpg.key
+    echo "deb [signed-by=/usr/share/keyrings/grafana.key] https://apt.grafana.com stable main" > grafana.list
+    sudo mv grafana.list /etc/apt/sources.list.d/grafana.list
+    sudo apt update && sudo apt install -y grafana
+
+
+    sudo systemctl enable grafana-server.service
+    sudo systemctl enable prometheus.service
+    sudo systemctl enable prometheus-node-exporter.service
+
+    sudo ufw allow 3000/tcp
+    sudo ufw reload
+
+    echo "Grafanaをインストールしました..."
+}
+
+
+
+
+
+
+# ## BP,Relay2以降の場合
+
+# sudo apt install -y prometheus-node-exporter
+# sudo systemctl enable prometheus-node-exporter.service
+# sudo ufw allow from <リレーノード1のIP> to any port 12798
+# sudo ufw allow from <リレーノード1のIP> to any port 9100
+# sudo ufw reload

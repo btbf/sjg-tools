@@ -3,9 +3,14 @@
 # shellcheck source="$HOME/.bashrc"
 # shellcheck source="${envPath}"
 
-currentDir=$(pwd)
+
+installDir=/opt/cnm/
+envPath=${installDir}/env
+gum_version="0.14.5"
+cnm_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
+
+
 source ${HOME}/.bashrc
-source ${currentDir}/sjgtool.library
 
 
 style(){
@@ -13,8 +18,9 @@ style(){
     | gum format -t template
 }
 
+
 CreateEnv(){
-cat <<-EOF > ./env 
+cat <<-EOF > ${envPath}
 #!/bin/bash
 #主要な値は環境変数に入っています。 "${HOME}"/.bashrc
 
@@ -48,8 +54,38 @@ DotSpinner3(){
 
 
 
-currentDir=$(pwd)
-envPath="${currentDir}"/env
+
+#環境設定
+cat > ~/.tmux.conf << EOF
+set -g default-terminal "screen-256color"
+EOF
+
+
+#ライブラリインストール
+echo "ライブラリをインストールします"
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
+sudo apt update && sudo apt install gum=${gum_version}
+gum --version
+echo
+
+#CNODE Managerインストール
+echo "CNODE Managerをインストールします"
+cd $HOME/git || { echo "Failure"; exit 1; }
+wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${cnm_version}.tar.gz -O cnm.tar.gz
+tar xzvf cnm.tar.gz
+rm cnm.tar.gz
+
+
+sudo mkdir ${installDir}
+cd sjg-tools-${cnm_version}/scripts
+sudo cp ./* ${installDir}
+
+chmod 755 cnm_run.sh
+chmod 755 sjgtool.sh
+
+rm -rf $HOME/git/sjg-tools-${cnm_version}
 
 
 ##------初期設定
@@ -58,14 +94,15 @@ if [ ! -e "${envPath}" ]; then
     gum style \
         --foreground 212 --border-foreground 212 --border double \
         --align center --width 50 --margin "1 2" --padding "2 4" \
-        'SJGTOOL V2'  ${version} '' 'ツール初期設定'
+        'SJGTOOL V2'  ${version} '' '初期設定'
+
     if [ -n "${NODE_HOME}" ]; then echo -e "既存のネットワーク設定が見つかりました : ${NODE_CONFIG}\n";workDir=${NODE_HOME};syncNetwork=${NODE_CONFIG}; fi
 
-    nodeType=$(gum choose --header="当サーバーにセットアップするノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ")
+    nodeType=$(gum choose --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" --no-show-help)
     
     if [ -z "${NODE_HOME}" ]; then
-        syncNetwork=$(gum choose --header="接続ネットワークを選択してください" "mainnet" "preview" "preprod" "Sancho-net")
-        workDir=$(gum input --value "${HOME}/cnode" --width=0 --header="作業ディレクトリを作成します。任意のパスを指定可能です。デフォルトの場合はそのままEnterを押して下さい" --header.foreground="99" --placeholder "Please specify the working directory")
+        syncNetwork=$(gum choose --header="接続ネットワークを選択してください" --no-show-help "mainnet" "preview" "preprod" "Sancho-net")
+        workDir=$(gum input --value "${HOME}/cnode" --width=0 --no-show-help --header="プール管理ディレクトリを作成します。デフォルトの場合はそのままEnterを押して下さい" --header.foreground="99" --placeholder "${HOME}/cnode")
     fi
 
     echo
@@ -98,9 +135,9 @@ if [ ! -e "${envPath}" ]; then
 
     style "ノードタイプ:" "${nodeType}"
     style "ネットワーク:" "${NODE_CONFIG}"
-    style "作業ディレクトリ:" "${workDir}"
+    style "プール管理ディレクトリ:" "${workDir}"
     echo
-    gum confirm "この設定でよろしいですか？" --default=false --affirmative="はい" --negative="いいえ" && iniSettings="Yes" || iniSettings="最初からやり直す場合はツールを再実行してください"
+    gum confirm "この設定でよろしいですか？" --default=true --no-show-help --affirmative="はい" --negative="いいえ" && iniSettings="Yes" || iniSettings="No"
 
     if [ "${iniSettings}" == "Yes" ]; then
         if [ -z "${NODE_HOME}" ]; then
@@ -120,6 +157,8 @@ if [ ! -e "${envPath}" ]; then
             echo alias cnstop='"sudo systemctl stop cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnreload='"kill -HUP $(pidof cardano-node)"' >> "${HOME}"/.bashrc
             echo alias glive="'cd ${HOME}/cnode/scripts; ./gLiveView.sh'" >> "${HOME}"/.bashrc
+            echo alias cnm="'cd /opt/cnm; ./cnm_run.sh'" >> $HOME/.bashrc
+            
         fi
         
         #設定ファイル作成
@@ -133,16 +172,13 @@ if [ ! -e "${envPath}" ]; then
     else
         clear
         echo
-        echo "${iniSettings}"
+        echo "最初からやり直す場合はツールを再実行してください"
         exit
     fi
 
 fi
 
-# #------初期設定
 
-tmux new-session -d -s sjgtool
-
-tmux send-keys -t sjgtool $HOME/sjg-tools/scripts/sjgtool.sh Enter
-
-tmux a -t sjgtool
+echo "source $HOME/.bashrc"
+echo "上記コマンドを実行して環境変数を再読み込みしてください"
+echo "CNODE Managerを起動するには \"cnm\" コマンドを実行してください"
