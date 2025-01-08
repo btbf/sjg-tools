@@ -1,0 +1,261 @@
+#!/bin/bash
+
+nodeCertCreateScript(){
+cat > $NODE_HOME/nodeCertVariables << EOF 
+#!/bin/bash
+counter_no=$1
+startKesPeriod=$2
+EOF
+}
+
+#KES作成
+kesCreate(){
+    case $NODE_TYPE in
+    "ブロックプロデューサー" )
+      #KEStimenig
+      slotNumInt=$(curl -s http://localhost:12798/metrics | grep cardano_node_metrics_slotNum_int | awk '{ print $2 }')
+      kesTiming=$(echo "scale=6; ${slotNumInt} / 129600" | bc | awk '{printf "%.5f\n", $0}')
+
+      echo '------------------------------------------------------------------------'
+      echo "KES作成(更新)作業にはブロックプロデューサーとエアギャップを使用します"
+      echo
+      echo -e "■ 実行フロー"
+      echo ' 1.KESファイル/CERTファイル作成(バックアップ)'
+      echo ' 2.新規KESファイル作成'
+      echo " 3.KESファイルをエアギャップへコピー"
+      echo ' 4.エアギャップ操作/CERTファイルBPコピー(手動)'
+      echo ' 5.ノード再起動'
+      echo '------------------------------------------------------------------------'
+      echo
+      echo "KESファイルを更新する前に、1時間以内にブロック生成スケジュールが無いことを確認してください"
+      echo
+      Gum_Confirm_YesNo "KES更新作業を開始しますか？" "Yes" "最初からやり直す場合はツールを再実行してください"
+      
+      if [ "$iniSettings" != "Yes" ]; then return 1; fi
+
+      echo 
+      echo  "KES更新タイミングチェック:$(MagentaStyle ${kesTiming})"
+      sleep 1
+
+      kesTimingDecimal=${kesTiming#*.}
+      if [ ${kesTimingDecimal} -ge 99800 ]; then
+        echo "KesStartがもうすぐ切り替わります(${kesTiming})"
+        nextkes=$(echo ${kesTiming} | awk '{echo("%d\n",$1+1)}')
+        echo "startKesPeriodが$nextkesへ切り替わってから再度実行してください"
+        select_rtn
+      else
+        GreenStyle "OK"
+      fi
+      Gum_DotSpinner3 "準備中"
+      echo
+      #最新ブロックカウンター番号チェック
+      if [ -e ${NODE_HOME}/${NODE_CERT_FILENAME} ]; then
+        cardano-cli conway query kes-period-info $NODE_NETWORK --op-cert-file ${NODE_HOME}/${NODE_CERT_FILENAME} --out-file ${NODE_HOME}/kesperiod.json
+        lastBlockCnt=$(cat ${NODE_HOME}/kesperiod.json | jq -r '.qKesNodeStateOperationalCertificateNumber')
+        rm ${NODE_HOME}/kesperiod.json
+      fi
+    
+      #現在のKESPeriod算出
+      slotNo=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
+      slotsPerKESPeriod=$(cat ${NODE_HOME}/${NODE_CONFIG}-shelley-genesis.json | jq -r '.slotsPerKESPeriod')
+      kesPeriod=$(( ${slotNo} / ${slotsPerKESPeriod} ))
+      startKesPeriod=${kesPeriod}
+      
+      kesfolder="${NODE_HOME}/kes-backup"
+      if [ ! -e "${kesfolder}" ]; then
+        mkdir $kesfolder
+        echo "$kesfolderディレクトリを作成しました"
+      fi
+
+      date=$(date +\%Y\%m\%d\%H\%M)
+      if [ -e "${NODE_HOME}/${KES_SKEY_FILENAME}" ]; then
+        MagentaStyle "■旧KESファイルのバックアップ..."
+        cp ${NODE_HOME}/${KES_VKEY_FILENAME} $kesfolder/$date-${KES_VKEY_FILENAME}
+        YellowStyle "${NODE_HOME}/${KES_VKEY_FILENAME} を $kesfolder/$date-${KES_VKEY_FILENAME}へコピーしました"
+        cp ${NODE_HOME}/${KES_SKEY_FILENAME} $kesfolder/$date-${KES_SKEY_FILENAME}
+        YellowStyle "${NODE_HOME}/${KES_SKEY_FILENAME} を $kesfolder/$date-${KES_SKEY_FILENAME}へコピーしました"
+        cp ${NODE_HOME}/${NODE_CERT_FILENAME} $kesfolder/$date-${NODE_CERT_FILENAME}
+        YellowStyle "${NODE_HOME}/${NODE_CERT_FILENAME} を $kesfolder/$date-${NODE_CERT_FILENAME}へコピーしました"
+
+        # チェックするディレクトリを指定
+        # 特定のファイル名に含まれる文字列を指定（3種類）
+        oldKessKey="*${KES_SKEY_FILENAME}"
+        oldKesvKey="*${KES_VKEY_FILENAME}"
+        oldNodecertKey="*${NODE_CERT_FILENAME}"
+
+        # 関数: 古いファイルを削除する
+        KesCleanupFiles() {
+          local pattern=${1}
+          local dir=${2}
+          
+          # 該当するファイルをリストアップ
+          file_list=$(ls -1t ${dir} | grep ${pattern})
+          
+          # 該当するファイル数を取得
+          file_count=$(echo "${file_list}" | wc -l)
+          
+          # ファイルが5つ以上ある場合
+          if [ "$file_count" -ge 5 ]; then
+            # 古いファイルをリストアップし、5番目のファイル以降を削除
+            echo "$file_list" | tail -n +6 | while read -r file; do
+              rm "$dir/$file"
+            done
+          fi
+        }
+
+        # 各パターンについて関数を呼び出す
+        KesCleanupFiles "$oldKessKey" "$kesfolder"
+        KesCleanupFiles "$oldKesvKey" "$kesfolder"
+        KesCleanupFiles "$oldNodecertKey" "$kesfolder"
+
+        MagentaStyle "${MAGENTA}■旧KESファイルの削除...${NC}"
+        sleep 2
+        rm ${NODE_HOME}/${KES_VKEY_FILENAME}
+        YellowStyle "${NODE_HOME}/${KES_VKEY_FILENAME} を削除しました"
+        rm ${NODE_HOME}/${KES_SKEY_FILENAME}
+        YellowStyle "${NODE_HOME}/${KES_SKEY_FILENAME} を削除しました"
+      fi
+
+      MagentaStyle "■新しいKESファイルの作成..."
+      cardano-cli conway node key-gen-KES --verification-key-file ${NODE_HOME}/${KES_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${KES_SKEY_FILENAME}
+      sleep 5
+      
+      kesVkey256=$(sha256sum ${NODE_HOME}/${KES_VKEY_FILENAME} | awk '{ print $1 }')
+      kesSkey256=$(sha256sum ${NODE_HOME}/${KES_SKEY_FILENAME} | awk '{ print $1 }')
+
+
+      FilePathAndHash "${NODE_HOME}/${KES_VKEY_FILENAME}"
+      FilePathAndHash "${NODE_HOME}/${KES_SKEY_FILENAME}"
+      echo "KESキーペアを作成しました"
+      
+      clear
+      echo
+      #lastBlockCnt=" "
+      echo "■カウンター番号情報"
+      if expr "$lastBlockCnt" : "[0-9]*$" >&/dev/null; then
+        counterValue=$(( $lastBlockCnt +1 ))
+        echo "チェーン上カウンター番号: ${lastBlockCnt}"
+        echo "今回更新のカウンター番号: ${counterValue}"
+        echo "node.cert生成時に指定するカウンター番号は\n必ずチェーン上カウンター番号 +1 を指定する必要があります\n\n\n"
+      else
+        counterValue=0
+        echo
+        echo "ブロック未生成です"
+        echo -e "今回更新のカウンター番号は ${counterValue} で更新します"
+      fi
+      echo "現在のstartKesPeriod: ${startKesPeriod}"
+      sleep 2
+      cd ${NODE_HOME}
+      nodeCertCreateScript ${counterValue} ${startKesPeriod}
+      echo
+      echo
+      tar -czvf kesSet.tar.gz ${KES_VKEY_FILENAME} ${KES_SKEY_FILENAME} nodeCertVariables
+      echo "ノード運用証明書作成用ファイル(kesSet.tar.gz)作成しました"
+      echo "${NODE_HOME}/kesSet.tar.gz"
+
+      echo -e "${YELLOW}${NODE_HOME}/kesSet.tar.gzをエアギャップのcnodeディレクトリにコピーしてください${NC}"
+      echo '----------------------------------------'
+      echo ">> [BP] ⇒ kesSet.tar.gz ⇒ [エアギャップ]"
+      echo '----------------------------------------'
+      echo
+      sleep 1
+      read -p "コピーしたらEnterを押してください"
+      echo
+      echo "エアギャップで「ノード運用証明書作成」を実行し、以下のハッシュ値が表示されているかご確認ください"
+      FilePathAndHash "${NODE_HOME}/kesSet.tar.gz"
+      read -p "コピーしたらEnterを押してください"
+      echo
+      echo "新しいKESファイルを有効化するにはノードを再起動する必要があります"
+      echo "ノードを再起動しますか？"
+      echo
+      echo "[1] このまま再起動する　[2] 手動で再起動する"
+      echo
+      while :
+        do
+          read -n 1 restartnum
+          if [ "$restartnum" == "1" ] || [ "$restartnum" == "2" ]; then
+            case ${restartnum} in
+              1) 
+                sudo systemctl reload-or-restart cardano-node
+                echo "\n${GREEN}ノードを再起動しました。${NC}\nglive viewを起動して同期状況を確認してください\n\n"
+                echo "${RED}ノード同期完了後、当ツールの[2] ブロック生成状態チェックを実行してください${NC}\n\n"
+                break
+                ;;
+              2) 
+                clear
+                echo "SPO JAPAN GUILD TOOL Closed!" 
+                exit ;;
+            esac
+            break
+          elif [ "$kesnum" == '' ]; then
+            echo "入力記号が不正です。再度入力してください\n"
+          else
+            echo "入力記号が不正です。再度入力してください\n"
+          fi
+      done
+    ;;
+
+    "エアギャップ" )
+      while :
+      do
+        echo
+        echo -e "${YELLOW}kesSet.tar.gzハッシュ値確認${NC}"
+        echo
+        if [ -e "${NODE_HOME}/kesSet.tar.gz" ]; then
+          echo -e "${YELLOW}ブロックプロデューサーに表示されているハッシュ値と同じであることを確認してください${NC}"
+          echo '----------------------------------------'
+          FilePathAndHash "${NODE_HOME}/kesSet.tar.gz"
+          echo '----------------------------------------'
+          echo
+          Gum_Confirm_YesNo "ハッシュ値は同じですか？" "Yes" "新しいKESファイルを${NODE_HOME}にコピーしてください"
+          if [ ${iniSettings} == "Yes" ]; then
+          break
+          else
+            echo
+            echo "${iniSettings}"
+            read -p "コピーしたらEnterを押してください"
+          fi
+        else
+          echo "${NODE_HOME}/kesSet.tar.gzが見つかりません"
+          read -p "ブロックプロデューサーからコピーしたらEnterを押してください"
+        fi
+      done
+
+      source ${NODE_HOME}/nodeCertVariables
+      cd ${NODE_HOME}
+      tar -xzvf ${NODE_HOME}/kesSet.tar.gz
+      rm ${NODE_HOME}/kesSet.tar.gz
+
+      chmod u+rwx $COLDKEYS_DIR
+      cardano-cli conway node new-counter --cold-verification-key-file $COLDKEYS_DIR/$COLD_VKEY_FILENAME --counter-value $counter_no --operational-certificate-issue-counter-file $COLDKEYS_DIR/$COUNTER_FILENAME
+      echo "カウンターファイルを作成しました"
+      sleep 1
+      echo
+      echo -e "${YELLOW}4. カウンター番号確認${NC}"
+      echo '----------------------------------------'
+      echo "カウンターファイル番号:$(cardano-cli conway text-view decode-cbor --in-file  $COLDKEYS_DIR/$COUNTER_FILENAME | grep int | head -1 | cut -d"(" -f2 | cut -d")" -f1)"
+      echo
+      cardano-cli conway node issue-op-cert --kes-verification-key-file ${NODE_HOME}/${KES_VKEY_FILENAME} --cold-signing-key-file $COLDKEYS_DIR/$COLD_SKEY_FILENAME --operational-certificate-issue-counter $COLDKEYS_DIR/$COUNTER_FILENAME --kes-period ${startKesPeriod} --out-file ${NODE_HOME}/${NODE_CERT_FILENAME}
+      if [ $? -eq 0 ]; then
+        echo $NODE_HOME/$NODE_CERT_FILENAME ファイルを生成しました。
+        chmod a-rwx $COLDKEYS_DIR
+        sleep 2
+      else
+        echo "${NODE_CERT_FILENAME}ファイル生成に失敗しました"
+        Gum_OneSelect "戻る"
+      fi
+
+      echo
+      echo -e "${YELLOW}6. エアギャップの ${NODE_CERT_FILENAME} をBPのcnodeディレクトリにコピーしてください${NC}"
+      echo '----------------------------------------'
+      echo ">> [エアギャップ] ⇒ ${NODE_CERT_FILENAME} ⇒ [BP]"
+      echo '----------------------------------------'
+      echo
+      echo "BP側で${NODE_CERT_FILENAME}のハッシュ値が完全一致していることを確認してください"
+      echo '----------------------------------------'
+      FilePathAndHash "${NODE_HOME}/${NODE_CERT_FILENAME}"
+      echo '----------------------------------------'
+      read -p "コピーしたらEnterを押してください"
+    ;;
+  esac
+}
