@@ -1,5 +1,5 @@
 #!/bin/bash
-version="v.0.2.5"
+version="v.0.2.6"
 
 envPath=$HOME/cnm/env
 
