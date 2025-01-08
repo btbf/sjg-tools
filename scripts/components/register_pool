@@ -10,11 +10,11 @@ echo $fee
 stakeAddressDeposit=$(cat $NODE_HOME/params.json | jq -r '.stakeAddressDeposit')
 style "ステークアドレス:" "$(cat ${NODE_HOME}/${STAKE_ADDR_FILENAME})"
 echo
-cardano-cli transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+0 --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 0 --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.tmp
-Cli_FeeCal
+cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+0 --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 200000 --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.tmp
+fee=$(cardano-cli conway transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --witness-count 2 --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
 txOut=$((${total_balance}-${stakeAddressDeposit}-${fee}))
 Gum_DotSpinner3 "トランザクションを構築しています"
-cardano-cli transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.raw
+cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.raw
 if [ $? -eq 0 ]; then
     Cli_TxRawCheck
 else
@@ -29,11 +29,11 @@ if [ -e ${NODE_HOME}/${POOL_CERT_FILENAME} ] && [ -e ${NODE_HOME}/deleg.cert ]; 
     CheckWallet
     poolDeposit=$(cat ${NODE_HOME}/params.json | jq -r '.stakePoolDeposit')
     currentSlot=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
-    cardano-cli transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/payment.addr)+$(( ${total_balance} - ${poolDeposit}))  --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 0 --certificate-file ${NODE_HOME}/pool.cert --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.tmp
-    fee=$(cardano-cli transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --tx-in-count ${txcnt} --tx-out-count 1 $NODE_NETWORK --witness-count 3 --byron-witness-count 0 --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
+    cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/payment.addr)+$(( ${total_balance} - ${poolDeposit}))  --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 200000 --certificate-file ${NODE_HOME}/pool.cert --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.tmp
+    fee=$(cardano-cli conway transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --tx-in-count ${txcnt} --tx-out-count 1 $NODE_NETWORK --witness-count 3 --byron-witness-count 0 --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
     txOut=$((${total_balance}-${poolDeposit}-${fee}))
     Gum_DotSpinner3 "トランザクションを構築しています"
-    cardano-cli transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/payment.addr)+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/pool.cert --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.raw
+    cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/payment.addr)+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/pool.cert --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.raw
     if [ $? -eq 0 ]; then
         echo -e "プール登録料: ${poolDeposit}"
         echo -e トランザクション手数料: $fee

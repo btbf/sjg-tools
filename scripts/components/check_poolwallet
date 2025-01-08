@@ -4,48 +4,43 @@
 
 checkPoolwallet(){
 checkPaymentFile=$(PathEnabledCheck "${NODE_HOME}/${PAYMENT_ADDR_FILENAME}" "Yes" "No")
-if [ "${NODE_TYPE}" == "ブロックプロデューサー" ]; then
-    if [ "${checkPaymentFile}" == "Yes" ]; then
-        echo "${PAYMENT_ADDR_FILENAME}ファイルが見つかりました"
-        while :
-        do
-            CheckWallet
-            #total_balance=""
-            echo
-            if [ "${total_balance}" == 0 ]; then
-            echo "ウォレット残高がありません"
-            echo "まずは上記のアドレスに少額からテスト送金してください" 
-            echo
-            res=$(gum choose --header="処理を選択してください" --height=4 --no-show-help "残高再確認" "メニュへ戻る")
-            if [ "${res}" == "メニュへ戻る" ]; then
-                break
-            fi
-            elif [ "${total_balance}" -ge 1 ] && [ "${total_balance}" -le 600000000 ]; then
-            echo "ウォレットには1ADA以上が入金されています。"
-            echo
-            echo "プール登録には以下の費用が必要です。追加の費用を送金してください(最低600ADA)"
-            echo
-            style "プール登録料:" "500ADA"
-            style "ステークキー登録料": "2ADA"
-            style "Pledge(誓約金):" "誓約として設定したい額"
-            echo
-            res=$(gum choose --header="処理を選択してください" --height=4 --no-show-help "残高再確認" "メニュへ戻る")
-            if [ "${res}" == "メニュへ戻る" ]; then
-                break
-            fi
-            else
-            Gum_OneSelect "戻る"
-                break
-            fi
-        done
-    else
-        echo "${PAYMENT_ADDR_FILENAME}ファイルが見つかりません"
-        echo "エアギャップマシンで当ツールを起動し、「プール構築」→「プールウォレット作成」を実行してください"
+
+if [ "${checkPaymentFile}" == "Yes" ]; then
+    echo "${PAYMENT_ADDR_FILENAME}ファイルが見つかりました"
+    while :
+    do
+        CheckWallet
+        #total_balance=""
         echo
+        if [ "${total_balance}" == 0 ]; then
+        echo "ウォレット残高がありません"
+        echo "まずは上記のアドレスに少額からテスト送金してください" 
+        echo
+        res=$(gum choose --header="処理を選択してください" --height=4 --no-show-help "残高再確認" "メニュへ戻る")
+        if [ "${res}" == "メニュへ戻る" ]; then
+            break
+        fi
+        elif [ "${total_balance}" -ge 1 ] && [ "${total_balance}" -le 600000000 ]; then
+        echo "ウォレットには1ADA以上が入金されています。"
+        echo
+        echo "プール登録には以下の費用が必要です。追加の費用を送金してください(最低600ADA)"
+        echo
+        style "プール登録料:" "500ADA"
+        style "ステークキー登録料": "2ADA"
+        style "Pledge(誓約金):" "誓約として設定したい額"
+        echo
+        res=$(gum choose --header="処理を選択してください" --height=4 --no-show-help "残高再確認" "メニュへ戻る")
+        if [ "${res}" == "メニュへ戻る" ]; then
+            break
+        fi
+        else
         Gum_OneSelect "戻る"
-    fi
+            break
+        fi
+    done
 else
-    echo "エアギャップマシンで当ツールを起動し、「プール構築」→「プールウォレット作成」を実行してください"
+    echo "${PAYMENT_ADDR_FILENAME}ファイルが見つかりません"
+    echo "エアギャップマシンで当ツールを起動し、「プール運用キー作成」を実行してください"
     echo
     Gum_OneSelect "戻る"
 fi

@@ -1,12 +1,4 @@
 #!/bin/bash
-# currentDir=$(pwd)
-# envPath=${currentDir}/env
-
-# source ${HOME}/.bashrc
-# source ${envPath}
-# source ${currentDir}/sjgtool.library
-
-
 
 NodeVersionSelect(){
   version_list=""
@@ -340,7 +332,7 @@ EOF
 
 
 nodeInstMain(){
-if [ -z "${nodeBynarlyPath}" ]; then
+if [ -z "${nodeBinaryPath}" ]; then
   echo "ノードをインストールします..."
   echo
   sleep 2
@@ -353,7 +345,7 @@ if [ -z "${nodeBynarlyPath}" ]; then
   sleep 2
 else 
   cardano-node --version
-  cardano-cli --version
+  cardano-cli version
   echo
   YellowStyle "cardano-nodeはインストール済みです"
   echo

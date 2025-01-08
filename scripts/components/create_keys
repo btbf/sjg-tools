@@ -1,0 +1,125 @@
+#!/bin/bash
+# shellcheck disable=SC1091,SC2086,SC1001,SC2317
+# shellcheck source="$HOME/.bashrc"
+
+
+createKeys(){
+  case $NODE_TYPE in
+    "ブロックプロデューサー" )
+        ##VRFキー作成
+        if [ ! -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${VRF_VKEY_FILENAME}" ]; then
+            cardano-cli conway query protocol-parameters $NODE_NETWORK --out-file ${NODE_HOME}/params.json
+            cardano-cli conway node key-gen-VRF --verification-key-file ${NODE_HOME}/${VRF_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${VRF_SKEY_FILENAME}
+            if [ $? -eq 0 ]; then
+                chmod 400 ${NODE_HOME}/${VRF_VKEY_FILENAME}; chmod 400 ${NODE_HOME}/${VRF_VKEY_FILENAME}
+                echo "VRFキーを読み取り専用で生成しました"
+                FilePathAndHash ${NODE_HOME}/${VRF_VKEY_FILENAME}
+                FilePathAndHash ${NODE_HOME}/${VRF_SKEY_FILENAME}
+                echo
+                echo "VRFキーペアはブロック生成で使用する鍵ファイルです。紛失するとブロック生成できなくなりますのでご注意ください"
+                echo "複数のUSBドライブなどにバックアップを推奨します"
+                echo "ブロックプロデューサーで作成した${VRF_VKEY_FILENAME}と${VRF_VKEY_FILENAME}をエアギャップの作業ディレクトリにコピーしてください"
+
+                read -p "コピーしたらEnterを押してください"
+                echo "次にエアギャップマシンでもプール運用キー作成を実行して、コールドキーとウォレットキーを作成してください"
+                read -p "作成したらEnterを押してください"
+            else
+                echo "VRFキーの生成に失敗しました"
+                Gum_OneSelect "戻る"
+            fi
+        else
+            echo "VRFファイルは作成済みです"
+            FilePathAndHash ${NODE_HOME}/${VRF_VKEY_FILENAME}
+            FilePathAndHash ${NODE_HOME}/${VRF_SKEY_FILENAME}
+            Gum_OneSelect "戻る"
+        fi
+    ;;
+
+    "エアギャップ" )
+          if [ -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ] && [ -e "${NODE_HOME}"/"${VRF_VKEY_FILENAME}" ]; then
+
+          ##コールドキー作成
+            if [ ! -e "${COLDKEYS_DIR}/${COLD_VKEY_FILENAME}" ] && [ ! -e "${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}" ]; then
+                mkdir ${COLDKEYS_DIR}
+                cardano-cli conway node key-gen --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --cold-signing-key-file ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME} --operational-certificate-issue-counter ${COLDKEYS_DIR}/${COUNTER_FILENAME}
+                if [ $? -eq 0 ]; then
+                    echo "コールドキーを読み取り専用で作成しました"
+                    echo ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME}
+                    echo ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}
+                    echo
+                    echo "このキーペアはプール運営で最も大切な鍵ファイルであり、紛失するとプール運営を継続できなくなりますのでご注意下さい"
+                    echo "複数のUSBドライブなどにバックアップを推奨します"
+                    chmod 400 ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME}; chmod 400 ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}
+                else
+                    echo "コールドキーの生成に失敗しました"
+                    Gum_OneSelect "戻る"
+                fi
+            else 
+                echo "すでにコールドキーが存在します"
+            fi
+          ##ウォレットキー作成
+            if [ ! -e "${NODE_HOME}"/"${PAYMENT_SKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${PAYMENT_VKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${STAKE_SKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${STAKE_VKEY_FILENAME}" ] ; then
+              echo "プール運営に必要なウォレットとステークアドレスを作成します"
+              echo "それぞれの秘密鍵(skey)、公開鍵(vkey)、アドレスファイル(addr)を生成します"
+              echo
+              Gum_Confirm_YesNo "作成してよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
+
+              if [ "${iniSettings}" == "Yes" ]; then
+                  cardano-cli conway address key-gen --verification-key-file ${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
+                  cardano-cli conway stake-address key-gen --verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME}
+                  cardano-cli conway address build --payment-verification-key-file ${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file ${NODE_HOME}/${PAYMENT_ADDR_FILENAME} ${NODE_NETWORK}
+                  cardano-cli conway stake-address build --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file ${NODE_HOME}/${STAKE_ADDR_FILENAME} ${NODE_NETWORK}
+                  cardano-cli conway stake-address registration-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --key-reg-deposit-amt 2000000 --out-file ${NODE_HOME}/${STAKE_CERT_FILENAME}
+
+                  chmod 400 ${NODE_HOME}/${PAYMENT_VKEY_FILENAME}
+                  chmod 400 ${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
+                  chmod 400 ${NODE_HOME}/${STAKE_VKEY_FILENAME}
+                  chmod 400 ${NODE_HOME}/${STAKE_SKEY_FILENAME}
+                  chmod 400 ${NODE_HOME}/${STAKE_ADDR_FILENAME}
+                  chmod 400 ${NODE_HOME}/${PAYMENT_ADDR_FILENAME}
+
+                  echo
+                  echo "ウォレットキーペアを${NODE_HOME}に生成しました"
+
+                  YellowStyle "skeyは秘密鍵です。紛失するとアドレス内の資産を失うことになりますのでご注意下さい"
+                  echo "複数USBドライブなどにバックアップすることをおすすめします"
+                  echo
+                  echo "アドレスファイルを以下のパスに生成しました"
+                  find ${NODE_HOME} -type f -name "${PAYMENT_ADDR_FILENAME}"
+                  find ${NODE_HOME} -type f -name "${STAKE_ADDR_FILENAME}"
+                  echo
+                  echo "ステーク証明書を以下のパスに生成しました"
+                  find ${NODE_HOME} -type f -name "${STAKE_CERT_FILENAME}"
+                  echo
+                  echo "以下の3ファイルをブロックプロデューサーの作業ディレクトリ(~/cnode) にコピーしてください。"
+                  YellowStyle "${PAYMENT_ADDR_FILENAME}"
+                  YellowStyle "${STAKE_ADDR_FILENAME}"
+                  YellowStyle "${STAKE_CERT_FILENAME}"
+                  echo
+                  read -p "コピーしたらEnterを押してください"
+                  echo
+                  echo "次にBPサーバーで「5.プール運用証明書作成」を実施してください"
+                  Gum_OneSelect "戻る"
+                  echo
+              else
+                  echo
+                  echo "${iniSettings}"
+                  echo
+                  Gum_OneSelect "戻る"
+              fi
+            else
+                  echo "ウォレット作成済みです"
+                  echo
+                  style "ウォレットアドレス：" "$(echo $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME}))"
+                  style "ステークアドレス：" "$(echo $(cat ${NODE_HOME}/${STAKE_ADDR_FILENAME}))"
+                  echo
+                  Gum_OneSelect "戻る"
+              fi
+
+          else
+          echo "vrfキーが存在しません。まずはブロックプロデューサーサーバでvrfキーを作成してください"
+          Gum_OneSelect "戻る"
+          fi
+    ;;
+  esac
+}

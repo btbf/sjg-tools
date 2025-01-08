@@ -84,12 +84,12 @@ EOF
     echo "${createTopologyBp}"
     echo "${createTopologyBp}" > $NODE_HOME/${NODE_CONFIG}-topology.json
     echo
-    Gum_Confirm_YesNo "この値でtopologyを生成しますか？" "Yes" "再度入力してください"
+    Gum_Confirm_YesNo "この値で${NODE_TYPE}用のトポロジーファイルを生成しますか？" "Yes" "再度入力してください"
     if [[ ${iniSettings} == "Yes" ]]; then
-    　echo "topologyを生成しました"
+        echo "$NODE_HOME/${NODE_CONFIG}-topology.jsonを生成しました"
     else
-    echo ${iniSettings}
-    echo
+        echo ${iniSettings}
+        echo
     fi
     elif [ "${NODE_TYPE}" == "リレー" ]; then
     echo "まだ実装していません"

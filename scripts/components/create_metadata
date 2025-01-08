@@ -23,15 +23,14 @@ if [ -z "${META_POOL_NAME}" ]; then
         echo META_DISCRIPTION=\""${metaDirscription}"\" >> "${envPath}"
         echo META_HOMEPAGE_URL=\""${metaHomepageUrl}"\" >> "${envPath}"
 
-        echo "設定ファイルに追記しました"
         Gum_DotSpinner3 "${POOL_META_FILENAME}を作成しています"
         echo
-        echo "以下のパスで${POOL_META_FILENAME}を作成しました"
+        echo "${POOL_META_FILENAME}を作成しました"
         CreatePoolMetaJson "${metaPoolName}" "${metaDirscription}" "${metaTicker}" "${metaHomepageUrl}"
         echo
-        echo "${POOL_META_FILENAME}をGithubまたはホームページサーバーにアップロードしてください"
+        echo "${NODE_HOME}/${POOL_META_FILENAME}をGithubまたはホームページサーバーにアップロードしてください"
         echo
-        gum choose --header="アップロードが完了したらEnter" --height=1 --no-show-help "OK"
+        gum choose --header="アップロードが完了したらEnterを押下し、オンライン上の${POOL_META_FILENAME}を検証します" --height=1 --no-show-help "OK"
         echo
 
         while :
@@ -52,10 +51,10 @@ if [ -z "${META_POOL_NAME}" ]; then
                 Gum_Confirm_YesNo "このデータでよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
                 
                 if [[ ${iniSettings} == "Yes" ]]; then
-                    echo "正常"
-                    echo "POOL_METADATA_URL=\"${poolMetaurl}\"" >> ${currentDir}/env
+                    echo "オンラインファイルのフォーマットは正常です"
+                    echo "POOL_METADATA_URL=\"${poolMetaurl}\"" >> ${CNM_HOME}/env
                     wget -q -O ${NODE_HOME}/${POOL_META_FILENAME} ${poolMetaurl}
-                    cardano-cli stake-pool metadata-hash --pool-metadata-file ${NODE_HOME}/${POOL_META_FILENAME} > ${NODE_HOME}/poolMetaDataHash.txt
+                    cardano-cli conway stake-pool metadata-hash --pool-metadata-file ${NODE_HOME}/${POOL_META_FILENAME} > ${NODE_HOME}/poolMetaDataHash.txt
                     echo "${NODE_HOME}/poolMetaDataHash.txtを作成しました"
                     echo
                     echo -e "${YELLOW}1. BPのpoolMetaDataHash.txtエアギャップのcnodeディレクトリにコピーしてください${NC}"
@@ -63,7 +62,7 @@ if [ -z "${META_POOL_NAME}" ]; then
                     echo ">> [BP] ⇒ poolMetaDataHash.txt ⇒ [エアギャップ]"
                     echo '----------------------------------------'
                     echo
-                    Gum_OneSelect "コピーしたらEnterを押して下さい"
+                    Gum_OneSelect "コピーしたらEnterを押して「3.トポロジー設定」を実施してください"
                     break
                 else
                     echo

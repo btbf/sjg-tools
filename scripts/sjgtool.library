@@ -1,8 +1,7 @@
 #!/bin/bash
 version="v.0.2.5"
 
-installDir=/opt/cnm/
-envPath=${installDir}/env
+envPath=$HOME/cnm/env
 
 # フォアグラウンドカラー
 BLACK='\033[0;30m'
@@ -135,7 +134,7 @@ WalletBalance(){
 }
 
 Cli_FeeCal(){
-  fee=$(cardano-cli transaction calculate-min-fee \
+  fee=$(cardano-cli conway transaction calculate-min-fee \
     --tx-body-file ${NODE_HOME}/tx.tmp \
     --tx-in-count ${txcnt} \
     --tx-out-count 1 \
@@ -152,7 +151,7 @@ CheckWallet(){
   echo 
   style "アドレス：" "$(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})"
   echo 
-  gum spin --spinner dot --show-output --title "ウォレット残高を確認しています" -- cardano-cli query utxo --address "$(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})" $NODE_NETWORK > ${NODE_HOME}/fullUtxo.out
+  gum spin --spinner dot --show-output --title "ウォレット残高を確認しています" -- cardano-cli conway query utxo --address "$(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})" $NODE_NETWORK > ${NODE_HOME}/fullUtxo.out
   #echo $0 >> fullUtxo.out
   tail -n +3 ${NODE_HOME}/fullUtxo.out | sort -k3 -nr > ${NODE_HOME}/balance.out
   cat ${NODE_HOME}/balance.out
@@ -177,7 +176,7 @@ do
   else
     echo "tx.signedが見つかりません。正しいディレクトリにコピーしてください"
     echo
-    break
+    Gum_OneSelect "コピーしたらEnterを押して下さい"
   fi
 done
 }
@@ -187,8 +186,8 @@ Cli_TxSubmit(){
   echo
   Gum_Confirm_YesNo "トランザクションを送信しますか？" "Yes" "再度トランザクション作成から実施してください"
   if [[ ${iniSettings} == "Yes" ]]; then
-    local txId=$(cardano-cli transaction txid --tx-body-file ${NODE_HOME}/tx.raw)
-    local txResult=$(cardano-cli transaction submit --tx-file ${NODE_HOME}/tx.signed $NODE_NETWORK)
+    local txId=$(cardano-cli conway transaction txid --tx-body-file ${NODE_HOME}/tx.raw)
+    local txResult=$(cardano-cli conway transaction submit --tx-file ${NODE_HOME}/tx.signed $NODE_NETWORK)
     echo
     if [[ ${txResult} == "Transaction"* ]]; then
       echo '----------------------------------------'
@@ -307,5 +306,5 @@ Gum_OneSelect(){
 }
 
 Gum_Confirm_YesNo(){
-  gum confirm "${1}" --default=false --affirmative="はい" --negative="いいえ" --no-show-help && iniSettings="${2}" || iniSettings="${3}"
+  gum confirm "${1}" --default=true --affirmative="はい" --negative="いいえ" --no-show-help && iniSettings="${2}" || iniSettings="${3}"
 }
