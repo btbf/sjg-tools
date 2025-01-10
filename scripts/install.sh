@@ -73,6 +73,7 @@ echo
 
 #CNODE Managerインストール
 echo "CNODE Managerをインストールします"
+mkdir -p $HOME/git
 cd $HOME/git || { echo "Failure"; exit 1; }
 wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${cnm_version}.tar.gz -O cnm.tar.gz
 tar xzvf cnm.tar.gz

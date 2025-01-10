@@ -71,7 +71,7 @@ NodeInstall(){
   echo
   YellowStyle "Libsodiumインストール..."
   echo; sleep 3
-  mkdir ${HOME}/git; cd ${HOME}/git || exit
+  cd ${HOME}/git || exit
   git clone https://github.com/IntersectMBO/libsodium
   cd libsodium || exit
   git checkout $SODIUM_VERSION

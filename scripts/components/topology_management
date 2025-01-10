@@ -35,26 +35,49 @@ if [ "${NODE_TYPE}" == "ブロックプロデューサー" ]; then
                     fi
                 done
                 if [ "$valid" = true ]; then
+                    if [ $i -ne $inputRelayNum ]; then
                     topologyRelays+=$(cat << EOF
-{
-"address": "${inputRelayAddress}",
-"port": "${inputRelayPort}"
-},
 
+    {
+    "address": "${inputRelayAddress}",
+    "port": ${inputRelayPort}
+    },
 EOF
 )
+else
+topologyRelays+=$(cat << EOF
+
+    {
+    "address": "${inputRelayAddress}",
+    "port": ${inputRelayPort}
+    }
+EOF
+)
+fi
                 else
                     echo "無効なIPアドレスです"
                     break 1
                 fi
             else
+                if [ $i -ne $inputRelayNum ]; then
                 topologyRelays+=$(cat << EOF
-{
-"address": "${inputRelayAddress}",
-"port": "${inputRelayPort}"
-},
+
+    {
+    "address": "${inputRelayAddress}",
+    "port": ${inputRelayPort}
+    },
 EOF
 )
+else
+topologyRelays+=$(cat << EOF
+
+    {
+    "address": "${inputRelayAddress}",
+    "port": ${inputRelayPort}
+    }
+EOF
+)
+fi
             fi
         done
         break 1
@@ -73,7 +96,7 @@ EOF
       ],
       "advertise": false,
       "trustable": true,
-      "valency": 2 
+      "valency": ${inputRelayNum} 
     }
 ],
 "publicRoots": [],
