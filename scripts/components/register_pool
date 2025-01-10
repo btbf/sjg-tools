@@ -47,7 +47,8 @@ if [ -e ${NODE_HOME}/${POOL_CERT_FILENAME} ] && [ -e ${NODE_HOME}/deleg.cert ]; 
         Gum_OneSelect "戻る"
     fi
 else
-    cho "登録用ファイルが見つかりません"
+    echo "プール登録用ファイルが見つかりません"
+    echo "エアギャップでプール登録証明書を作成してください"
 fi
 }
 

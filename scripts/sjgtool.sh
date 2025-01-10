@@ -152,6 +152,10 @@ case $selection0 in
               signStakeAddressTx
               ;;
 
+              "プール登録証明書作成" )
+              CreatePoolCert
+              ;;
+
               "プール登録Tx署名" )
               signPoolRegisterTx
               ;;

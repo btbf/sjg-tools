@@ -8,7 +8,7 @@ CNM_INST_DIR=/opt/cnm
 CNM_HOME=$HOME/cnm
 gum_version="0.14.5"
 # cnm_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
-cnm_version="0.2.6-v5"
+cnm_version="0.2.6-v6"
 
 source ${HOME}/.bashrc
 
@@ -63,11 +63,14 @@ EOF
 
 
 #ライブラリインストール
+
 echo "ライブラリをインストールします"
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
-echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
-sudo apt update && sudo apt install gum=${gum_version}
+if [ ! -e "/usr/bin/gum" ]; then
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
+    sudo apt update && sudo apt install gum=${gum_version}
+fi
 sudo apt install git jq bc automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
 gum --version
 echo

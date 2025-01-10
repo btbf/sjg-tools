@@ -34,7 +34,7 @@ CreatePoolCert(){
 
     while :
     do
-      inputRelayNum=$(gum input --value="2" --width=0 --header="チェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
+      inputRelayNum=$(gum input --value="2" --width=0 --header="オンチェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
         # 入力が数字かどうかを確認
       if [[ "$inputRelayNum" =~ ^[0-9]+$ ]]; then
         # 配列を使用して変数を管理
