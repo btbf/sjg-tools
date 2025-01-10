@@ -9,6 +9,7 @@ if [ "${checkPaymentFile}" == "Yes" ]; then
     echo "${PAYMENT_ADDR_FILENAME}ファイルが見つかりました"
     while :
     do
+        clear
         CheckWallet
         #total_balance=""
         echo

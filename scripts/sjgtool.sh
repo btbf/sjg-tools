@@ -12,6 +12,7 @@ source ${CNM_INST_DIR}/components/register_pool
 source ${CNM_INST_DIR}/components/create_keys
 source ${CNM_INST_DIR}/components/topology_management
 source ${CNM_INST_DIR}/components/check_poolwallet
+source ${CNM_INST_DIR}/components/air_gap
 source ${envPath}
 
 clear

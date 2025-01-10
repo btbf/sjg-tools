@@ -8,7 +8,7 @@ CNM_INST_DIR=/opt/cnm
 CNM_HOME=$HOME/cnm
 gum_version="0.14.5"
 # cnm_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
-cnm_version="0.2.6-v2"
+cnm_version="0.2.6-v3"
 
 source ${HOME}/.bashrc
 
