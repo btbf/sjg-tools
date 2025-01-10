@@ -52,7 +52,8 @@ if [ -z "${META_POOL_NAME}" ]; then
                 
                 if [[ ${iniSettings} == "Yes" ]]; then
                     echo "オンラインファイルのフォーマットは正常です"
-                    echo "POOL_METADATA_URL=\"${poolMetaurl}\"" >> ${CNM_HOME}/env
+                    echo "POOL_METADATA_URL=\"${poolMetaurl}\"" >> "${envPath}"
+                    
                     wget -q -O ${NODE_HOME}/${POOL_META_FILENAME} ${poolMetaurl}
                     cardano-cli conway stake-pool metadata-hash --pool-metadata-file ${NODE_HOME}/${POOL_META_FILENAME} > ${NODE_HOME}/poolMetaDataHash.txt
                     echo "${NODE_HOME}/poolMetaDataHash.txtを作成しました"

@@ -76,7 +76,7 @@ CreatePoolCert(){
         exit 1
       fi
     done
-    inputMetaUrl=$(gum input --value="http://xstakepool.com/poolMetaData.json" --width=0 --header="poolMetaData.jsonのホストURLを入力してください" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "Pool Homepage URL")
+    inputMetaUrl=$(gum input --width=0 --header="poolMetaData.jsonのURLを入力してください" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "Pool Homepage URL")
 
     # ヘッダー行を出力
     echo -e "誓約(Pledge)" ${B_YELLOW}"${inputPledge}ADA"${NC} >> table.out
@@ -121,7 +121,7 @@ EOF
       eval $cmdPoolCert
       echo プール登録証明書 ${YELLOW}"${NODE_HOME}/${POOL_CERT_FILENAME}${NC} を生成しました"
       echo
-      cardano-cli conway stake-address delegation-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --out-file ${NODE_HOME}/deleg.cert
+      cardano-cli conway stake-address stake-delegation-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --out-file ${NODE_HOME}/deleg.cert
       chmod u+rwx ${COLDKEYS_DIR}
       cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format bech32 --out-file ${NODE_HOME}/pool.id-bech32
       cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format hex --out-file ${NODE_HOME}/pool.id

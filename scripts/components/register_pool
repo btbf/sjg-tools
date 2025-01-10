@@ -29,11 +29,11 @@ if [ -e ${NODE_HOME}/${POOL_CERT_FILENAME} ] && [ -e ${NODE_HOME}/deleg.cert ]; 
     CheckWallet
     poolDeposit=$(cat ${NODE_HOME}/params.json | jq -r '.stakePoolDeposit')
     currentSlot=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
-    cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/payment.addr)+$(( ${total_balance} - ${poolDeposit}))  --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 200000 --certificate-file ${NODE_HOME}/pool.cert --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.tmp
+    cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+$(( ${total_balance} - ${poolDeposit}))  --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 200000 --certificate-file ${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.tmp
     fee=$(cardano-cli conway transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --tx-in-count ${txcnt} --tx-out-count 1 $NODE_NETWORK --witness-count 3 --byron-witness-count 0 --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
     txOut=$((${total_balance}-${poolDeposit}-${fee}))
     Gum_DotSpinner3 "トランザクションを構築しています"
-    cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/payment.addr)+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/pool.cert --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.raw
+    cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.raw
     if [ $? -eq 0 ]; then
         echo -e "プール登録料: ${poolDeposit}"
         echo -e トランザクション手数料: $fee
@@ -49,6 +49,7 @@ if [ -e ${NODE_HOME}/${POOL_CERT_FILENAME} ] && [ -e ${NODE_HOME}/deleg.cert ]; 
 else
     echo "プール登録用ファイルが見つかりません"
     echo "エアギャップでプール登録証明書を作成してください"
+    Gum_OneSelect "戻る"
 fi
 }
 
