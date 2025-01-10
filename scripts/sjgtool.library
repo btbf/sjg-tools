@@ -2,6 +2,8 @@
 version="v.0.2.6"
 
 envPath=$HOME/cnm/env
+nodeBinaryPath=$(which cardano-node)
+cliBinaryPath=$(which cardano-cli)
 
 # フォアグラウンドカラー
 BLACK='\033[0;30m'

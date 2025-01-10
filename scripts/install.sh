@@ -68,6 +68,7 @@ sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
 echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
 sudo apt update && sudo apt install gum=${gum_version}
+sudo apt install git jq bc automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
 gum --version
 echo
 
@@ -100,7 +101,7 @@ if [ ! -d "${CNM_HOME}" ]; then
 
     if [ -d "${NODE_HOME}" ]; then echo -e "既存のネットワーク設定が見つかりました : ${NODE_CONFIG}\n";workDir=${NODE_HOME};syncNetwork=${NODE_CONFIG}; fi
 
-    nodeType=$(gum choose --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" --no-show-help)
+    nodeType=$(gum choose --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ" --no-show-help)
     
     if [ ! -d "${NODE_HOME}" ]; then
         syncNetwork=$(gum choose --header="接続ネットワークを選択してください" --no-show-help "mainnet" "preview" "preprod" "Sancho-net")
@@ -155,7 +156,7 @@ if [ ! -d "${CNM_HOME}" ]; then
             echo export NODE_NETWORK="${NODE_NETWORK}" >> "${HOME}"/.bashrc
             echo export CARDANO_NODE_NETWORK_ID="${CARDANO_NODE_NETWORK_ID}" >> "${HOME}"/.bashrc
 
-            echo alias cnode='"journalctl -u cardano-node -f"' >> "${HOME}"/.bashrc
+            echo alias cnode='"sudo journalctl -u cardano-node -f"' >> "${HOME}"/.bashrc
             echo alias cnstart='"sudo systemctl start cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnstop='"sudo systemctl stop cardano-node"' >> "${HOME}"/.bashrc

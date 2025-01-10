@@ -221,11 +221,12 @@ kesCreate(){
         fi
       done
 
-      source ${NODE_HOME}/nodeCertVariables
+      
       cd ${NODE_HOME}
       tar -xzvf ${NODE_HOME}/kesSet.tar.gz
       rm ${NODE_HOME}/kesSet.tar.gz
-
+      source ${NODE_HOME}/nodeCertVariables
+      
       chmod u+rwx $COLDKEYS_DIR
       cardano-cli conway node new-counter --cold-verification-key-file $COLDKEYS_DIR/$COLD_VKEY_FILENAME --counter-value $counter_no --operational-certificate-issue-counter-file $COLDKEYS_DIR/$COUNTER_FILENAME
       echo "カウンターファイルを作成しました"

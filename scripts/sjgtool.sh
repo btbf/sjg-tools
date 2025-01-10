@@ -15,8 +15,7 @@ source ${CNM_INST_DIR}/components/check_poolwallet
 source ${envPath}
 
 clear
-nodeBinaryPath=$(which cardano-node)
-cliBinaryPath=$(which cardano-cli)
+
 checkPaymentFile=$(PathEnabledCheck "${NODE_HOME}/${PAYMENT_ADDR_FILENAME}" "Yes" "No")
 Header
 
