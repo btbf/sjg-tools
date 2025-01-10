@@ -28,15 +28,10 @@ grafanaInstall(){
     echo "Grafanaをインストールしました..."
 }
 
-
-
-
-
-
 # ## BP,Relay2以降の場合
-
-# sudo apt install -y prometheus-node-exporter
-# sudo systemctl enable prometheus-node-exporter.service
-# sudo ufw allow from <リレーノード1のIP> to any port 12798
-# sudo ufw allow from <リレーノード1のIP> to any port 9100
-# sudo ufw reload
+prometheusInstall(){
+    sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
+    echo $sudopass | sudo apt install -y prometheus-node-exporter
+    sudo systemctl enable prometheus-node-exporter.service
+    echo "prometheusをインストールしました..."
+}

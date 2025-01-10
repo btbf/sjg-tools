@@ -109,6 +109,10 @@ case $selection0 in
               registarPool
               ;;
 
+              "9.監視ツールセットアップ" )
+                prometheusInstall
+              ;;
+
               "メインメニュー" )
               break
               ;;
@@ -116,15 +120,19 @@ case $selection0 in
           ;;
 
           "リレー" )
-            selection=$(gum choose --header="" --height=6 --no-show-help "ノードインストール" "監視ツールインストール" "メインメニュー")
+            selection=$(gum choose --header="" --height=6 --no-show-help "1.ノードインストール" "2.トポロジー設定" "監視ツールセットアップ" "メインメニュー")
 
             case $selection in
               "ノードインストール" )
               nodeInstMain
               ;;
 
-              "監視ツールインストール" )
-              GrafanaInstall
+              "2.トポロジー設定" )
+                  topologyManagement
+              ;;
+
+              "3.監視ツールセットアップ" )
+                  grafanaInstall
               ;;
 
               "メインメニュー" )
