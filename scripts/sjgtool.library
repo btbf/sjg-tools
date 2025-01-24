@@ -1,7 +1,9 @@
 #!/bin/bash
-version="v.0.2.6"
+version="v.0.3.0"
 
 envPath=$HOME/cnm/env
+nodeBinaryPath=$(which cardano-node)
+cliBinaryPath=$(which cardano-cli)
 
 # フォアグラウンドカラー
 BLACK='\033[0;30m'
@@ -85,10 +87,8 @@ EOF
 
 
 Header(){
-  gum style \
-	--foreground 212 --border-foreground 212 --border double \
-	--align center --width 50 --margin "1 2" --padding "2 4" \
-	'SJGTOOL V2' ${version}
+	gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "CNODE Manager ${version}" "${1}"
+  gum style --align center --width 60 --margin "0 2 1 2" --padding "0 0" "ネットワーク:$(gum style --foreground 011 ${NODE_CONFIG}) | ノードタイプ:$(gum style --foreground 011 ${NODE_TYPE})"
 }
 
 SystemUpdate(){
@@ -159,30 +159,55 @@ CheckWallet(){
   WalletBalance
 }
 
-Cli_TxRawCheck(){
-echo "トランザクションファイルを作成しました (${NODE_HOME}/tx.raw)"
-echo
-echo "1.tx.rawをエアギャップの作業ディレクトリにコピーしてください"
-echo "2.コピーしたらエアギャップ側で署名ファイル(tx.signed)を作成してください"
-echo "3.エアギャップで署名ファイルを作成したらBPの${NODE_HOME}にコピーしてください"
-echo
-while :
-do
+reward_Balance(){
+  if [[ -e "${NODE_HOME}/${STAKE_ADDR_FILENAME}" ]]; then
+    echo "■stakeアドレス"
+    printf "${FG_YELLOW}$(cat ${NODE_HOME}/$STAKE_ADDR_FILENAME)${NC}\n\n"
+    pool_reward=$(cardano-cli conway query stake-address-info --address $(cat ${NODE_HOME}/$STAKE_ADDR_FILENAME) $NODE_NETWORK | jq .[].rewardAccountBalance)
+    #pool_reward=$(cat $PARENT/stake_json.txt | grep rewardAccountBalance | awk '{ print $2 }')
+    if [[ -n ${pool_reward} ]]; then
+      pool_reward_Amount=$(scale1 ${pool_reward})
+      printf "報酬額:${FG_GREEN}$pool_reward_Amount${NC} ADA ($pool_reward Lovelace)\n"
+    else
+      echo "報酬はまだ発生していません"
+      Gum_OneSelect "戻る"
+    fi
+  else
+    echo "${STAKE_ADDR_FILENAME}ファイルが見つかりません"
+    echo
+    echo "${NODE_HOME}に${STAKE_ADDR_FILENAME}をコピーするか"
+    echo "envファイルのSTAKE_ADDR_FILENAME変数の指定値をご確認ください"
+    echo
+    Gum_OneSelect "戻る"
+  fi
+}
+
+#出金前チェック
+tx_Check(){
+  rows36="%15s ${FG_CYAN}%-15s${NC}\n"
+  rows32="%15s ${FG_GREEN}%-15s${NC}\n"
+  #printf "$rows" "Send_Address:" "${destinationAddress::20}...${destinationAddress: -20}"
+  printf "$rows36" "送金先アドレス:" "$1"
+  printf "$rows32" "       送金ADA:" "$(scale1 $2) ADA"
+  printf "$rows32" "　　　  手数料:" "$(scale3 $3) ADA"
+  printf "$rows32" "    Wallet残高:" "$(scale1 $4) ADA"
+
+}
+
+#トランザクション送信
+Cli_TxSubmit(){
+  while :
+  do
   Gum_OneSelect "1～3が完了したらEnterを押して下さい"
   echo
   if [ -e ${NODE_HOME}/tx.signed ]; then
-    Cli_TxSubmit
     break
   else
     echo "tx.signedが見つかりません。正しいディレクトリにコピーしてください"
     echo
     Gum_OneSelect "コピーしたらEnterを押して下さい"
   fi
-done
-}
-
-#トランザクション送信
-Cli_TxSubmit(){
+  done
   echo
   Gum_Confirm_YesNo "トランザクションを送信しますか？" "Yes" "再度トランザクション作成から実施してください"
   if [[ ${iniSettings} == "Yes" ]]; then
@@ -212,7 +237,7 @@ Cli_TxSubmit(){
       printf "\n${FG_YELLOW}Tx承認を確認しています。このまましばらくお待ち下さい...${NC}\n\n"
       while :
         do
-        koios_tx_status=$(curl -s -X POST "$KOIOS_API/api/v1/tx_status" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_tx_hashes\":[\"${txId}\"]}" | jq -r '.[].num_confirmations')
+        koios_tx_status=$(curl -s -X POST "$KOIOS_API/tx_status" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_tx_hashes\":[\"${txId}\"]}" | jq -r '.[].num_confirmations')
         if [[ ${koios_tx_status} != "null" ]] && [ ${koios_tx_status} -gt 1 ]; then
           printf "確認済みブロック:$koios_tx_status ${FG_GREEN}Txが承認されました${NC}\n\n"
           sleep 3s
@@ -251,8 +276,46 @@ FilePathAndHash(){
   echo -e "${1} >> ${YELLOW}$(sha256sum ${1} | awk '{ print $1 }')${NC}\n"
 }
 
+message_file_transfer(){
+  echo
+  echo "■${1}ファイルを作成しました。エアギャップオフラインマシンで以下の操作を実施してください"
+  echo
+  echo -e "${FG_YELLOW}1. BPの ${1} をエアギャップのcnodeディレクトリにコピーしてください${NC}"
+  echo '----------------------------------------'
+  echo ">> [BP] ⇒ ${1}  ⇒ [エアギャップ]"
+  echo '----------------------------------------'
+  echo
+  echo -e "${FG_YELLOW}2. エアギャップでトランザクションファイルに署名してください${NC}"
+  echo 
+  echo "エアギャップで「$2」を実行してください"
+  echo
+  echo -e "${FG_YELLOW}3. エアギャップの tx.signed をBPのcnodeディレクトリにコピーしてください${NC}"
+  echo '----------------------------------------'
+  echo ">> [エアギャップ] ⇒ tx.signed ⇒ [BP]"
+  echo '----------------------------------------'
+  echo
+  echo "1～3の操作が終わったらEnterを押してください"
+  Gum_OneSelect "Enter"
+}
 
 
+#プールデータAPI取得
+get_pooldata(){
+  #APIリクエストクエリjson生成
+  pId_json="{\""_pool_bech32_ids"\":[\""$(cat $NODE_HOME/$POOL_ID_BECH32_FILENAME)"\"]}"
+  #API プールデータ取得
+  curl -s -X POST "$KOIOS_API/pool_info" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d $pId_json > $NODE_HOME/pooldata.txt
+  wait
+
+  pooldata_chk=$(cat $NODE_HOME/pooldata.txt)
+  if [[ $pooldata_chk != *"pool_id_bech32"* ]]; then
+    echo "APIからプールデータを取得できませんでした。再度お試しください"
+    Gum_OneSelect "戻る"
+  fi
+}
 
 
 #----------CLI関数----------------
@@ -302,7 +365,9 @@ Gum_Fnspin() {
 }
 
 Gum_OneSelect(){
+  echo
   gum choose --header="" --height=1 --no-show-help "${1}"
+  return
 }
 
 Gum_Confirm_YesNo(){

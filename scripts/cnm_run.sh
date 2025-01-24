@@ -7,7 +7,7 @@ source ${HOME}/.bashrc
 
 tmux new-session -d -s sjgtool
 
-tmux send-keys -t sjgtool ${CNM_INST_DIR}/sjgtool.sh Enter
+tmux send-keys -t sjgtool "${CNM_INST_DIR}/sjgtool.sh $1" Enter
 
 tmux a -t sjgtool
 

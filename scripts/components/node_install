@@ -38,17 +38,6 @@ NodeVersionSelect(){
   select_node_version=$(gum choose --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
 }
 
-
-  #依存関係インストール
-Installdependencies(){
-  echo
-  YellowStyle "依存パッケージインストール..."
-  echo; sleep 3
-  sudo apt install git jq bc automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev -y
-  echo
-  YellowStyle "依存関係をインストールしました..."
-}
-
 #ノードインストール
 NodeInstall(){
   clear
@@ -71,7 +60,7 @@ NodeInstall(){
   echo
   YellowStyle "Libsodiumインストール..."
   echo; sleep 3
-  mkdir ${HOME}/git; cd ${HOME}/git || exit
+  cd ${HOME}/git || exit
   git clone https://github.com/IntersectMBO/libsodium
   cd libsodium || exit
   git checkout $SODIUM_VERSION
@@ -146,12 +135,10 @@ NodeInstall(){
 
   echo; YellowStyle "ノードインストール"
   sleep 3
-  mkdir ${HOME}/git/cardano-node
+  mkdir -p ${HOME}/git/cardano-node
   cd ${HOME}/git/cardano-node || exit
   wget -q https://github.com/IntersectMBO/cardano-node/releases/download/${1}/cardano-node-${1}-linux.tar.gz
   tar zxvf cardano-node-${1}-linux.tar.gz ./bin/cardano-node ./bin/cardano-cli
-  $(find ${HOME}/git/cardano-node -type f -name "cardano-cli") version
-  $(find ${HOME}/git/cardano-node -type f -name "cardano-node") version
 
   sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-cli")" /usr/local/bin/cardano-cli
   sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-node")" /usr/local/bin/cardano-node
@@ -162,15 +149,19 @@ NodeInstall(){
   if [ "${NODE_TYPE}" != "エアギャップ" ]; then
     echo; YellowStyle "設定ファイルダウンロード..."
     sleep 3
-    mkdir ${NODE_HOME}
+    mkdir -p ${NODE_HOME}
     cd ${NODE_HOME} || exit
     wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/byron-genesis.json -O ${NODE_CONFIG}-byron-genesis.json
     wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/topology.json -O ${NODE_CONFIG}-topology.json
     wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/shelley-genesis.json -O ${NODE_CONFIG}-shelley-genesis.json
     wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/alonzo-genesis.json -O ${NODE_CONFIG}-alonzo-genesis.json
     wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/conway-genesis.json -O ${NODE_CONFIG}-conway-genesis.json
+    if [ "${NODE_TYPE}" = "リレー" ]; then
     wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/config.json -O ${NODE_CONFIG}-config.json
     echo; YellowStyle "設定ファイルダウンロードしました"
+    else
+      wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/config-bp.json -O ${NODE_CONFIG}-config.json
+    fi 
 
     sed -i ${NODE_CONFIG}-config.json \
         -e 's!"AlonzoGenesisFile": "alonzo-genesis.json"!"AlonzoGenesisFile": "'${NODE_CONFIG}'-alonzo-genesis.json"!' \
@@ -327,26 +318,26 @@ EOF
     echo
     YellowStyle "サービスファイルを作成しました"
     echo
+    echo "gliveコマンドを実行してgLiveViewを起動してください..."
   fi
 }
 
 
 nodeInstMain(){
-if [ -z "${nodeBinaryPath}" ]; then
+if [ ! -e "${nodeBinaryPath}" ]; then
   echo "ノードをインストールします..."
   echo
   sleep 2
   sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
   SystemUpdate $sudopass
-  Installdependencies "依存パッケージインストール中"
   NodeVersionSelect
   NodeInstall $select_node_version
-  echo "gliveコマンドを実行してgLiveViewを起動してください..."
   sleep 2
 else 
   cardano-node --version
   cardano-cli version
   echo
+  echo ${nodeBinaryPath}
   YellowStyle "cardano-nodeはインストール済みです"
   echo
   Gum_OneSelect "戻る"
