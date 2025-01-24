@@ -9,7 +9,7 @@ EOF
 }
 
 #KES作成
-kesCreate(){
+createKes(){
     case $NODE_TYPE in
     "ブロックプロデューサー" )
       #KEStimenig

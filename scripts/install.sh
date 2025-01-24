@@ -45,7 +45,10 @@ STAKE_VKEY_FILENAME="stake.vkey"
 STAKE_ADDR_FILENAME="stake.addr"
 STAKE_CERT_FILENAME="stake.cert"
 POOL_META_FILENAME="poolMetaData.json"
+POOL_ID_FILENAME="pool.id"
+POOL_ID_BECH32_FILENAME="pool.id-bech32"
 KOIOS_API="${3}"
+NODE_PROMETHEUS_PORT="12798"
 EOF
 }
 
@@ -117,25 +120,25 @@ if [ ! -d "${CNM_HOME}" ]; then
             NODE_CONFIG=mainnet
             NODE_NETWORK='"--mainnet"'
             CARDANO_NODE_NETWORK_ID=mainnet
-            koios_domain="https://api.koios.rest"
+            koios_domain="https://api.koios.rest/api/v1"
         ;;
         "preview" )
             NODE_CONFIG=preview
             NODE_NETWORK='"--testnet-magic 2"'
             CARDANO_NODE_NETWORK_ID=2
-            koios_domain="https://preview.koios.rest"
+            koios_domain="https://preview.koios.rest/api/v1"
         ;;
         "preprod" )
             NODE_CONFIG=preprod
             NODE_NETWORK='"--testnet-magic 1"'
             CARDANO_NODE_NETWORK_ID=1
-            koios_domain="https://preprod.koios.rest"
+            koios_domain="https://preprod.koios.rest/api/v1"
         ;;
         "Sancho-net" )
             NODE_CONFIG=sanchonet
             NODE_NETWORK='"--testnet-magic 4"'
             CARDANO_NODE_NETWORK_ID=4
-            koios_domain="https://sancho.koios.rest"
+            koios_domain="https://sancho.koios.rest/api/v1"
         ;;
     esac
 
