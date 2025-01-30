@@ -259,7 +259,7 @@ manageWallet(){
                   --tx-out ${destinationAddress}+${amountToSend} \
                   --invalid-hereafter $(( ${currentSlot} + 10000)) \
                   --fee ${fee} \
-                  --out-file $NODE_HOME/$NODE_HOME/tx.raw
+                  --out-file $NODE_HOME/tx.raw
               
               #エアギャップ操作メッセージ
               message_file_transfer "tx.raw" "一般Tx署名"
