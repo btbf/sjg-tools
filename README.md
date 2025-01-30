@@ -11,7 +11,7 @@ SJGTOOL V2 α
 
 ### インストール
 ```
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/btbf/sjg-tools/refs/tags/0.3.0/scripts/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/btbf/sjg-tools/refs/tags/0.3.1/scripts/install.sh)"
 ```
 
 ### 環境変数再読み込み
