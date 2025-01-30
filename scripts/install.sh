@@ -7,7 +7,6 @@
 CNM_INST_DIR=/opt/cnm
 CNM_HOME=$HOME/cnm
 gum_version="0.14.5"
-cnm_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
 
 
 source ${HOME}/.bashrc
@@ -66,7 +65,6 @@ EOF
 
 
 #ライブラリインストール
-
 echo "ライブラリをインストールします"
 if [ ! -e "/usr/bin/gum" ]; then
     sudo mkdir -p /etc/apt/keyrings
@@ -74,11 +72,12 @@ if [ ! -e "/usr/bin/gum" ]; then
     echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
     sudo apt update && sudo apt install gum=${gum_version}
 fi
-sudo apt install git jq bc automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
+sudo apt install git jq bc ccze automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
 gum --version
 echo
 
 #CNODE Managerインストール
+cnm_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
 echo "CNODE Managerをインストールします"
 mkdir -p $HOME/git
 cd $HOME/git || { echo "Failure"; exit 1; }
@@ -161,8 +160,8 @@ if [ ! -d "${CNM_HOME}" ]; then
             echo export NODE_CONFIG="${NODE_CONFIG}" >> "${HOME}"/.bashrc
             echo export NODE_NETWORK="${NODE_NETWORK}" >> "${HOME}"/.bashrc
             echo export CARDANO_NODE_NETWORK_ID="${CARDANO_NODE_NETWORK_ID}" >> "${HOME}"/.bashrc
-
-            echo alias cnode='"sudo journalctl -u cardano-node -f"' >> "${HOME}"/.bashrc
+            #sudo journalctl -u cardano-node -f | ccze -A
+            echo alias cnode='"sudo journalctl -u cardano-node -f | ccze -A"' >> "${HOME}"/.bashrc
             echo alias cnstart='"sudo systemctl start cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnstop='"sudo systemctl stop cardano-node"' >> "${HOME}"/.bashrc
