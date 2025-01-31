@@ -73,6 +73,7 @@ if [ ! -e "/usr/bin/gum" ]; then
     sudo apt update && sudo apt install gum=${gum_version}
 fi
 sudo apt install git jq bc ccze automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
+sudo apt-mark hold gum
 gum --version
 echo
 
@@ -80,7 +81,7 @@ echo
 cnm_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
 echo "CNODE Managerをインストールします"
 mkdir -p $HOME/git
-cd $HOME/git || { echo "Failure"; exit 1; }
+cd $HOME/git
 wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${cnm_version}.tar.gz -O cnm.tar.gz
 tar xzvf cnm.tar.gz
 rm cnm.tar.gz

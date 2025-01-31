@@ -227,8 +227,9 @@ EOF
     sleep 3
     #Rustインストール
     sudo apt install -y libssl-dev build-essential m4 jq
-    cd ${HOME}/git || exit
+    cd ${HOME}/git
     mithril_release="$(curl -s https://api.github.com/repos/input-output-hk/mithril/releases/latest | jq -r '.tag_name')"
+    YellowStyle "Mithrilクライアントをダウンロードしています..."
     wget -q https://github.com/input-output-hk/mithril/releases/download/${mithril_release}/mithril-${mithril_release}-linux-x64.tar.gz -O mithril.tar.gz
     tar zxvf mithril.tar.gz mithril-client
     sudo cp mithril-client /usr/local/bin/mithril-client
@@ -316,7 +317,9 @@ EOF
     sudo systemctl start cardano-node
 
     echo
-    YellowStyle "サービスファイルを作成しました"
+    YellowStyle "サービスファイル作成済み"
+    YellowStyle "カルダノノードを起動しました"
+    sleep 2
     echo
     echo "gliveコマンドを実行してgLiveViewを起動してください..."
   fi
