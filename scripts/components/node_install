@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 NodeVersionSelect(){
   version_list=""
   repo=IntersectMBO/cardano-node
@@ -38,25 +39,8 @@ NodeVersionSelect(){
   select_node_version=$(gum choose --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
 }
 
-#ノードインストール
-NodeInstall(){
-  clear
-  case "$NODE_TYPE" in
-
-  "ブロックプロデューサー" )
-    node_run_filename="startBlockProducingNode.sh"
-    ;;
-  "リレー" )
-    node_run_filename="startRelayNode1.sh"
-    ;;
-  esac
-
-  IOHKNIX_VERSION=$(curl -s https://raw.githubusercontent.com/IntersectMBO/cardano-node/${1}/flake.lock | jq -r '.nodes.iohkNix.locked.rev')
-  SODIUM_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.sodium.original.rev')
-  SECP256K1_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.secp256k1.original.ref')
-  BLST_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/master/flake.lock | jq -r '.nodes.blst.original.ref')
-
-  #Libsodium Install
+LibsodiumInstall(){
+#Libsodium Install
   echo
   YellowStyle "Libsodiumインストール..."
   echo; sleep 3
@@ -68,8 +52,10 @@ NodeInstall(){
   ./configure
   make
   sudo make install
+}
 
-  #Secp256k1 Install
+
+Secp256k1Install(){
   echo
   YellowStyle "Secp256k1インストール..."
   echo; sleep 3
@@ -81,9 +67,10 @@ NodeInstall(){
   ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental
   make
   sudo make install
+}
 
-  #blst Install
-  echo
+BlstInstall(){
+echo
   YellowStyle "blstインストール..."
   echo; sleep 3
   cd ${HOME}/git || exit
@@ -110,7 +97,9 @@ NodeInstall(){
   sudo cp bindings/blst_aux.h bindings/blst.h bindings/blst.hpp  /usr/local/include/
   sudo cp libblst.a /usr/local/lib
   sudo chmod u=rw,go=r /usr/local/{lib/{libblst.a,pkgconfig/libblst.pc},include/{blst.{h,hpp},blst_aux.h}}
+}
 
+GhcupInstall(){
   echo; YellowStyle "GHCUPインストール..."
   sleep 3
   cd ${HOME} || exit
@@ -132,6 +121,20 @@ NodeInstall(){
 
   cabal update
   cabal --version; ghc --version
+}
+
+#ノードインストール
+NodeInstall(){
+  clear
+  case "$NODE_TYPE" in
+
+  "ブロックプロデューサー" )
+    node_run_filename="startBlockProducingNode.sh"
+    ;;
+  "リレー" )
+    node_run_filename="startRelayNode1.sh"
+    ;;
+  esac
 
   echo; YellowStyle "ノードインストール"
   sleep 3
@@ -145,6 +148,7 @@ NodeInstall(){
 
   cardano-cli version
   cardano-node version
+  echo
 
   if [ "${NODE_TYPE}" != "エアギャップ" ]; then
     echo; YellowStyle "設定ファイルダウンロード..."
