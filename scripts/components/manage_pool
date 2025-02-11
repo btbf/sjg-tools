@@ -364,7 +364,7 @@ managePool(){
         ;;
 
         "[q] 終了" )
-        tmux kill-session -t sjgtool
+        tmux kill-session -t spokit
         ;;
         
         esac

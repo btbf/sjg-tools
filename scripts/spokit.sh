@@ -3,26 +3,26 @@
 # shellcheck source="$HOME/.bashrc"
 
 source ${HOME}/.bashrc
-source ${CNM_INST_DIR}/sjgtool.library
-source ${CNM_INST_DIR}/components/node_install
-source ${CNM_INST_DIR}/components/create_kes
-source ${CNM_INST_DIR}/components/grafana_install
-source ${CNM_INST_DIR}/components/create_metadata
-source ${CNM_INST_DIR}/components/register_pool
-source ${CNM_INST_DIR}/components/create_keys
-source ${CNM_INST_DIR}/components/topology_management
-source ${CNM_INST_DIR}/components/check_poolwallet
-source ${CNM_INST_DIR}/components/air_gap
-source ${CNM_INST_DIR}/components/manage_wallet
-source ${CNM_INST_DIR}/components/manage_pool
-source ${CNM_INST_DIR}/components/node_sync_check
-source ${CNM_INST_DIR}/components/mithril_bootstrap
+source ${SPOKIT_INST_DIR}/spokit.library
+source ${SPOKIT_INST_DIR}/components/node_install
+source ${SPOKIT_INST_DIR}/components/create_kes
+source ${SPOKIT_INST_DIR}/components/grafana_install
+source ${SPOKIT_INST_DIR}/components/create_metadata
+source ${SPOKIT_INST_DIR}/components/register_pool
+source ${SPOKIT_INST_DIR}/components/create_keys
+source ${SPOKIT_INST_DIR}/components/topology_management
+source ${SPOKIT_INST_DIR}/components/check_poolwallet
+source ${SPOKIT_INST_DIR}/components/air_gap
+source ${SPOKIT_INST_DIR}/components/manage_wallet
+source ${SPOKIT_INST_DIR}/components/manage_pool
+source ${SPOKIT_INST_DIR}/components/node_sync_check
+source ${SPOKIT_INST_DIR}/components/mithril_bootstrap
 source ${envPath}
 
 clear
 
 #-------------------------------#
- #CNODE Managerプール構築メニュー
+ #Spokitプール構築メニュー
 #-------------------------------#
 
 PoolSetupMenu(){
@@ -82,7 +82,7 @@ PoolSetupMenu(){
           prometheusInstall
         ;;
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
       done
@@ -108,7 +108,7 @@ PoolSetupMenu(){
         ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
       done
@@ -142,7 +142,7 @@ PoolSetupMenu(){
         ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
     ;;
@@ -152,7 +152,7 @@ PoolSetupMenu(){
 
 
 #-------------------------------#
- #CNODE Managerプール管理メニュー
+ #Spokitプール管理メニュー
 #-------------------------------#
 CnmMain(){
   headerTitle="プール管理メニュー"
@@ -176,7 +176,7 @@ CnmMain(){
         # ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
       done
@@ -198,7 +198,7 @@ CnmMain(){
         ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
       done
@@ -224,7 +224,7 @@ CnmMain(){
         ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
     ;;

@@ -279,7 +279,7 @@ manageWallet(){
             ;;
 
             "[q] 終了" )
-            tmux kill-session -t sjgtool
+            tmux kill-session -t spokit
             ;;
         esac
         done
@@ -288,7 +288,7 @@ manageWallet(){
       Cnm_main
       ;;
       "[q] 終了" )
-      tmux kill-session -t sjgtool
+      tmux kill-session -t spokit
       ;;
     esac
 		done

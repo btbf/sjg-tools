@@ -354,6 +354,9 @@ fi
 }
 
 NodeVirsionUp(){
+  cnstop
+  echo "ノードを停止しました"
+  echo
   sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
   SystemUpdate $sudopass
   NodeVersionSelect
