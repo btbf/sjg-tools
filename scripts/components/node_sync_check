@@ -1,0 +1,119 @@
+#!/bin/bash
+nodeSyncCheck(){
+
+##############################
+# 1. sudo 認証を先に実行しておく
+##############################
+# ここでパスワード入力が求められ、認証が完了するまで先に待機します。
+gum input --password --no-show-help --placeholder="sudoパスワードを入力してください" | sudo -v || { echo "sudo 認証に失敗しました。"; exit 1; }
+
+
+# エラーメッセージと対応する決まった文章を連想配列で定義
+declare -A error_response=(
+  ["TopologyP2P"]="トポロジーファイルエラーです"
+  ["GenesisReadFileError"]="ジェネシスファイルエラーです"
+  ["InvalidYaml"]="設定ファイルエラーです"
+  ["Invalid option"]="起動オプションエラーです"
+  ["Invalid argument"]="起動コマンドエラーです"
+  ["Address in use"]="ノードポート番号が競合しています"
+)
+
+#####################################
+# 2. 状態管理（Ledger/RunServerのシーケンス監視）
+#####################################
+state="waiting_ledger"
+
+#####################################
+# 3. スピナー関数の定義
+#####################################
+spinner() {
+    local spin_chars='-\|/'
+    local i=0
+    while true; do
+        i=$(( (i+1) % 4 ))
+        # \r で行頭に戻り、スピナーの文字を上書き表示
+        printf "\r%s" "${spin_chars:$i:1}"
+        sleep 0.1
+    done
+}
+
+#####################################
+# 4. スピナー開始用の関数（バックグラウンド実行）
+#####################################
+start_spinner() {
+    spinner &
+    spinner_pid=$!
+}
+
+#####################################
+# 5. スピナー停止用の関数
+#####################################
+stop_spinner() {
+    if [ -n "$spinner_pid" ]; then
+        kill "$spinner_pid" 2>/dev/null
+        unset spinner_pid
+        # 行頭に戻してクリア
+        printf "\r"
+    fi
+}
+
+#####################################
+# 6. メイン処理開始
+#####################################
+echo "ノード同期チェック開始..."
+
+# 初回のスピナー開始（Ledger DB待ち状態）
+start_spinner
+
+# journalctl の出力を処理（出力自体は表示しない）
+while IFS= read -r line; do
+    # ① エラー検知（優先）
+    for err in "${!error_response[@]}"; do
+        if [[ "$line" == *"$err"* ]]; then
+            stop_spinner
+            echo "エラー検知: [$err] → ${error_response[$err]}"
+            exit 1
+        fi
+    done
+
+    # ② シーケンス監視
+    case "$state" in
+        waiting_ledger)
+            if [[ "$line" == *"Started opening Ledger DB"* ]]; then
+                stop_spinner
+                echo "データベースを検証しています..."
+                state="waiting_runserver"
+                # RunServer待ち状態でもスピナーを表示
+                start_spinner
+            fi
+            ;;
+        waiting_runserver)
+            if [[ "$line" == *"RunServer"* ]]; then
+                stop_spinner
+                echo "チェーン同期を開始します..."
+                echo "エンドポイントslot値を確認します..."
+                # RunServer検知後、localhost:12798/metrics をポーリング
+                while true; do
+                    # metrics の内容から 'slot' の行を抽出（先頭が "slot" であると仮定）
+                    slot_line=$(curl -s http://localhost:12798/metrics | grep 'cardano_node_metrics_slotInEpoch_int')
+                    if [ -n "$slot_line" ]; then
+                        # slot 行が存在すれば、値を抽出（値が空でなければ終了）
+                        slot_value=$(echo "$slot_line" | awk '{print $2}')
+                        if [ -n "$slot_value" ]; then
+                            echo "エポックスロットを検出しました: $slot_value"
+                            echo "ノードが同期されました！"
+                            sleep 2
+                            exit 0
+                        fi
+                    fi
+                    # まだ slot 値がなければ 1秒待機
+                    sleep 1
+                done
+            fi
+            ;;
+    esac
+
+done < <(sudo journalctl -u cardano-node -f 2>/dev/null)
+}
+
+nodeSyncCheck

@@ -15,6 +15,7 @@ source ${CNM_INST_DIR}/components/check_poolwallet
 source ${CNM_INST_DIR}/components/air_gap
 source ${CNM_INST_DIR}/components/manage_wallet
 source ${CNM_INST_DIR}/components/manage_pool
+source ${CNM_INST_DIR}/components/node_sync_check
 source ${envPath}
 
 clear

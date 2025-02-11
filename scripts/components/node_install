@@ -322,10 +322,17 @@ EOF
 
     echo
     YellowStyle "サービスファイル作成済み"
-    YellowStyle "カルダノノードを起動しました"
-    sleep 2
-    echo
-    echo "gliveコマンドを実行してgLiveViewを起動してください..."
+    YellowStyle "カルダノノードを起動しました..."
+    nodeSyncCheck
+    if [ $? -eq 0 ]; then
+      echo "gLiveviewを起動します"
+      sleep
+      glive
+    else
+      echo "ノード起動に失敗しました"
+      echo "エラーメッセージの原因を解決してください"
+      Gum_OneSelect "戻る"
+    fi
   fi
 }
 
