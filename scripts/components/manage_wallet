@@ -72,7 +72,7 @@ manageWallet(){
 		do
     clear
     Header "ウォレット管理"
-    select=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット残高確認" "[2] プール報酬確認" "[3] 報酬/資金出金" "[b] 戻る" "[q] 終了")
+    select=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット残高確認" "[2] プール報酬確認" "[3] 報酬/資金出金" "[b] 戻る" "[q] 終了")
     case $select in
       "[1] ウォレット残高確認" )
         echo
@@ -96,7 +96,7 @@ manageWallet(){
 		    do
         clear
         Header "報酬/資金出金"
-        withdrawl=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] 報酬出金" "[2] ウォレット出金" "[b] 戻る" "[q] 終了")
+        withdrawl=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] 報酬出金" "[2] ウォレット出金" "[b] 戻る" "[q] 終了")
         case ${withdrawl} in
           #[START] payment.addr ⇒ 任意のアドレス(ADAHandle) [START] 
 
