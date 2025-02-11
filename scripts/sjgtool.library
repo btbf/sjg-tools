@@ -5,10 +5,7 @@ envPath=$HOME/cnm/env
 nodeBinaryPath=$(which cardano-node)
 cliBinaryPath=$(which cardano-cli)
 
-IOHKNIX_VERSION=$(curl -s https://raw.githubusercontent.com/IntersectMBO/cardano-node/${1}/flake.lock | jq -r '.nodes.iohkNix.locked.rev')
-SODIUM_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.sodium.original.rev')
-SECP256K1_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.secp256k1.original.ref')
-BLST_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/master/flake.lock | jq -r '.nodes.blst.original.ref')
+
 
 # フォアグラウンドカラー
 BLACK='\033[0;30m'

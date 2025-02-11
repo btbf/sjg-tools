@@ -221,7 +221,6 @@ createKes(){
         fi
       done
 
-      
       cd ${NODE_HOME}
       tar -xzvf ${NODE_HOME}/kesSet.tar.gz
       rm ${NODE_HOME}/kesSet.tar.gz

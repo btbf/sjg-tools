@@ -16,6 +16,7 @@ source ${CNM_INST_DIR}/components/air_gap
 source ${CNM_INST_DIR}/components/manage_wallet
 source ${CNM_INST_DIR}/components/manage_pool
 source ${CNM_INST_DIR}/components/node_sync_check
+source ${CNM_INST_DIR}/components/mithril_bootstrap
 source ${envPath}
 
 clear
@@ -33,10 +34,10 @@ PoolSetupMenu(){
       do
       clear
       Header $headerTitle
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] プールメタデータ作成" "[3] トポロジー設定" "[4] プール運用キー作成" "[5] プール運用証明書作成" "[6] ウォレット準備" "[7] ステークアドレス登録" "[8] プール登録" "[9] 監視ツールセットアップ" "[q] 終了")
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] プールメタデータ作成" "[3] トポロジー設定" "[4] プール運用キー作成" "[5] プール運用証明書作成" "[6] ウォレット準備" "[7] ステークアドレス登録" "[8] プール登録" "[9] 監視ツールセットアップ" "[q] 終了")
       case $selection in
         "[1] ノードインストール" )
-            nodeInstMain
+            FirstNodeSetup
         ;;
 
         "[2] プールメタデータ作成" )
@@ -92,10 +93,10 @@ PoolSetupMenu(){
       do
       clear
       Header $headerTitle
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] トポロジー設定" "[3] 監視ツールセットアップ" "[q] 終了")
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] トポロジー設定" "[3] 監視ツールセットアップ" "[q] 終了")
       case $selection in
         "[1] ノードインストール" )
-            nodeInstMain
+            FirstNodeSetup
         ;;
 
         "[2] トポロジー設定" )
@@ -113,11 +114,11 @@ PoolSetupMenu(){
       done
     ;;
     "エアギャップ" )
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIインストール" "プール運用キー作成" "ノード運用証明書作成" "ステークアドレスTx署名" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIインストール" "プール運用キー作成" "ノード運用証明書作成" "ステークアドレスTx署名" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
       case $selection in
 
         "CLIインストール" )
-        nodeInstMain
+          FirstNodeSetup
         ;;
       
         "プール運用キー作成" )
@@ -161,7 +162,7 @@ CnmMain(){
       do
       clear
       Header $headerTitle
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット管理" "[2] プール情報管理" "[q] 終了")
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット管理" "[2] プール情報管理" "[q] 終了")
       case $selection in
         "[1] ウォレット管理" )
         manageWallet
@@ -186,9 +187,10 @@ CnmMain(){
       do
       clear
       Header $headerTitle
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードバージョンアップ" "[2] トポロジー変更" "[q] 終了")
+      selection=$(gum filter --height=6 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードバージョンアップ" "[2] トポロジー変更" "[q] 終了")
       case $selection in
         "[1] ノードバージョンアップ" )
+          NodeVirsionUp
         ;;
 
         "[2] トポロジー変更" )
@@ -203,7 +205,7 @@ CnmMain(){
     ;;
 
     "エアギャップ" )
-     selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIバージョンアップ" "ノード運用証明書作成" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
+     selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIバージョンアップ" "ノード運用証明書作成" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
       case $selection in
 
         "CLIバージョンアップ" )

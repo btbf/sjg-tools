@@ -116,4 +116,4 @@ while IFS= read -r line; do
 done < <(sudo journalctl -u cardano-node -f 2>/dev/null)
 }
 
-nodeSyncCheck
+#nodeSyncCheck
