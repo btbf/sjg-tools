@@ -7,14 +7,13 @@
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
 gum_version="0.15.2"
-
+spokit_version=0.3.4
 
 source ${HOME}/.bashrc
 
 
 style(){
-  echo -e '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' "\n" \
-    | gum format -t template
+  echo -e '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' "\n" | gum format -t template; echo
 }
 
 
@@ -56,13 +55,18 @@ DotSpinner3(){
 }
 
 
-
-
 #環境設定
 cat > ~/.tmux.conf << EOF
 set -g default-terminal "screen-256color"
 EOF
 
+
+##############
+#起動タイトル
+##############
+
+gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokit v${version}" "インストール"
+sleep 2
 
 #ライブラリインストール
 echo "ライブラリをインストールします"
