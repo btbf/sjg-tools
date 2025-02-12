@@ -78,23 +78,24 @@ gum --version
 echo
 
 #Spokitインストール
-cnm_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
+spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
 echo "Spokitをインストールします"
 mkdir -p $HOME/git
 cd $HOME/git
-wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${cnm_version}.tar.gz -O cnm.tar.gz
-tar xzvf cnm.tar.gz
-rm cnm.tar.gz
+spokit_version=0.3.2
+wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
+tar xzvf spokit.tar.gz
+rm spokit.tar.gz
 
 
 sudo mkdir -p ${SPOKIT_INST_DIR}
-cd sjg-tools-${cnm_version}/scripts
+cd sjg-tools-${spokit_version}/scripts
 sudo cp -pR ./* ${SPOKIT_INST_DIR}
 
-chmod 755 cnm_run.sh
+chmod 755 spokit_run.sh
 chmod 755 spokit.sh
 
-rm -rf $HOME/git/sjg-tools-${cnm_version}
+rm -rf $HOME/git/sjg-tools-${spokit_version}
 
 
 ##------初期設定
