@@ -335,10 +335,11 @@ EOF
   YellowStyle "サービスファイル作成済み"
   YellowStyle "カルダノノードを起動しました..."
   nodeSyncCheck
-  if [ $? -eq 0 ]; then
+  if $slot_value; then
     echo "gLiveviewを起動します"
     sleep
-    glive
+    cd $NODE_HOME/scripts
+    ./gLiveView.sh
   else
     echo "ノード起動に失敗しました"
     echo "エラーメッセージの原因を解決してください"
