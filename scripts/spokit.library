@@ -1,5 +1,5 @@
 #!/bin/bash
-version="0.3.4"
+version="0.3.5"
 
 envPath=$HOME/spokit/env
 nodeBinaryPath=$(which cardano-node)
