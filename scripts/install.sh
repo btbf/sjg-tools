@@ -82,7 +82,7 @@ spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/l
 echo "Spokitをインストールします"
 mkdir -p $HOME/git
 cd $HOME/git
-spokit_version=0.3.2
+spokit_version=0.3.3
 wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
 tar xzvf spokit.tar.gz
 rm spokit.tar.gz
