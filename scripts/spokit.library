@@ -334,21 +334,25 @@ Cli_CurrentSlot(){
 style(){
   echo -e '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' "\n" \
     | gum format -t template
+  echo
 }
 
 YellowStyle(){
   echo -e '{{ Color "11" "'"$1"'" }}' "\n" \
     | gum format -t template
+  echo
 }
 
 MagentaStyle(){
   echo -e '{{ Color "127" " '"$1"' " }}' "\n" \
     | gum format -t template
+  echo
 }
 
 GreenStyle(){
   echo -e '{{ Color "2" " '"$1"' " }}' "\n" \
     | gum format -t template
+  echo
 }
 
 #spin
