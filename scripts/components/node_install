@@ -260,7 +260,7 @@ NodeInstall(){
   SystemUpdate $sudopass
   NodeVersionSelect
   #ノードバイナリダウンロード
-  NodeDownload $1
+  NodeDownload $select_node_version
   echo
 
   #ノードコンフィグファイルダウンロード
