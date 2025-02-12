@@ -1,0 +1,61 @@
+#!/bin/bash
+
+MithrilBootStrap(){
+  YellowStyle "Mithrilクライアントをインストールします..."
+  echo
+  sleep 3
+  #Rustインストール
+  sudo apt install -y libssl-dev build-essential m4 jq
+  cd ${HOME}/git
+  mithril_release="$(curl -s https://api.github.com/repos/input-output-hk/mithril/releases/latest | jq -r '.tag_name')"
+  YellowStyle "Mithrilクライアントをダウンロードしています..."
+  wget -q https://github.com/input-output-hk/mithril/releases/download/${mithril_release}/mithril-${mithril_release}-linux-x64.tar.gz -O mithril.tar.gz
+  tar zxvf mithril.tar.gz mithril-client
+  sudo cp mithril-client /usr/local/bin/mithril-client
+  sudo chmod +x /usr/local/bin/mithril-client
+  rm mithril.tar.gz mithril-client
+
+  echo
+  mithril-client -V
+  YellowStyle "Mithrilクライアントをインストールしました..."
+  echo
+
+  case ${NODE_CONFIG} in
+  "mainnet" )
+      mithril_network=release-${NODE_CONFIG}
+  ;;
+
+  "preview" )
+      mithril_network=pre-release-${NODE_CONFIG}
+  ;;
+
+  "preprod" )
+      mithril_network=release-${NODE_CONFIG}
+  ;;
+
+  "sanchonet" )
+      mithril_network=testing-${NODE_CONFIG}
+  ;;
+  esac
+
+  AGGREGATOR_ENDPOINT="https://aggregator.${mithril_network}.api.mithril.network/aggregator"
+  GENESIS_VERIFICATION_KEY="$(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${mithril_network}/genesis.vkey)"
+  NETWORK=${NODE_CONFIG}
+  SNAPSHOT_DIGEST="latest"
+
+  export NETWORK
+  export AGGREGATOR_ENDPOINT
+  export GENESIS_VERIFICATION_KEY
+  export SNAPSHOT_DIGEST
+
+  echo
+  YellowStyle "DBスナップショットをダウンロードします..."
+  YellowStyle "この作業は30分以上かかる場合があります"
+  echo
+  sleep 3
+  mithril-client cardano-db download --download-dir ${NODE_HOME} latest
+
+  echo
+  YellowStyle "DBスナップショットをダウンロードしました..."
+  echo
+}

@@ -2,101 +2,91 @@
 # shellcheck disable=SC1091,SC2086,SC1001,SC2317
 # shellcheck source="$HOME/.bashrc"
 
-topologyManagement(){
-if [ "${NODE_TYPE}" == "ブロックプロデューサー" ]; then
+inputConnections(){
+topologyAccessPoints=""
+while :
+do
+    inputConnectionNum=$(gum input --value="2" --width=0 --header="接続する${1}数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Connections")
+    # 入力が数字かどうかを確認
+    if [[ "$inputConnectionNum" =~ ^[0-9]+$ ]]; then
+    # 配列を使用して変数を管理
+    topologyRelays=""
 
-    while :
-    do
-        inputRelayNum=$(gum input --value="2" --width=0 --header="運用するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
-        # 入力が数字かどうかを確認
-        if [[ "$inputRelayNum" =~ ^[0-9]+$ ]]; then
-        # 配列を使用して変数を管理
-        declare -a inputRelays
-        declare -a inputPorts
-        topologyRelays=""
+    # ループを実行
+    for ((i = 1; i <= $inputConnectionNum; i++)); do
+        if [ "$i" -ge "2" ]; then poolRelaySet+="   "; fi
 
-        # ループを実行
-        for ((i = 1; i <= $inputRelayNum; i++)); do
-            if [ "$i" -ge "2" ]; then poolRelaySet+="   "; fi
-            inputRelayAddress=$(gum input --width=0 --header="リレー${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
-            inputRelays[$i]=${inputRelayAddress}
-            inputRelayPort=$(gum input --value="6000" --width=0 --header="リレー${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Realy Port")
-            inputPorts[$i]=${inputRelayPort}
+        while :
+        do 
+            inputAddress=$(gum input --width=0 --header="${1}${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
 
-            # 正規表現でIPv4アドレスの形式をチェック
-            if [[ $inputRelayAddress =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
-                # 各オクテットが0〜255の範囲内であることをチェック
-                IFS='.' read -r -a octets <<< "$inputRelayAddress"
-                valid=true
-                for octet in "${octets[@]}"; do
-                    if (( octet < 0 || octet > 255 )); then
-                        valid=false
-                        break
-                    fi
-                done
-                if [ "$valid" = true ]; then
-                    if [ $i -ne $inputRelayNum ]; then
-                    topologyRelays+=$(cat << EOF
+            # IPv4アドレスの正規表現
+            regex="^([0-9]{1,3}\.){3}[0-9]{1,3}$"
 
-    {
-    "address": "${inputRelayAddress}",
-    "port": ${inputRelayPort}
-    },
-EOF
-)
-else
-topologyRelays+=$(cat << EOF
-
-    {
-    "address": "${inputRelayAddress}",
-    "port": ${inputRelayPort}
-    }
-EOF
-)
-fi
-                else
-                    echo "無効なIPアドレスです"
+            # IPアドレスかどうかをチェック
+            if [[ $inputAddress =~ $regex ]]; then
+                # IP の範囲が 0〜255 かチェック
+                IFS='.' read -r a b c d <<< "$inputAddress"
+                if ((a <= 255 && b <= 255 && c <= 255 && d <= 255)); then
                     break 1
+                else
+                    echo "$inputAddress は無効な IP アドレスです（範囲外）"
                 fi
             else
-                if [ $i -ne $inputRelayNum ]; then
-                topologyRelays+=$(cat << EOF
+                # IPでなければ DNS として nslookup でチェック
+                if nslookup "$inputAddress" >/dev/null 2>&1; then
+                    break 1
+                else
+                    echo "$inputAddress は無効なドメインです（DNS解決不可）"
+                fi
+            fi
 
+        done
+        inputPort=$(gum input --value="6000" --width=0 --header="${1}${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Port")
+        newEntry=$(cat <<EOF
     {
-    "address": "${inputRelayAddress}",
-    "port": ${inputRelayPort}
-    },
-EOF
-)
-else
-topologyRelays+=$(cat << EOF
-
-    {
-    "address": "${inputRelayAddress}",
-    "port": ${inputRelayPort}
+        "address": "${inputAddress}",
+        "port": ${inputPort}
     }
 EOF
-)
-fi
-            fi
-        done
-        break 1
-        else
-        echo "数字を入力してください"
-        exit 1
+                )
+        
+        # 最後の要素でなければカンマを付ける
+        if [ $i -lt $inputConnectionNum ]; then
+            newEntry+=",
+"
         fi
+
+        topologyAccessPoints+="$newEntry"
     done
-    createTopologyBp=$(cat <<- EOF
+
+    break 1
+    else
+    echo "数字を入力してください"
+    exit 1
+    fi
+done
+}
+
+topologyManagement(){
+case $NODE_TYPE in
+
+"ブロックプロデューサー" )
+
+inputConnections "リレー"
+
+createTopology=$(cat <<- EOF
 {
 "bootstrapPeers": null,
 "localRoots": [
     {
       "accessPoints": [
-        ${topologyRelays}
+${topologyAccessPoints}
       ],
-      "advertise": false,
+      "advertise": true,
       "trustable": true,
-      "valency": ${inputRelayNum} 
+      "hotValency": ${inputConnectionNum},
+      "warmValency": $((${inputConnectionNum}+1))
     }
 ],
 "publicRoots": [],
@@ -104,19 +94,73 @@ fi
 }
 EOF
 )
-    echo "${createTopologyBp}"
-    echo "${createTopologyBp}" > $NODE_HOME/${NODE_CONFIG}-topology.json
+;;
+
+"リレー" )
+inputConnections "BP"
+bp_accessPoint=$topologyAccessPoints
+bp_connectNum=$inputConnectionNum
+
+inputConnections "リレー"
+relay_accessPoint=$topologyAccessPoints
+relay_connectNum=$inputConnectionNum
+
+createTopology=$(cat <<- EOF
+{
+"bootstrapPeers": [
+    {
+    "address": "backbone.cardano.iog.io",
+    "port": 3001
+    },
+    {
+    "address": "backbone.mainnet.emurgornd.com",
+    "port": 3001
+    },
+    {
+    "address": "backbone.mainnet.cardanofoundation.org",
+    "port": 3001
+    }
+],
+"localRoots": [
+    {
+    "accessPoints": [
+${bp_accessPoint}
+    ],
+      "advertise": false,
+      "trustable": true,
+      "hotValency": ${bp_connectNum},
+      "warmValency": $((${bp_connectNum}+1))
+    },
+    {
+    "accessPoints": [
+${relay_accessPoint}
+    ],
+      "advertise": true,
+      "trustable": true,
+      "hotValency": ${relay_connectNum},
+      "warmValency": $((${relay_connectNum}+1))
+    }
+],
+"publicRoots": [],
+"useLedgerAfterSlot": 128908821 
+}
+EOF
+)
+
+;;
+esac
+
+echo "${createTopology}"
+
+echo
+Gum_Confirm_YesNo "この値で${NODE_TYPE}用のトポロジーファイルを生成しますか？" "Yes" "再度入力してください"
+if [[ ${iniSettings} == "Yes" ]]; then
+    echo "${createTopology}" > $NODE_HOME/${NODE_CONFIG}-topology.json
+    GreenStyle "$NODE_HOME/${NODE_CONFIG}-topology.jsonを生成しました"
+    Gum_OneSelect "メニューに戻る"
+else
+    echo ${iniSettings}
     echo
-    Gum_Confirm_YesNo "この値で${NODE_TYPE}用のトポロジーファイルを生成しますか？" "Yes" "再度入力してください"
-    if [[ ${iniSettings} == "Yes" ]]; then
-        echo "$NODE_HOME/${NODE_CONFIG}-topology.jsonを生成しました"
-    else
-        echo ${iniSettings}
-        echo
-    fi
-    elif [ "${NODE_TYPE}" == "リレー" ]; then
-    echo "まだ実装していません"
-    else
-    echo "まだ実装していません"
-    fi
+    Gum_OneSelect "メニューに戻る"
+fi
 }

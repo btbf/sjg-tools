@@ -3,37 +3,41 @@
 # shellcheck source="$HOME/.bashrc"
 
 source ${HOME}/.bashrc
-source ${CNM_INST_DIR}/sjgtool.library
-source ${CNM_INST_DIR}/components/node_install
-source ${CNM_INST_DIR}/components/create_kes
-source ${CNM_INST_DIR}/components/grafana_install
-source ${CNM_INST_DIR}/components/create_metadata
-source ${CNM_INST_DIR}/components/register_pool
-source ${CNM_INST_DIR}/components/create_keys
-source ${CNM_INST_DIR}/components/topology_management
-source ${CNM_INST_DIR}/components/check_poolwallet
-source ${CNM_INST_DIR}/components/air_gap
-source ${CNM_INST_DIR}/components/manage_wallet
-source ${CNM_INST_DIR}/components/manage_pool
+source ${SPOKIT_INST_DIR}/spokit.library
+source ${SPOKIT_INST_DIR}/components/node_install
+source ${SPOKIT_INST_DIR}/components/create_kes
+source ${SPOKIT_INST_DIR}/components/grafana_install
+source ${SPOKIT_INST_DIR}/components/create_metadata
+source ${SPOKIT_INST_DIR}/components/register_pool
+source ${SPOKIT_INST_DIR}/components/create_keys
+source ${SPOKIT_INST_DIR}/components/topology_management
+source ${SPOKIT_INST_DIR}/components/check_poolwallet
+source ${SPOKIT_INST_DIR}/components/air_gap
+source ${SPOKIT_INST_DIR}/components/manage_wallet
+source ${SPOKIT_INST_DIR}/components/manage_pool
+source ${SPOKIT_INST_DIR}/components/node_sync_check
+source ${SPOKIT_INST_DIR}/components/mithril_bootstrap
 source ${envPath}
 
 clear
 
 #-------------------------------#
- #CNODE Managerプール構築メニュー
+ #Spokitプール構築メニュー
 #-------------------------------#
 
 PoolSetupMenu(){
+  headerTitle="プール管理メニュー"
+
   case $NODE_TYPE in
     "ブロックプロデューサー" )
       while :
       do
       clear
-      Header "プール構築メニュー"
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] プールメタデータ作成" "[3] トポロジー設定" "[4] プール運用キー作成" "[5] プール運用証明書作成" "[6] ウォレット準備" "[7] ステークアドレス登録" "[8] プール登録" "[9] 監視ツールセットアップ" "[q] 終了")
+      Header $headerTitle
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] プールメタデータ作成" "[3] トポロジー設定" "[4] プール運用キー作成" "[5] プール運用証明書作成" "[6] ウォレット準備" "[7] ステークアドレス登録" "[8] プール登録" "[9] 監視ツールセットアップ" "[q] 終了")
       case $selection in
         "[1] ノードインストール" )
-            nodeInstMain
+            NodeInstall
         ;;
 
         "[2] プールメタデータ作成" )
@@ -78,18 +82,21 @@ PoolSetupMenu(){
           prometheusInstall
         ;;
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
       done
     ;;
 
     "リレー" )
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] トポロジー設定" "[3] 監視ツールセットアップ" "[q] 終了")
-
+      while :
+      do
+      clear
+      Header $headerTitle
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] トポロジー設定" "[3] 監視ツールセットアップ" "[q] 終了")
       case $selection in
         "[1] ノードインストール" )
-            nodeInstMain
+            NodeInstall
         ;;
 
         "[2] トポロジー設定" )
@@ -101,16 +108,22 @@ PoolSetupMenu(){
         ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
+      done
     ;;
     "エアギャップ" )
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIインストール" "プール運用キー作成" "ノード運用証明書作成" "ステークアドレスTx署名" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIインストール" "プール運用キー作成" "ノード運用証明書作成" "ステークアドレスTx署名" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
       case $selection in
 
         "CLIインストール" )
-        nodeInstMain
+        sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
+        SystemUpdate $sudopass
+        NodeVersionSelect
+        #ノードバイナリダウンロード
+        NodeDownload $select_node_version
+        echo
         ;;
       
         "プール運用キー作成" )
@@ -134,7 +147,7 @@ PoolSetupMenu(){
         ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
     ;;
@@ -144,16 +157,17 @@ PoolSetupMenu(){
 
 
 #-------------------------------#
- #CNODE Managerプール管理メニュー
+ #Spokitプール管理メニュー
 #-------------------------------#
 CnmMain(){
+  headerTitle="プール管理メニュー"
   case $NODE_TYPE in
     "ブロックプロデューサー" )
       while :
       do
       clear
-      Header "プール管理メニュー"
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット管理" "[2] プール情報管理" "[q] 終了")
+      Header $headerTitle
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット管理" "[2] プール情報管理" "[3] ノードバージョンアップ" "[q] 終了")
       case $selection in
         "[1] ウォレット管理" )
         manageWallet
@@ -163,21 +177,29 @@ CnmMain(){
         managePool
         ;;
 
+        "[3] ノードバージョンアップ" )
+          NodeVirsionUp
+        ;;
+
         # "[3] ガバナンス管理" )
         # ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
       done
     ;;
     
     "リレー" )
-      selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードバージョンアップ" "[2] トポロジー変更" "[q] 終了")
-
+      while :
+      do
+      clear
+      Header $headerTitle
+      selection=$(gum filter --height=6 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードバージョンアップ" "[2] トポロジー変更" "[q] 終了")
       case $selection in
         "[1] ノードバージョンアップ" )
+          NodeVirsionUp
         ;;
 
         "[2] トポロジー変更" )
@@ -185,13 +207,14 @@ CnmMain(){
         ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
+      done
     ;;
 
     "エアギャップ" )
-     selection=$(gum filter --height=12 --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIバージョンアップ" "ノード運用証明書作成" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
+     selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIバージョンアップ" "ノード運用証明書作成" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
       case $selection in
 
         "CLIバージョンアップ" )
@@ -210,7 +233,7 @@ CnmMain(){
         ;;
 
         "[q] 終了" )
-          tmux kill-session -t sjgtool
+          tmux kill-session -t spokit
         ;;
       esac
     ;;

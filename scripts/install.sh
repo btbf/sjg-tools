@@ -4,9 +4,9 @@
 # shellcheck source="${envPath}"
 
 
-CNM_INST_DIR=/opt/cnm
-CNM_HOME=$HOME/cnm
-gum_version="0.14.5"
+SPOKIT_INST_DIR=/opt/spokit
+SPOKIT_HOME=$HOME/spokit
+gum_version="0.15.2"
 
 
 source ${HOME}/.bashrc
@@ -19,8 +19,8 @@ style(){
 
 
 CreateEnv(){
-mkdir -p ${CNM_HOME}
-cat <<-EOF > ${CNM_HOME}/env
+mkdir -p ${SPOKIT_HOME}
+cat <<-EOF > ${SPOKIT_HOME}/env
 #!/bin/bash
 #主要な値は環境変数に入っています。 "${HOME}"/.bashrc
 
@@ -73,32 +73,34 @@ if [ ! -e "/usr/bin/gum" ]; then
     sudo apt update && sudo apt install gum=${gum_version}
 fi
 sudo apt install git jq bc ccze automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
+sudo apt-mark hold gum
 gum --version
 echo
 
-#CNODE Managerインストール
-cnm_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
-echo "CNODE Managerをインストールします"
+#Spokitインストール
+spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
+echo "Spokitをインストールします"
 mkdir -p $HOME/git
-cd $HOME/git || { echo "Failure"; exit 1; }
-wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${cnm_version}.tar.gz -O cnm.tar.gz
-tar xzvf cnm.tar.gz
-rm cnm.tar.gz
+cd $HOME/git
+spokit_version=0.3.2
+wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
+tar xzvf spokit.tar.gz
+rm spokit.tar.gz
 
 
-sudo mkdir -p ${CNM_INST_DIR}
-cd sjg-tools-${cnm_version}/scripts
-sudo cp -pR ./* ${CNM_INST_DIR}
+sudo mkdir -p ${SPOKIT_INST_DIR}
+cd sjg-tools-${spokit_version}/scripts
+sudo cp -pR ./* ${SPOKIT_INST_DIR}
 
-chmod 755 cnm_run.sh
-chmod 755 sjgtool.sh
+chmod 755 spokit_run.sh
+chmod 755 spokit.sh
 
-rm -rf $HOME/git/sjg-tools-${cnm_version}
+rm -rf $HOME/git/sjg-tools-${spokit_version}
 
 
 ##------初期設定
 clear
-if [ ! -d "${CNM_HOME}" ]; then
+if [ ! -d "${SPOKIT_HOME}" ]; then
     gum style \
         --foreground 212 --border-foreground 212 --border double \
         --align center --width 50 --margin "1 2" --padding "2 4" \
@@ -155,8 +157,8 @@ if [ ! -d "${CNM_HOME}" ]; then
             echo export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> "${HOME}"/.bashrc
             echo export NODE_HOME="${HOME}"/cnode >> "${HOME}"/.bashrc
             echo export CARDANO_NODE_SOCKET_PATH="${HOME}/cnode/db/socket" >> "${HOME}"/.bashrc
-            echo export CNM_INST_DIR="${CNM_INST_DIR}" >> "${HOME}"/.bashrc
-            echo export CNM_HOME="${CNM_HOME}" >> "${HOME}"/.bashrc
+            echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
+            echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
             echo export NODE_CONFIG="${NODE_CONFIG}" >> "${HOME}"/.bashrc
             echo export NODE_NETWORK="${NODE_NETWORK}" >> "${HOME}"/.bashrc
             echo export CARDANO_NODE_NETWORK_ID="${CARDANO_NODE_NETWORK_ID}" >> "${HOME}"/.bashrc
@@ -167,18 +169,18 @@ if [ ! -d "${CNM_HOME}" ]; then
             echo alias cnstop='"sudo systemctl stop cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnreload='"kill -HUP $(pidof cardano-node)"' >> "${HOME}"/.bashrc
             echo alias glive="'cd ${HOME}/cnode/scripts; ./gLiveView.sh'" >> "${HOME}"/.bashrc
-            echo alias cnm="'${CNM_INST_DIR}/cnm_run.sh'" >> $HOME/.bashrc
+            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> $HOME/.bashrc
         else
-            echo export CNM_INST_DIR="${CNM_INST_DIR}" >> "${HOME}"/.bashrc
-            echo export CNM_HOME="${CNM_HOME}" >> "${HOME}"/.bashrc
-            echo alias cnm="'${CNM_INST_DIR}/cnm_run.sh'" >> $HOME/.bashrc
+            echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
+            echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
+            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> $HOME/.bashrc
         fi
         
         #設定ファイル作成
         CreateEnv "${nodeType}" "${NODE_CONFIG}" "${koios_domain}"
 
         echo
-        style "設定ファイルを作成しました" "${CNM_HOME}/env"
+        style "設定ファイルを作成しました" "${SPOKIT_HOME}/env"
         echo
 
         DotSpinner3 "初期設定を終了します"
@@ -195,4 +197,4 @@ echo "------------------------------------------------------------"
 echo "source $HOME/.bashrc"
 echo
 echo "上記コマンドを実行して環境変数を再読み込みしてください"
-echo "CNODE Managerを起動するには \"cnm\" コマンドを実行してください"
+echo "Spokitを起動するには \"cnm\" コマンドを実行してください"

@@ -5,9 +5,9 @@
 
 source ${HOME}/.bashrc
 
-tmux new-session -d -s sjgtool
+tmux new-session -d -s spokit
 
-tmux send-keys -t sjgtool "${CNM_INST_DIR}/sjgtool.sh $1" Enter
+tmux send-keys -t spokit "${SPOKIT_INST_DIR}/spokit.sh $1" Enter
 
-tmux a -t sjgtool
+tmux a -t spokit
 

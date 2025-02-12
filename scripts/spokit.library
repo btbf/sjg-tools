@@ -1,9 +1,11 @@
 #!/bin/bash
 version="v.0.3.0"
 
-envPath=$HOME/cnm/env
+envPath=$HOME/spokit/env
 nodeBinaryPath=$(which cardano-node)
 cliBinaryPath=$(which cardano-cli)
+
+
 
 # フォアグラウンドカラー
 BLACK='\033[0;30m'
@@ -87,7 +89,7 @@ EOF
 
 
 Header(){
-	gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "CNODE Manager ${version}" "${1}"
+	gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokit ${version}" "${1}"
   gum style --align center --width 60 --margin "0 2 1 2" --padding "0 0" "ネットワーク:$(gum style --foreground 011 ${NODE_CONFIG}) | ノードタイプ:$(gum style --foreground 011 ${NODE_TYPE})"
 }
 
@@ -335,7 +337,7 @@ style(){
 }
 
 YellowStyle(){
-  echo -e '{{ Color "11" " '"$1"' " }}' "\n" \
+  echo -e '{{ Color "11" "'"$1"'" }}' "\n" \
     | gum format -t template
 }
 
@@ -361,7 +363,7 @@ Gum_DotSpinner(){
 Gum_Fnspin() {
     local TITLE="${*: -1}"
     local COMMANDO="${*:1:$(($# - 1))}"
-    gum spin --spinner="dot" --title="$TITLE" --show-output -- bash -c "source ../sjgtool.library && $COMMANDO"
+    gum spin --spinner="dot" --title="$TITLE" --show-output -- bash -c "source ../spokit.library && $COMMANDO"
 }
 
 Gum_OneSelect(){
