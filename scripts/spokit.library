@@ -1,7 +1,7 @@
 #!/bin/bash
 version="v.0.3.0"
 
-envPath=$HOME/cnm/env
+envPath=$HOME/spokit/env
 nodeBinaryPath=$(which cardano-node)
 cliBinaryPath=$(which cardano-cli)
 
@@ -337,7 +337,7 @@ style(){
 }
 
 YellowStyle(){
-  echo -e '{{ Color "11" " '"$1"' " }}' "\n" \
+  echo -e '{{ Color "11" "'"$1"'" }}' "\n" \
     | gum format -t template
 }
 

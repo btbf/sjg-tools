@@ -8,6 +8,7 @@ NodeVersionSelect(){
   latest_node_version=$(curl -s --url "https://api.github.com/repos/$repo/releases/latest" | grep -oP '"tag_name": "\K(.*)(?=")')
   if [[ $SYNC_NETWORK == "mainnet" ]]; then
     echo
+    echo
     printf "最新バージョン: $latest_node_version\n"
     printf "推奨バージョン: $recommend_node_version\n"
     echo
@@ -38,7 +39,7 @@ NodeVersionSelect(){
       done
       # 先頭のスペースを削除
       version_list=$(echo $version_list | sed 's/^ *//')
-
+      version_list="$version_list キャンセル"
       echo
       select_node_version=$(gum choose --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
     fi
@@ -51,23 +52,30 @@ NodeVersionSelect(){
     -e ' href="/'"$repo"'/commit/[0-9a-f]{40,}"' |
     cut -d'"' -f2 |
     sed -E 's,^.*/(commit|tag)/,,' |
+    {
+    count=0
     while read name && read hash; do
-      node_version="$name "
-      echo -n "$node_version"
-    done)
+      [ "$count" -ge 5 ] && break
+      echo -n "$name "
+      count=$((count+1))
+    done
+    echo -n "キャンセル"
+    })
 
-
+    echo
     echo
     printf "最新バージョン: $latest_node_version\n"
     select_node_version=$(gum choose --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
     
   fi
   echo
-  echo 
-  IOHKNIX_VERSION=$(curl -s https://raw.githubusercontent.com/IntersectMBO/cardano-node/$select_node_version/flake.lock | jq -r '.nodes.iohkNix.locked.rev')
-  SODIUM_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.sodium.original.rev')
-  SECP256K1_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.secp256k1.original.ref')
-  BLST_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/master/flake.lock | jq -r '.nodes.blst.original.ref')
+  if [[ $select_node_version != "キャンセル" ]]; then
+    IOHKNIX_VERSION=$(curl -s https://raw.githubusercontent.com/IntersectMBO/cardano-node/$select_node_version/flake.lock | jq -r '.nodes.iohkNix.locked.rev')
+    SODIUM_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.sodium.original.rev')
+    SECP256K1_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.secp256k1.original.ref')
+    BLST_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/master/flake.lock | jq -r '.nodes.blst.original.ref')
+  fi
+
 }
 
 LibsodiumInstall(){
@@ -233,6 +241,7 @@ GliveViewDowndload(){
 
 #ノードインストール
 NodeInstall(){
+  if [ ! -e "${nodeBinaryPath}" ]; then
   clear
   case "$NODE_TYPE" in
 
@@ -244,6 +253,12 @@ NodeInstall(){
     ;;
   esac
 
+  echo "ノードをインストールします..."
+  echo
+  sleep 2
+  sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
+  SystemUpdate $sudopass
+  NodeVersionSelect
   #ノードバイナリダウンロード
   NodeDownload $1
   echo
@@ -329,19 +344,6 @@ EOF
     echo "エラーメッセージの原因を解決してください"
     Gum_OneSelect "戻る"
   fi
-}
-
-
-FirstNodeSetup(){
-if [ ! -e "${nodeBinaryPath}" ]; then
-  echo "ノードをインストールします..."
-  echo
-  sleep 2
-  sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
-  SystemUpdate $sudopass
-  NodeVersionSelect
-  NodeInstall $select_node_version
-  sleep 2
 else 
   cardano-node --version
   cardano-cli version
@@ -353,12 +355,21 @@ else
 fi
 }
 
+
 NodeVirsionUp(){
-  cnstop
+  echo "起動中のノードを停止します..."
+  sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
+  echo $sudopass | sudo -S systemctl stop cardano-node
   echo "ノードを停止しました"
   echo
-  sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
+  
   SystemUpdate $sudopass
   NodeVersionSelect
-  NodeDownload $select_node_version
+  if [[ $select_node_version == "キャンセル" ]]; then
+    echo
+    echo "アップデートはキャンセルされました"
+    Gum_OneSelect "戻る"
+  else
+    NodeDownload $select_node_version
+  fi
 }

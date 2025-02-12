@@ -37,7 +37,7 @@ PoolSetupMenu(){
       selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] プールメタデータ作成" "[3] トポロジー設定" "[4] プール運用キー作成" "[5] プール運用証明書作成" "[6] ウォレット準備" "[7] ステークアドレス登録" "[8] プール登録" "[9] 監視ツールセットアップ" "[q] 終了")
       case $selection in
         "[1] ノードインストール" )
-            FirstNodeSetup
+            NodeInstall
         ;;
 
         "[2] プールメタデータ作成" )
@@ -96,7 +96,7 @@ PoolSetupMenu(){
       selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] トポロジー設定" "[3] 監視ツールセットアップ" "[q] 終了")
       case $selection in
         "[1] ノードインストール" )
-            FirstNodeSetup
+            NodeInstall
         ;;
 
         "[2] トポロジー設定" )
@@ -118,7 +118,12 @@ PoolSetupMenu(){
       case $selection in
 
         "CLIインストール" )
-          FirstNodeSetup
+        sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
+        SystemUpdate $sudopass
+        NodeVersionSelect
+        #ノードバイナリダウンロード
+        NodeDownload $select_node_version
+        echo
         ;;
       
         "プール運用キー作成" )
@@ -162,7 +167,7 @@ CnmMain(){
       do
       clear
       Header $headerTitle
-      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット管理" "[2] プール情報管理" "[q] 終了")
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット管理" "[2] プール情報管理" "[3] ノードバージョンアップ" "[q] 終了")
       case $selection in
         "[1] ウォレット管理" )
         manageWallet
@@ -170,6 +175,10 @@ CnmMain(){
 
         "[2] プール情報管理" )
         managePool
+        ;;
+
+        "[3] ノードバージョンアップ" )
+          NodeVirsionUp
         ;;
 
         # "[3] ガバナンス管理" )

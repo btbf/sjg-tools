@@ -4,9 +4,9 @@
 # shellcheck source="${envPath}"
 
 
-SPOKIT_INST_DIR=/opt/cnm
-SPOKIT_HOME=$HOME/cnm
-gum_version="0.14.5"
+SPOKIT_INST_DIR=/opt/spokit
+SPOKIT_HOME=$HOME/spokit
+gum_version="0.15.2"
 
 
 source ${HOME}/.bashrc
