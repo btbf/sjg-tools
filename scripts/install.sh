@@ -7,7 +7,7 @@
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
 gum_version="0.15.2"
-spokit_version=0.3.4
+spokit_version=0.3.5
 
 source ${HOME}/.bashrc
 
@@ -82,11 +82,11 @@ gum --version
 echo
 
 #Spokitインストール
-spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
+#spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
 echo "Spokitをインストールします"
 mkdir -p $HOME/git
 cd $HOME/git
-spokit_version=0.3.4
+
 wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
 tar xzvf spokit.tar.gz
 rm spokit.tar.gz
@@ -105,10 +105,7 @@ rm -rf $HOME/git/sjg-tools-${spokit_version}
 ##------初期設定
 clear
 if [ ! -d "${SPOKIT_HOME}" ]; then
-    gum style \
-        --foreground 212 --border-foreground 212 --border double \
-        --align center --width 50 --margin "1 2" --padding "2 4" \
-        'SJGTOOL V2'  ${version} '' '初期設定'
+    gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokit v${version}" "初期設定"
 
     if [ -d "${NODE_HOME}" ]; then echo -e "既存のネットワーク設定が見つかりました : ${NODE_CONFIG}\n";workDir=${NODE_HOME};syncNetwork=${NODE_CONFIG}; fi
 
