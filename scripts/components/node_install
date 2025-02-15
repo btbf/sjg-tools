@@ -1,6 +1,8 @@
 #!/bin/bash
 
 recommend_node_version="10.1.4"
+recommend_cabal_vrtsion="3.8.1.0"
+recommend_ghc_vrtsion="8.10.7"
 
 NodeVersionSelect(){
   version_list=""
@@ -78,9 +80,8 @@ NodeVersionSelect(){
 
 LibsodiumInstall(){
 #Libsodium Install
-  echo
-  YellowStyle "Libsodiumインストール..."
-  echo; sleep 3
+  LglayStyle "Libsodiumインストール..."
+  sleep 3
   cd ${HOME}/git || exit
   git clone https://github.com/IntersectMBO/libsodium
   cd libsodium || exit
@@ -92,9 +93,8 @@ LibsodiumInstall(){
 }
 
 Secp256k1Install(){
-  echo
-  YellowStyle "Secp256k1インストール..."
-  echo; sleep 3
+  LglayStyle "Secp256k1インストール..."
+  sleep 3
   cd ${HOME}/git || exit
   git clone https://github.com/bitcoin-core/secp256k1.git
   cd secp256k1/ || exit
@@ -106,9 +106,8 @@ Secp256k1Install(){
 }
 
 BlstInstall(){
-echo
-  YellowStyle "blstインストール..."
-  echo; sleep 3
+  LglayStyle "blstインストール..."
+  sleep 3
   cd ${HOME}/git || exit
   git clone https://github.com/supranational/blst
   cd blst || exit
@@ -136,7 +135,7 @@ echo
 }
 
 GhcupInstall(){
-  echo; YellowStyle "GHCUPインストール..."
+  LglayStyle "GHCUPインストール..."
   sleep 3
   cd ${HOME} || exit
   BOOTSTRAP_HASKELL_NONINTERACTIVE=1
@@ -149,11 +148,11 @@ GhcupInstall(){
 
   source ${HOME}/.ghcup/env
   ghcup upgrade
-  ghcup install cabal 3.8.1.0
-  ghcup set cabal 3.8.1.0
+  ghcup install cabal $recommend_cabal_vrtsion
+  ghcup set cabal $recommend_cabal_vrtsion
 
-  ghcup install ghc 8.10.7
-  ghcup set ghc 8.10.7
+  ghcup install ghc $recommend_ghc_vrtsion
+  ghcup set ghc $recommend_ghc_vrtsion
 
   cabal update
   cabal --version; ghc --version
@@ -161,18 +160,58 @@ GhcupInstall(){
 
 
 NodeDownload(){
-  LglayStyle "ノードインストール開始"
-  mkdir -p ${HOME}/git/cardano-node
-  cd ${HOME}/git/cardano-node || exit
-  wget -q https://github.com/IntersectMBO/cardano-node/releases/download/${1}/cardano-node-${1}-linux.tar.gz
-  tar zxvf cardano-node-${1}-linux.tar.gz ./bin/cardano-node ./bin/cardano-cli > /dev/null 2>&1
-  sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-cli")" /usr/local/bin/cardano-cli
-  sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-node")" /usr/local/bin/cardano-node
+  nodeBinary_URL="https://github.com/IntersectMBO/cardano-node/releases/download/${1}/cardano-node-${1}-linux.tar.gz"
+  wget --spider -q "$nodeBinary_URL"
+  local status=$?
+  if [ $status -eq 0 ]; then
+    LglayStyle "ノードインストール開始"
+    mkdir -p ${HOME}/git/cardano-node
+    cd ${HOME}/git/cardano-node || exit
+    wget -q "https://github.com/IntersectMBO/cardano-node/releases/download/${1}/cardano-node-${1}-linux.tar.gz"
+    tar zxvf "cardano-node-${1}-linux.tar.gz" ./bin/cardano-node ./bin/cardano-cli > /dev/null 2>&1
+    sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-cli")" /usr/local/bin/cardano-cli
+    sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-node")" /usr/local/bin/cardano-node
+  else
+    echo "リリースバージョンではないためソースコードからビルドします"
+    #Libsodiumインストール
+    LibsodiumInstall
+    #Secp256インストール
+    Secp256k1Install
+    #Blstインストール
+    BlstInstall
+    #GHCUPインストール
+    GhcupInstall
 
+    cd $HOME/git
+    gitURL="https://github.com/IntersectMBO/cardano-node.git"
+    LglayStyle "cardano-nodeリポジトリダウンロード..."
+    echo "git-URL: $(DglayStyle $gitURL)" 
+    git clone $gitURL
+    cd cardano-node
+    git fetch --quiet --all --recurse-submodules --tags
+    git checkout --quiet tags/$1
+    echo "git tag:$(DglayStyle $1)"
+    cabal clean
+    cabal update
+    cabal configure --with-compiler=ghc-$recommend_ghc_vrtsion
+
+    LglayStyle "ソースコードからビルド開始..."
+    YellowStyle "この作業は30分以上かかる場合があります"
+    cabal build all cardano-cli
+    local node_install_status=$?
+    if [[ $node_install_status -eq 0 ]]; then
+      GreenStyle "ビルド成功"
+      echo
+      sudo cp $(./scripts/bin-path.sh cardano-cli) /usr/local/bin/cardano-cli
+      sudo cp $(./scripts/bin-path.sh cardano-node) /usr/local/bin/cardano-node
+    else
+      node_install_result="failure"
+    fi
+  fi
   cardano-cli version
   cardano-node version
 
-  rm -rf ${HOME}/git/cardano-node/*
+  rm -rf ${HOME}/git/cardano-node
   DglayStyle "ノード(v${1})をインストールしました"
   sleep 2
 }
@@ -223,7 +262,7 @@ GliveViewDowndload(){
 
   sed -i ${NODE_HOME}/scripts/env \
   -e '1,73s!#CNODE_HOME="/opt/cardano/cnode"!CNODE_HOME=${NODE_HOME}!' \
-  -e '1,73s!#CNODE_PORT=6000!CNODE_PORT='"${PORT}"'!' \
+  -e '1,73s!#CNODE_PORT=6000!CNODE_PORT='"${1}"'!' \
   -e '1,73s!#UPDATE_CHECK="Y"!UPDATE_CHECK="N"!' \
   -e '1,73s!#CONFIG="${CNODE_HOME}/files/config.json"!CONFIG="${CNODE_HOME}/'${NODE_CONFIG}'-config.json"!' \
   -e '1,73s!#SOCKET="${CNODE_HOME}/sockets/node0.socket"!SOCKET="${CNODE_HOME}/db/socket"!'
@@ -254,16 +293,24 @@ NodeInstall(){
   #ノードバイナリダウンロード
   NodeDownload $select_node_version
 
+  if [[ $node_install_result == "failure" ]]; then
+    ErrorStyle "ビルド失敗"
+    Gum_OneSelect "戻る"
+    return
+  fi
   #ノードコンフィグファイルダウンロード
   NodeConfigDownload
 
+  #ノード起動ポート選択
+  Select_NodePort
+
   LglayStyle "ノード起動用スクリプト作成..."
   sleep 2
-  PORT=6000
+
 cat <<-EOF > ${NODE_HOME}/${node_run_filename}
 #!/bin/bash
 DIRECTORY=${NODE_HOME}
-PORT=${PORT}
+PORT=${select_node_port}
 HOSTADDR=0.0.0.0
 TOPOLOGY=\${DIRECTORY}/${NODE_CONFIG}-topology.json
 DB_PATH=\${DIRECTORY}/db
@@ -278,7 +325,7 @@ EOF
   DglayStyle "起動スクリプトを作成しました"
 
   #gLiveViewインストール
-  GliveViewDowndload
+  GliveViewDowndload $select_node_port
 
   #Mithril DBブートストラップ
   MithrilBootStrap
@@ -326,6 +373,19 @@ EOF
     # sleep 2
     # cd $NODE_HOME/scripts
     # ./gLiveView.sh
+
+    if [[ $NODE_TYPE == "リレー" ]]; then
+      ufwStatus=$(UfwCheck)
+      if [[ $ufwStatus == "active" ]]; then
+        sudopass=$(InputSudoPass)
+        echo "$sudopass" | sudo -S ufw allow $select_node_port/tcp
+        sudo ufw reload
+        GreenStyle "$select_node_port番ポートを開放しました"
+      else
+        YellowStyle "ソフトウェアファイアウォール(ufw)が無効になっています"
+        YellowStyle ご契約のVPSでハードウェアファイアウォールを利用中の場合は $select_node_port/tcp をIP無指定で開放してください
+      fi
+    fi
     echo
     YellowStyle "日常オペレーションでノードの起動状況を確認するには、glive コマンドを使用してください。"
     Gum_OneSelect "戻る"

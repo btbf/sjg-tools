@@ -81,7 +81,7 @@ EOF
     echo
 
     #Spokitインストール
-    #spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
+    spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
     YellowStyle "Spokitをインストール..."
     mkdir -p $HOME/git
     cd $HOME/git
@@ -108,16 +108,19 @@ fi
 ##------初期設定
 clear
 if [ ! -d "${SPOKIT_HOME}" ]; then
-    gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokit v${version}" "初期設定"
+    gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokit v${spokit_version}" "ノードセットアップ初期設定"
 
-    if [ -d "${NODE_HOME}" ]; then echo -e "既存のネットワーク設定が見つかりました : ${NODE_CONFIG}\n";workDir=${NODE_HOME};syncNetwork=${NODE_CONFIG}; fi
-
-    nodeType=$(gum choose --header.foreground="244" --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ" --no-show-help)
-    
-    if [ ! -d "${NODE_HOME}" ]; then
+    if [ -d "${NODE_HOME}" ]; then 
+        echo -e "既存のネットワーク設定が見つかりました : ${NODE_CONFIG}\n"
+        workDir=${NODE_HOME}
+        syncNetwork=${NODE_CONFIG}
+    else
         syncNetwork=$(gum choose --header.foreground="244" --header="接続ネットワークを選択してください" --no-show-help "mainnet" "preview" "preprod" "Sancho-net")
-        workDir=$(gum input --value "${HOME}/cnode" --width=0 --no-show-help --header="プール管理ディレクトリを作成します。デフォルトの場合はそのままEnterを押して下さい" --header.foreground="99" --placeholder "${HOME}/cnode")
+        workDir=$(gum input --value "${HOME}/cnode" --width=0 --no-show-help --header.foreground="244" --header="プール管理ディレクトリを作成します。デフォルトの場合はそのままEnterを押して下さい" --header.foreground="99" --placeholder "${HOME}/cnode")
     fi
+
+    NODE_TYPE=$(gum choose --header.foreground="244" --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ" --no-show-help)
+    
 
     echo
     case "${syncNetwork}" in
@@ -125,29 +128,29 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             NODE_CONFIG=mainnet
             NODE_NETWORK='"--mainnet"'
             CARDANO_NODE_NETWORK_ID=mainnet
-            koios_domain="https://api.koios.rest/api/v1"
+            KOIOS_DOMAIN="https://api.koios.rest/api/v1"
         ;;
         "preview" )
             NODE_CONFIG=preview
             NODE_NETWORK='"--testnet-magic 2"'
             CARDANO_NODE_NETWORK_ID=2
-            koios_domain="https://preview.koios.rest/api/v1"
+            KOIOS_DOMAIN="https://preview.koios.rest/api/v1"
         ;;
         "preprod" )
             NODE_CONFIG=preprod
             NODE_NETWORK='"--testnet-magic 1"'
             CARDANO_NODE_NETWORK_ID=1
-            koios_domain="https://preprod.koios.rest/api/v1"
+            KOIOS_DOMAIN="https://preprod.koios.rest/api/v1"
         ;;
         "Sancho-net" )
             NODE_CONFIG=sanchonet
             NODE_NETWORK='"--testnet-magic 4"'
             CARDANO_NODE_NETWORK_ID=4
-            koios_domain="https://sancho.koios.rest/api/v1"
+            KOIOS_DOMAIN="https://sancho.koios.rest/api/v1"
         ;;
     esac
 
-    style "ノードタイプ:" "${nodeType}"
+    style "ノードタイプ:" "${NODE_TYPE}"
     style "ネットワーク:" "${NODE_CONFIG}"
     style "プール管理ディレクトリ:" "${workDir}"
     echo
@@ -166,7 +169,6 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             echo export NODE_CONFIG="${NODE_CONFIG}" >> "${HOME}"/.bashrc
             echo export NODE_NETWORK="${NODE_NETWORK}" >> "${HOME}"/.bashrc
             echo export CARDANO_NODE_NETWORK_ID="${CARDANO_NODE_NETWORK_ID}" >> "${HOME}"/.bashrc
-            #sudo journalctl -u cardano-node -f | ccze -A
             echo alias cnode='"sudo journalctl -u cardano-node -f | ccze -A"' >> "${HOME}"/.bashrc
             echo alias cnstart='"sudo systemctl start cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> "${HOME}"/.bashrc
@@ -181,7 +183,7 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
         fi
         
         #設定ファイル作成
-        CreateEnv "${nodeType}" "${NODE_CONFIG}" "${koios_domain}"
+        CreateEnv "${NODE_TYPE}" "${NODE_CONFIG}" "${UFW_STATUS}" "${KOIOS_DOMAIN}"
 
         echo
         style "設定ファイルを作成しました" "${SPOKIT_HOME}/env"
@@ -199,6 +201,7 @@ fi
 
 echo "------------------------------------------------------------"
 echo "source $HOME/.bashrc"
-echo
 echo "上記コマンドを実行して環境変数を再読み込みしてください"
-echo "Spokitを起動するには \"spokit poolsetup\" コマンドを実行してください"
+echo
+echo "プール構築開始コマンド \"spokit setup\" "
+echo "プール運営コマンド \"spokit\" "

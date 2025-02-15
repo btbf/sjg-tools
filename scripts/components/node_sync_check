@@ -81,7 +81,7 @@ while IFS= read -r line; do
         waiting_ledger)
             if [[ "$line" == *"Started opening Ledger DB"* ]]; then
                 stop_spinner
-                DglayStyleStyle "データベースを検証しています..."
+                LglayStyle "データベースを検証しています..."
                 state="waiting_runserver"
                 # RunServer待ち状態でもスピナーを表示
                 start_spinner
@@ -90,8 +90,8 @@ while IFS= read -r line; do
         waiting_runserver)
             if [[ "$line" == *"RunServer"* ]]; then
                 stop_spinner
-                DglayStyleStyle "チェーン同期を検知しました"
-                DglayStyleStyle "エンドポイントslot値を確認します..."
+                LglayStyle "チェーン同期を検知しました"
+                LglayStyle "エンドポイントslot値を確認します..."
                 # RunServer検知後、localhost:12798/metrics をポーリング
                 while true; do
                     # metrics の内容から 'slot' の行を抽出（先頭が "slot" であると仮定）
