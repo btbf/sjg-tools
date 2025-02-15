@@ -17,7 +17,7 @@ if [ "${checkPaymentFile}" == "Yes" ]; then
         echo "ウォレット残高がありません"
         echo "まずは上記のアドレスに少額からテスト送金してください" 
         echo
-        res=$(gum choose --header="処理を選択してください" --height=4 --no-show-help "残高再確認" "メニュへ戻る")
+        res=$(gum choose --header.foreground="244" --header="処理を選択してください" --height=4 --no-show-help "残高再確認" "メニュへ戻る")
         if [ "${res}" == "メニュへ戻る" ]; then
             break
         fi
@@ -30,7 +30,7 @@ if [ "${checkPaymentFile}" == "Yes" ]; then
         style "ステークキー登録料": "2ADA"
         style "Pledge(誓約金):" "誓約として設定したい額"
         echo
-        res=$(gum choose --header="処理を選択してください" --height=4 --no-show-help "残高再確認" "メニュへ戻る")
+        res=$(gum choose --header.foreground="244" --header="処理を選択してください" --height=4 --no-show-help "残高再確認" "メニュへ戻る")
         if [ "${res}" == "メニュへ戻る" ]; then
             break
         fi

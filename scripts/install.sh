@@ -7,7 +7,6 @@
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
 gum_version="0.15.2"
-spokit_version=0.3.5
 
 source ${HOME}/.bashrc
 
@@ -55,51 +54,55 @@ DotSpinner3(){
 }
 
 
+##############
+#起動タイトル
+##############
+
+gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokitへようこそ！" "Cardano SPO Tool Kit"
+sleep 3
+
+if [[ ! -d $SPOKIT_INST_DIR ]]; then
 #環境設定
 cat > ~/.tmux.conf << EOF
 set -g default-terminal "screen-256color"
 EOF
 
+    #ライブラリインストール
+    YellowStyle "ライブラリをインストール..."
+    if [ ! -e "/usr/bin/gum" ]; then
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
+        sudo apt update && sudo apt install gum=${gum_version}
+    fi
+    sudo apt install git jq bc ccze automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
+    sudo apt-mark hold gum
+    gum --version
+    echo
 
-##############
-#起動タイトル
-##############
+    #Spokitインストール
+    #spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
+    YellowStyle "Spokitをインストール..."
+    mkdir -p $HOME/git
+    cd $HOME/git
 
-gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokit v${version}" "インストール"
-sleep 2
+    wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
+    tar xzvf spokit.tar.gz
+    rm spokit.tar.gz
 
-#ライブラリインストール
-echo "ライブラリをインストールします"
-if [ ! -e "/usr/bin/gum" ]; then
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
-    echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
-    sudo apt update && sudo apt install gum=${gum_version}
+
+    sudo mkdir -p ${SPOKIT_INST_DIR}
+    cd sjg-tools-${spokit_version}/scripts
+    sudo cp -pR ./* ${SPOKIT_INST_DIR}
+
+    chmod 755 spokit_run.sh
+    chmod 755 spokit.sh
+
+    rm -rf $HOME/git/sjg-tools-${spokit_version}
+else
+    echo "Spokitはすでにインストールされています"
+    echo "spokit または spokit setup で起動できます"
 fi
-sudo apt install git jq bc ccze automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
-sudo apt-mark hold gum
-gum --version
-echo
-
-#Spokitインストール
-#spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
-echo "Spokitをインストールします"
-mkdir -p $HOME/git
-cd $HOME/git
-
-wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
-tar xzvf spokit.tar.gz
-rm spokit.tar.gz
-
-
-sudo mkdir -p ${SPOKIT_INST_DIR}
-cd sjg-tools-${spokit_version}/scripts
-sudo cp -pR ./* ${SPOKIT_INST_DIR}
-
-chmod 755 spokit_run.sh
-chmod 755 spokit.sh
-
-rm -rf $HOME/git/sjg-tools-${spokit_version}
 
 
 ##------初期設定
@@ -109,10 +112,10 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
 
     if [ -d "${NODE_HOME}" ]; then echo -e "既存のネットワーク設定が見つかりました : ${NODE_CONFIG}\n";workDir=${NODE_HOME};syncNetwork=${NODE_CONFIG}; fi
 
-    nodeType=$(gum choose --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ" --no-show-help)
+    nodeType=$(gum choose --header.foreground="244" --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ" --no-show-help)
     
     if [ ! -d "${NODE_HOME}" ]; then
-        syncNetwork=$(gum choose --header="接続ネットワークを選択してください" --no-show-help "mainnet" "preview" "preprod" "Sancho-net")
+        syncNetwork=$(gum choose --header.foreground="244" --header="接続ネットワークを選択してください" --no-show-help "mainnet" "preview" "preprod" "Sancho-net")
         workDir=$(gum input --value "${HOME}/cnode" --width=0 --no-show-help --header="プール管理ディレクトリを作成します。デフォルトの場合はそのままEnterを押して下さい" --header.foreground="99" --placeholder "${HOME}/cnode")
     fi
 

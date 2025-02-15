@@ -1,25 +1,19 @@
 #!/bin/bash
 
 MithrilBootStrap(){
-  YellowStyle "Mithrilクライアントをインストールします..."
-  echo
-  sleep 3
+  LglayStyle "Mithrilクライアントインストール開始..."
+  sleep 2
   #Rustインストール
-  sudo apt install -y libssl-dev build-essential m4 jq
+  sudo apt install -y libssl-dev build-essential m4 jq > /dev/null 2>&1
   cd ${HOME}/git
   mithril_release="$(curl -s https://api.github.com/repos/input-output-hk/mithril/releases/latest | jq -r '.tag_name')"
-  YellowStyle "Mithrilクライアントをダウンロードしています..."
   wget -q https://github.com/input-output-hk/mithril/releases/download/${mithril_release}/mithril-${mithril_release}-linux-x64.tar.gz -O mithril.tar.gz
-  tar zxvf mithril.tar.gz mithril-client
+  tar zxvf mithril.tar.gz mithril-client > /dev/null 2>&1
   sudo cp mithril-client /usr/local/bin/mithril-client
   sudo chmod +x /usr/local/bin/mithril-client
   rm mithril.tar.gz mithril-client
-
-  echo
   mithril-client -V
-  YellowStyle "Mithrilクライアントをインストールしました..."
-  echo
-
+  DglayStyle "Mithrilクライアントをインストールしました"
   case ${NODE_CONFIG} in
   "mainnet" )
       mithril_network=release-${NODE_CONFIG}
@@ -48,14 +42,9 @@ MithrilBootStrap(){
   export GENESIS_VERIFICATION_KEY
   export SNAPSHOT_DIGEST
 
-  echo
-  YellowStyle "DBスナップショットをダウンロードします..."
+  LglayStyle "Mithril-DBスナップショットダウンロード開始..."
   YellowStyle "この作業は30分以上かかる場合があります"
-  echo
-  sleep 3
+  sleep 2
   mithril-client cardano-db download --download-dir ${NODE_HOME} latest
-
-  echo
-  YellowStyle "DBスナップショットをダウンロードしました..."
-  echo
+  DglayStyle "Mithril-DBスナップショットをダウンロードしました..."
 }

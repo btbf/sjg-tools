@@ -73,6 +73,15 @@ PathEnabledCheck(){
   fi
 }
 
+
+InputSudoPass(){
+  if sudo -n true 2>/dev/null; then
+    echo ""
+  else
+    gum input --password --no-show-help --placeholder="sudoパスワードを入力してください"
+  fi
+}
+
 #--------------------
 #ファイル生成関数
 #--------------------
@@ -94,9 +103,11 @@ Header(){
 }
 
 SystemUpdate(){
-  YellowStyle "Ubuntuパッケージアップデート..."
-  echo ${1} | sudo -S apt update -y && sudo apt upgrade -y
-  YellowStyle "Ubuntuパッケージデート完了"
+  LglayStyle "Ubuntuパッケージアップデート開始..."
+  sudopass=$(InputSudoPass)
+  echo "$sudopass" | sudo -S apt update -y && sudo apt upgrade -y
+  echo
+  DglayStyle "Ubuntuパッケージデート完了"
   sleep 3
 }
 
@@ -332,22 +343,39 @@ Cli_CurrentSlot(){
 #--------------------
 
 style(){
-  echo -e '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' "\n" \ | gum format -t template; echo
+  printf '{{ Color "15" "'"$1"'" }}''{{ Color "11" " '"$2"' " }}' | gum format -t template; echo
 }
 
 YellowStyle(){
-  echo -e '{{ Color "11" "'"$1"'" }}' "\n" | gum format -t template; echo
-  echo
+  printf '{{ Color "11" "'"$1"'" }}' | gum format -t template; echo
 }
 
 MagentaStyle(){
-  echo -e '{{ Color "127" " '"$1"' " }}' "\n" | gum format -t template; echo
-  echo
+  printf '{{ Color "127" "'"$1"'" }}' | gum format -t template; echo
+}
+
+PinkStyle(){
+  printf '{{ Color "127" "'"$1"'" }}' | gum format -t template; echo
 }
 
 GreenStyle(){
-  echo -e '{{ Color "2" " '"$1"' " }}' "\n" | gum format -t template; echo
-  echo
+  printf '{{ Color "2" "'"$1"'" }}' | gum format -t template; echo
+}
+
+CyanStyle(){
+  printf '{{ Color "6" "'"$1"'" }}' | gum format -t template; echo
+}
+
+LglayStyle(){
+  printf '{{ Color "249" "'"$1"'" }}' | gum format -t template; echo
+}
+
+DglayStyle(){
+  printf '{{ Color "242" "'"$1"'" }}' | gum format -t template; echo
+}
+
+ErrorStyle(){
+  printf '{{ Color "196" "'"$1"'" }}' | gum format -t template; echo
 }
 
 #spin
@@ -367,7 +395,7 @@ Gum_Fnspin() {
 
 Gum_OneSelect(){
   echo
-  gum choose --header="" --height=1 --no-show-help "${1}"
+  gum choose --header.foreground="244" --header="" --height=1 --no-show-help "${1}"
   return
 }
 

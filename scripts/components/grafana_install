@@ -7,10 +7,10 @@ grafanaInstall(){
     grafana_path=$(which grafana-server)
     if [[ -z $grafana_path ]]; then
         echo "Grafanaをインストールします..."
-        sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
-
+        
         cd $HOME
-        echo $sudopass | sudo apt install -y prometheus prometheus-node-exporter
+        sudopass=$(InputSudoPass)
+        echo "$sudopass" | sudo -S apt install -y prometheus prometheus-node-exporter
         sudo apt-get install -y apt-transport-https software-properties-common
         sudo wget -q -O /usr/share/keyrings/grafana.key https://apt.grafana.com/gpg.key
         echo "deb [signed-by=/usr/share/keyrings/grafana.key] https://apt.grafana.com stable main" > grafana.list
@@ -37,8 +37,8 @@ grafanaInstall(){
 
 # ## BP,Relay2以降の場合
 prometheusInstall(){
-    sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
-    echo $sudopass | sudo apt install -y prometheus-node-exporter
+    sudopass=$(InputSudoPass)
+    echo "$sudopass" | sudo -S apt install -y prometheus-node-exporter
     sudo systemctl enable prometheus-node-exporter.service
     echo "prometheusをインストールしました..."
 }
