@@ -1,10 +1,9 @@
 #!/bin/bash
-version="0.3.5"
+version="0.3.6"
 
 envPath=$HOME/spokit/env
 nodeBinaryPath=$(which cardano-node)
 cliBinaryPath=$(which cardano-cli)
-
 
 
 # フォアグラウンドカラー
@@ -73,6 +72,20 @@ PathEnabledCheck(){
   fi
 }
 
+InputSudoPass(){
+  if sudo -n true 2>/dev/null; then
+    echo ""
+  else
+    gum input --password --no-show-help --placeholder="sudoパスワードを入力してください"
+  fi
+}
+
+UfwCheck(){
+  sudopass=$(InputSudoPass)
+  echo "$sudopass" | sudo -S ufw status | awk '/Status/ {print $2}'
+}
+
+
 #--------------------
 #ファイル生成関数
 #--------------------
@@ -94,9 +107,11 @@ Header(){
 }
 
 SystemUpdate(){
-  YellowStyle "Ubuntuパッケージアップデート..."
-  echo ${1} | sudo -S apt update -y && sudo apt upgrade -y
-  YellowStyle "Ubuntuパッケージデート完了"
+  LglayStyle "Ubuntuパッケージアップデート開始..."
+  sudopass=$(InputSudoPass)
+  echo "$sudopass" | sudo -S apt update -y && sudo apt upgrade -y
+  echo
+  DglayStyle "Ubuntuパッケージデート完了"
   sleep 3
 }
 
@@ -319,6 +334,28 @@ get_pooldata(){
   fi
 }
 
+Select_NodePort(){
+  case $NODE_TYPE in
+    "ブロックプロデューサー" )
+      local loop_count=5
+      port_set=""
+    ;;
+
+    "リレー" )
+      local loop_count=3
+      port_set="3000 3001 6000 6001"
+    ;;
+  esac
+
+  for i in $(seq 1 $loop_count); do
+    port_set="$port_set $((49152 + RANDOM % (65535 - 49152 + 1)))"
+  done
+
+  echo
+  select_node_port=$(gum choose --header.foreground="244" --header="任意の$NODE_TYPEノード起動ポートを選択してください" --no-show-help $port_set)
+  printf "選択ポート番号: $(GreenStyle $select_node_port)\n"
+}
+
 
 #----------CLI関数----------------
 
@@ -332,22 +369,39 @@ Cli_CurrentSlot(){
 #--------------------
 
 style(){
-  echo -e '{{ Color "15" " '"$1"' " }}''{{ Color "11" " '"$2"' " }}' "\n" \ | gum format -t template; echo
+  printf '{{ Color "15" "'"$1"'" }}''{{ Color "11" " '"$2"' " }}' | gum format -t template; echo
 }
 
 YellowStyle(){
-  echo -e '{{ Color "11" "'"$1"'" }}' "\n" | gum format -t template; echo
-  echo
+  printf '{{ Color "11" "'"$1"'" }}' | gum format -t template; echo
 }
 
 MagentaStyle(){
-  echo -e '{{ Color "127" " '"$1"' " }}' "\n" | gum format -t template; echo
-  echo
+  printf '{{ Color "127" "'"$1"'" }}' | gum format -t template; echo
+}
+
+PinkStyle(){
+  printf '{{ Color "127" "'"$1"'" }}' | gum format -t template; echo
 }
 
 GreenStyle(){
-  echo -e '{{ Color "2" " '"$1"' " }}' "\n" | gum format -t template; echo
-  echo
+  printf '{{ Color "2" "'"$1"'" }}' | gum format -t template; echo
+}
+
+CyanStyle(){
+  printf '{{ Color "6" "'"$1"'" }}' | gum format -t template; echo
+}
+
+LglayStyle(){
+  printf '{{ Color "249" "'"$1"'" }}' | gum format -t template; echo
+}
+
+DglayStyle(){
+  printf '{{ Color "242" "'"$1"'" }}' | gum format -t template; echo
+}
+
+ErrorStyle(){
+  printf '{{ Color "196" "'"$1"'" }}' | gum format -t template; echo
 }
 
 #spin
@@ -367,7 +421,7 @@ Gum_Fnspin() {
 
 Gum_OneSelect(){
   echo
-  gum choose --header="" --height=1 --no-show-help "${1}"
+  gum choose --header.foreground="244" --header="" --height=1 --no-show-help "${1}"
   return
 }
 

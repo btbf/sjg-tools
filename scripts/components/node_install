@@ -1,6 +1,8 @@
 #!/bin/bash
 
 recommend_node_version="10.1.4"
+recommend_cabal_vrtsion="3.8.1.0"
+recommend_ghc_vrtsion="8.10.7"
 
 NodeVersionSelect(){
   version_list=""
@@ -8,17 +10,16 @@ NodeVersionSelect(){
   latest_node_version=$(curl -s --url "https://api.github.com/repos/$repo/releases/latest" | grep -oP '"tag_name": "\K(.*)(?=")')
   if [[ $SYNC_NETWORK == "mainnet" ]]; then
     echo
-    echo
-    printf "最新バージョン: $latest_node_version\n"
-    printf "推奨バージョン: $recommend_node_version\n"
+    printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
+    printf "推奨バージョン: $(GreenStyle $recommend_node_version)\n"
     echo
 
     if [[ $latest_node_version == $recommend_node_version ]]; then
-      Gum_Confirm_YesNo "最新バージョン: $latest_node_version をインストールしますか？" "Yes" "手動選択"
+      Gum_Confirm_YesNo "最新バージョン: $(GreenStyle $latest_node_version) をインストールしますか？" "Yes" "手動選択"
       select_node_version=$latest_node_version
     else
       echo 
-      Gum_Confirm_YesNo "推奨バージョン: $recommend_node_version をインストールしますか？" "Yes" "手動選択"
+      Gum_Confirm_YesNo "推奨バージョン: $(GreenStyle $recommend_node_version) をインストールしますか？" "Yes" "手動選択"
       select_node_version=$recommend_node_version
     fi
 
@@ -41,7 +42,8 @@ NodeVersionSelect(){
       version_list=$(echo $version_list | sed 's/^ *//')
       version_list="$version_list キャンセル"
       echo
-      select_node_version=$(gum choose --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
+      select_node_version=$(gum choose --header.foreground="244" --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
+      printf "選択バージョン: $(GreenStyle $select_node_version)\n"
     fi
   else
     #テストネット用
@@ -62,11 +64,9 @@ NodeVersionSelect(){
     echo -n "キャンセル"
     })
 
-    echo
-    echo
-    printf "最新バージョン: $latest_node_version\n"
-    select_node_version=$(gum choose --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
-    
+    printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
+    select_node_version=$(gum choose --header.foreground="244" --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
+    printf "選択バージョン: $(GreenStyle $select_node_version)\n"
   fi
   echo
   if [[ $select_node_version != "キャンセル" ]]; then
@@ -80,9 +80,8 @@ NodeVersionSelect(){
 
 LibsodiumInstall(){
 #Libsodium Install
-  echo
-  YellowStyle "Libsodiumインストール..."
-  echo; sleep 3
+  LglayStyle "Libsodiumインストール..."
+  sleep 3
   cd ${HOME}/git || exit
   git clone https://github.com/IntersectMBO/libsodium
   cd libsodium || exit
@@ -94,9 +93,8 @@ LibsodiumInstall(){
 }
 
 Secp256k1Install(){
-  echo
-  YellowStyle "Secp256k1インストール..."
-  echo; sleep 3
+  LglayStyle "Secp256k1インストール..."
+  sleep 3
   cd ${HOME}/git || exit
   git clone https://github.com/bitcoin-core/secp256k1.git
   cd secp256k1/ || exit
@@ -108,9 +106,8 @@ Secp256k1Install(){
 }
 
 BlstInstall(){
-echo
-  YellowStyle "blstインストール..."
-  echo; sleep 3
+  LglayStyle "blstインストール..."
+  sleep 3
   cd ${HOME}/git || exit
   git clone https://github.com/supranational/blst
   cd blst || exit
@@ -138,7 +135,7 @@ echo
 }
 
 GhcupInstall(){
-  echo; YellowStyle "GHCUPインストール..."
+  LglayStyle "GHCUPインストール..."
   sleep 3
   cd ${HOME} || exit
   BOOTSTRAP_HASKELL_NONINTERACTIVE=1
@@ -151,11 +148,11 @@ GhcupInstall(){
 
   source ${HOME}/.ghcup/env
   ghcup upgrade
-  ghcup install cabal 3.8.1.0
-  ghcup set cabal 3.8.1.0
+  ghcup install cabal $recommend_cabal_vrtsion
+  ghcup set cabal $recommend_cabal_vrtsion
 
-  ghcup install ghc 8.10.7
-  ghcup set ghc 8.10.7
+  ghcup install ghc $recommend_ghc_vrtsion
+  ghcup set ghc $recommend_ghc_vrtsion
 
   cabal update
   cabal --version; ghc --version
@@ -163,28 +160,66 @@ GhcupInstall(){
 
 
 NodeDownload(){
-  echo; YellowStyle "ノードインストール..."
-  echo
-  mkdir -p ${HOME}/git/cardano-node
-  cd ${HOME}/git/cardano-node || exit
-  wget -q https://github.com/IntersectMBO/cardano-node/releases/download/${1}/cardano-node-${1}-linux.tar.gz
-  tar zxvf cardano-node-${1}-linux.tar.gz ./bin/cardano-node ./bin/cardano-cli
-  sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-cli")" /usr/local/bin/cardano-cli
-  sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-node")" /usr/local/bin/cardano-node
+  nodeBinary_URL="https://github.com/IntersectMBO/cardano-node/releases/download/${1}/cardano-node-${1}-linux.tar.gz"
+  wget --spider -q "$nodeBinary_URL"
+  local status=$?
+  if [ $status -eq 0 ]; then
+    LglayStyle "ノードインストール開始"
+    mkdir -p ${HOME}/git/cardano-node
+    cd ${HOME}/git/cardano-node || exit
+    wget -q "https://github.com/IntersectMBO/cardano-node/releases/download/${1}/cardano-node-${1}-linux.tar.gz"
+    tar zxvf "cardano-node-${1}-linux.tar.gz" ./bin/cardano-node ./bin/cardano-cli > /dev/null 2>&1
+    sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-cli")" /usr/local/bin/cardano-cli
+    sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-node")" /usr/local/bin/cardano-node
+  else
+    echo "リリースバージョンではないためソースコードからビルドします"
+    #Libsodiumインストール
+    LibsodiumInstall
+    #Secp256インストール
+    Secp256k1Install
+    #Blstインストール
+    BlstInstall
+    #GHCUPインストール
+    GhcupInstall
 
+    cd $HOME/git
+    gitURL="https://github.com/IntersectMBO/cardano-node.git"
+    LglayStyle "cardano-nodeリポジトリダウンロード..."
+    echo "git-URL: $(DglayStyle $gitURL)" 
+    git clone $gitURL
+    cd cardano-node
+    git fetch --quiet --all --recurse-submodules --tags
+    git checkout --quiet tags/$1
+    echo "git tag:$(DglayStyle $1)"
+    cabal clean
+    cabal update
+    cabal configure --with-compiler=ghc-$recommend_ghc_vrtsion
+
+    LglayStyle "ソースコードからビルド開始..."
+    YellowStyle "この作業は30分以上かかる場合があります"
+    cabal build all cardano-cli
+    local node_install_status=$?
+    if [[ $node_install_status -eq 0 ]]; then
+      GreenStyle "ビルド成功"
+      echo
+      sudo cp $(./scripts/bin-path.sh cardano-cli) /usr/local/bin/cardano-cli
+      sudo cp $(./scripts/bin-path.sh cardano-node) /usr/local/bin/cardano-node
+    else
+      node_install_result="failure"
+    fi
+  fi
   cardano-cli version
   cardano-node version
 
-  rm -rf ${HOME}/git/cardano-node/*
-
-  echo; YellowStyle "ノード(v${1})をインストールしました"
+  rm -rf ${HOME}/git/cardano-node
+  DglayStyle "ノード(v${1})をインストールしました"
   sleep 2
 }
 
 
 NodeConfigDownload(){
-  echo; YellowStyle "設定ファイルダウンロード..."
-  sleep 3
+  LglayStyle "ノード設定ファイルダウンロード開始..."
+  sleep 2
   mkdir -p ${NODE_HOME}
   cd ${NODE_HOME} || exit
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/byron-genesis.json -O ${NODE_CONFIG}-byron-genesis.json
@@ -193,11 +228,10 @@ NodeConfigDownload(){
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/alonzo-genesis.json -O ${NODE_CONFIG}-alonzo-genesis.json
   wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/conway-genesis.json -O ${NODE_CONFIG}-conway-genesis.json
   if [ "${NODE_TYPE}" = "リレー" ]; then
-  wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/config.json -O ${NODE_CONFIG}-config.json
-  echo; YellowStyle "設定ファイルダウンロードしました"
+    wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/config.json -O ${NODE_CONFIG}-config.json
   else
     wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/config-bp.json -O ${NODE_CONFIG}-config.json
-  fi 
+  fi
 
   sed -i ${NODE_CONFIG}-config.json \
       -e 's!"AlonzoGenesisFile": "alonzo-genesis.json"!"AlonzoGenesisFile": "'${NODE_CONFIG}'-alonzo-genesis.json"!' \
@@ -212,16 +246,15 @@ NodeConfigDownload(){
       -e '/"setupScribes": \[/a\    \{\n      "scFormat": "ScJson",\n      "scKind": "FileSK",\n      "scName": "'${NODE_HOME}'/logs/node.json"\n    \},' \
       -e "s/127.0.0.1/0.0.0.0/g"
 
-  echo; YellowStyle "設定ファイルを書き換えました"
+  DglayStyle "ノード設定ファイルをダウンロードしました"
 }
 
 GliveViewDowndload(){
-  YellowStyle "gliveViewをインストールします..."
-  echo
-  sleep 3
-  mkdir ${NODE_HOME}/scripts
+  LglayStyle "gliveViewインストール開始..."
+  sleep 2
+  mkdir -p ${NODE_HOME}/scripts
   cd ${NODE_HOME}/scripts || exit
-  sudo sudo apt install bc tcptraceroute -y
+  sudo sudo apt install bc tcptraceroute -y > /dev/null 2>&1
 
   curl -s -o gLiveView.sh https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/gLiveView.sh
   curl -s -o env https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/env
@@ -229,18 +262,17 @@ GliveViewDowndload(){
 
   sed -i ${NODE_HOME}/scripts/env \
   -e '1,73s!#CNODE_HOME="/opt/cardano/cnode"!CNODE_HOME=${NODE_HOME}!' \
-  -e '1,73s!#CNODE_PORT=6000!CNODE_PORT='"${PORT}"'!' \
+  -e '1,73s!#CNODE_PORT=6000!CNODE_PORT='"${1}"'!' \
   -e '1,73s!#UPDATE_CHECK="Y"!UPDATE_CHECK="N"!' \
   -e '1,73s!#CONFIG="${CNODE_HOME}/files/config.json"!CONFIG="${CNODE_HOME}/'${NODE_CONFIG}'-config.json"!' \
   -e '1,73s!#SOCKET="${CNODE_HOME}/sockets/node0.socket"!SOCKET="${CNODE_HOME}/db/socket"!'
 
-  echo
-  YellowStyle "gliveViewをインストールしました..."
-  echo
+  DglayStyle "gliveViewをインストールしました..."
 }
 
 #ノードインストール
 NodeInstall(){
+
   if [ ! -e "${nodeBinaryPath}" ]; then
   clear
   case "$NODE_TYPE" in
@@ -253,26 +285,32 @@ NodeInstall(){
     ;;
   esac
 
-  echo "ノードをインストールします..."
+  Header "ノードインストール"
   echo
   sleep 2
-  sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
-  SystemUpdate $sudopass
+  SystemUpdate
   NodeVersionSelect
   #ノードバイナリダウンロード
   NodeDownload $select_node_version
-  echo
 
+  if [[ $node_install_result == "failure" ]]; then
+    ErrorStyle "ビルド失敗"
+    Gum_OneSelect "戻る"
+    return
+  fi
   #ノードコンフィグファイルダウンロード
   NodeConfigDownload
 
-  echo; YellowStyle "起動スクリプトを作成します"
-  echo; sleep 3
-  PORT=6000
+  #ノード起動ポート選択
+  Select_NodePort
+
+  LglayStyle "ノード起動用スクリプト作成..."
+  sleep 2
+
 cat <<-EOF > ${NODE_HOME}/${node_run_filename}
 #!/bin/bash
 DIRECTORY=${NODE_HOME}
-PORT=${PORT}
+PORT=${select_node_port}
 HOSTADDR=0.0.0.0
 TOPOLOGY=\${DIRECTORY}/${NODE_CONFIG}-topology.json
 DB_PATH=\${DIRECTORY}/db
@@ -284,21 +322,16 @@ EOF
   cd ${NODE_HOME} || exit
   chmod +x ${node_run_filename}
 
-  echo
-  YellowStyle "起動スクリプトを作成しました"
-  echo
+  DglayStyle "起動スクリプトを作成しました"
 
   #gLiveViewインストール
-  GliveViewDowndload
+  GliveViewDowndload $select_node_port
 
-  echo
   #Mithril DBブートストラップ
   MithrilBootStrap
 
-  echo
-  YellowStyle "サービスファイルを作成します"
-  echo
-  sleep 3
+  LglayStyle "ノード起動サービスファイル作成..."
+  sleep 2
 cat > ${NODE_HOME}/cardano-node.service <<-EOF
 # The Cardano node service (part of systemd)
 # file: /etc/systemd/system/cardano-node.service
@@ -325,21 +358,38 @@ SyslogIdentifier=cardano-node
 WantedBy    = multi-user.target
 EOF
 
-  gum input --password --no-show-help --placeholder="sudoパスワードを入力してください" | sudo -S cp ${NODE_HOME}/cardano-node.service /etc/systemd/system/cardano-node.service
+  sudopass=$(InputSudoPass)
+  echo "$sudopass" | sudo -S cp ${NODE_HOME}/cardano-node.service /etc/systemd/system/cardano-node.service
   sudo chmod 644 /etc/systemd/system/cardano-node.service
   sudo systemctl daemon-reload
   sudo systemctl enable cardano-node
   sudo systemctl start cardano-node
 
-  echo
-  YellowStyle "サービスファイル作成済み"
-  YellowStyle "カルダノノードを起動しました..."
+  DglayStyle "ノード起動サービスファイルを作成しました"
+  LglayStyle "カルダノノード起動中..."
   nodeSyncCheck
-  if $slot_value; then
-    echo "gLiveviewを起動します"
-    sleep
-    cd $NODE_HOME/scripts
-    ./gLiveView.sh
+  if [[ -n $slot_value ]]; then
+    # YellowStyle "gLiveviewを起動します"
+    # sleep 2
+    # cd $NODE_HOME/scripts
+    # ./gLiveView.sh
+
+    if [[ $NODE_TYPE == "リレー" ]]; then
+      ufwStatus=$(UfwCheck)
+      if [[ $ufwStatus == "active" ]]; then
+        sudopass=$(InputSudoPass)
+        echo "$sudopass" | sudo -S ufw allow $select_node_port/tcp
+        sudo ufw reload
+        GreenStyle "$select_node_port番ポートを開放しました"
+      else
+        YellowStyle "ソフトウェアファイアウォール(ufw)が無効になっています"
+        YellowStyle ご契約のVPSでハードウェアファイアウォールを利用中の場合は $select_node_port/tcp をIP無指定で開放してください
+      fi
+    fi
+    echo
+    YellowStyle "日常オペレーションでノードの起動状況を確認するには、glive コマンドを使用してください。"
+    Gum_OneSelect "戻る"
+    echo
   else
     echo "ノード起動に失敗しました"
     echo "エラーメッセージの原因を解決してください"
@@ -350,8 +400,7 @@ else
   cardano-cli version
   echo
   echo ${nodeBinaryPath}
-  YellowStyle "cardano-nodeはインストール済みです"
-  echo
+  echo "cardano-nodeはインストール済みです"
   Gum_OneSelect "戻る"
 fi
 }
@@ -359,15 +408,14 @@ fi
 
 NodeVirsionUp(){
   echo "起動中のノードを停止します..."
-  sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
-  echo $sudopass | sudo -S systemctl stop cardano-node
+
+  sudopass=$(InputSudoPass)
+  echo "$sudopass" | sudo -S systemctl stop cardano-node
   echo "ノードを停止しました"
-  echo
   
-  SystemUpdate $sudopass
+  SystemUpdate
   NodeVersionSelect
   if [[ $select_node_version == "キャンセル" ]]; then
-    echo
     echo "アップデートはキャンセルされました"
     Gum_OneSelect "戻る"
   else

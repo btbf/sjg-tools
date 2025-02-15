@@ -118,8 +118,8 @@ PoolSetupMenu(){
       case $selection in
 
         "CLIインストール" )
-        sudopass=$(gum input --password --no-show-help --placeholder="sudoパスワードを入力してください")
-        SystemUpdate $sudopass
+        
+        SystemUpdate
         NodeVersionSelect
         #ノードバイナリダウンロード
         NodeDownload $select_node_version
@@ -246,7 +246,7 @@ clear
 source ${envPath}
 
 case $1 in
-  "poolsetup" )
+  "setup" )
     PoolSetupMenu
   ;;
 

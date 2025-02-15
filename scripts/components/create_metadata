@@ -54,7 +54,7 @@ if [ "${iniSettings}" == "Yes" ]; then
     echo
     echo "${NODE_HOME}/${POOL_META_FILENAME}をGithubまたはホームページサーバーにアップロードしてください"
     echo
-    gum choose --header="アップロードが完了したらEnterを押下し、オンライン上の${POOL_META_FILENAME}を検証します" --height=1 --no-show-help "OK"
+    gum choose --header.foreground="244" --header="アップロードが完了したらEnterを押下し、オンライン上の${POOL_META_FILENAME}を検証します" --height=1 --no-show-help "OK"
     echo
 
     while :

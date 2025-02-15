@@ -5,7 +5,8 @@ nodeSyncCheck(){
 # 1. sudo 認証を先に実行しておく
 ##############################
 # ここでパスワード入力が求められ、認証が完了するまで先に待機します。
-gum input --password --no-show-help --placeholder="sudoパスワードを入力してください" | sudo -v || { echo "sudo 認証に失敗しました。"; exit 1; }
+sudopass=$(InputSudoPass)
+echo "$sudopass" | sudo -v || { echo "sudo 認証に失敗しました。"; exit 1; }
 
 
 # エラーメッセージと対応する決まった文章を連想配列で定義
@@ -60,8 +61,7 @@ stop_spinner() {
 #####################################
 # 6. メイン処理開始
 #####################################
-echo "ノード同期チェック開始..."
-
+LglayStyle "ノード同期チェック開始..."
 # 初回のスピナー開始（Ledger DB待ち状態）
 start_spinner
 
@@ -71,7 +71,7 @@ while IFS= read -r line; do
     for err in "${!error_response[@]}"; do
         if [[ "$line" == *"$err"* ]]; then
             stop_spinner
-            echo "エラー検知: [$err] → ${error_response[$err]}"
+            ErrorStyle "エラー検知: [$err] → ${error_response[$err]}"
             exit 1
         fi
     done
@@ -81,7 +81,7 @@ while IFS= read -r line; do
         waiting_ledger)
             if [[ "$line" == *"Started opening Ledger DB"* ]]; then
                 stop_spinner
-                echo "データベースを検証しています..."
+                LglayStyle "データベースを検証しています..."
                 state="waiting_runserver"
                 # RunServer待ち状態でもスピナーを表示
                 start_spinner
@@ -90,8 +90,8 @@ while IFS= read -r line; do
         waiting_runserver)
             if [[ "$line" == *"RunServer"* ]]; then
                 stop_spinner
-                echo "チェーン同期を開始します..."
-                echo "エンドポイントslot値を確認します..."
+                LglayStyle "チェーン同期を検知しました"
+                LglayStyle "エンドポイントslot値を確認します..."
                 # RunServer検知後、localhost:12798/metrics をポーリング
                 while true; do
                     # metrics の内容から 'slot' の行を抽出（先頭が "slot" であると仮定）
@@ -100,10 +100,10 @@ while IFS= read -r line; do
                         # slot 行が存在すれば、値を抽出（値が空でなければ終了）
                         slot_value=$(echo "$slot_line" | awk '{print $2}')
                         if [ -n "$slot_value" ]; then
-                            echo "エポックスロットを検出しました: $slot_value"
-                            echo "ノードが同期されました！"
+                            DglayStyle "エポックスロットを検出しました: $slot_value"
+                            GreenStyle "ノードが最新ブロックと同期しました！"
                             sleep 2
-                            exit 0
+                            break 2
                         fi
                     fi
                     # まだ slot 値がなければ 1秒待機
@@ -112,7 +112,6 @@ while IFS= read -r line; do
             fi
             ;;
     esac
-
 done < <(sudo journalctl -u cardano-node -f 2>/dev/null)
 }
 
