@@ -57,8 +57,14 @@ DotSpinner3(){
 ##############
 #起動タイトル
 ##############
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
 
-gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokitへようこそ！" "Cardano SPO Tool Kit"
+echo -e "${GREEN}====================================${NC}"
+echo -e "${RED}              Spokit!                 ${NC}"
+echo -e "${RED}        Cardano SPO Tool Kit          ${NC}"
+echo -e "${GREEN}====================================${NC}"
 sleep 3
 
 if [[ ! -d $SPOKIT_INST_DIR ]]; then
