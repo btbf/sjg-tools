@@ -26,7 +26,7 @@ clear
 #-------------------------------#
 
 PoolSetupMenu(){
-  headerTitle="プール管理メニュー"
+  headerTitle="プール構築メニュー"
 
   case $NODE_TYPE in
     "ブロックプロデューサー" )
