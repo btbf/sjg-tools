@@ -178,7 +178,8 @@ CnmMain(){
         ;;
 
         "[3] ノードバージョンアップ" )
-          NodeVirsionUp
+        echo "機能実装まで今しばらくお待ち下さい"
+        #NodeVirsionUp
         ;;
 
         # "[3] ガバナンス管理" )
@@ -199,7 +200,8 @@ CnmMain(){
       selection=$(gum filter --height=6 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードバージョンアップ" "[2] トポロジー変更" "[q] 終了")
       case $selection in
         "[1] ノードバージョンアップ" )
-          NodeVirsionUp
+          echo "機能実装まで今しばらくお待ち下さい"
+          #NodeVirsionUp
         ;;
 
         "[2] トポロジー変更" )
