@@ -6,7 +6,7 @@
 
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
-gum_version="0.15.2"
+gum_version="0.16.0"
 
 source ${HOME}/.bashrc
 
@@ -54,11 +54,41 @@ DotSpinner3(){
 }
 
 
+title_logo(){
+    echo -e "${CYAN}"
+    cat << "EOF"
+███████╗██████╗  ██████╗ ██╗  ██╗██╗████████╗
+██╔════╝██╔══██╗██╔═══██╗██║ ██╔╝██║╚══██╔══╝
+███████╗██████╔╝██║   ██║█████╔╝ ██║   ██║   
+╚════██║██╔═══╝ ██║   ██║██╔═██╗ ██║   ██║   
+███████║██║     ╚██████╔╝██║  ██╗██║   ██║   
+╚══════╝╚═╝      ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝ 
+EOF
+    echo -e "${NC}"
+    echo -e "${GREEN}                   ${1}                    ${NC}"
+    echo -e "${WHITE}============================================${NC}"
+    echo -e "${CYAN}           Cardano SPO Tool Kit              ${NC}"
+    echo -e "${YELLOW}            ${2}                           ${NC}"
+    echo -e "${WHITE}============================================${NC}"
+}
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+CYAN='\e[36m'
+PURPLE='\e[35m'
+YELLOW='\e[33m'
+BLUE='\e[34m'
+WHITE='\e[37m'
+BOLD='\e[1m'
+UNDERLINE='\e[4m'
+NC='\033[0m' # No Color
+
 ##############
 #起動タイトル
 ##############
 
-gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokitへようこそ！" "Cardano SPO Tool Kit"
+title_logo "" "Spokitインストール"
+#title_logo "" ""
 sleep 3
 
 if [[ ! -d $SPOKIT_INST_DIR ]]; then
@@ -69,13 +99,13 @@ EOF
 
     #ライブラリインストール
     YellowStyle "ライブラリをインストール..."
+    sudo apt install git jq bc ccze automake tmux htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
     if [ ! -e "/usr/bin/gum" ]; then
         sudo mkdir -p /etc/apt/keyrings
         curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
         echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
         sudo apt update && sudo apt install gum=${gum_version}
     fi
-    sudo apt install git jq bc ccze automake tmux rsync htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
     sudo apt-mark hold gum
     gum --version
     echo
@@ -89,7 +119,7 @@ EOF
     wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
     tar xzvf spokit.tar.gz
     rm spokit.tar.gz
-
+    YellowStyle "Spokitをインストールしました"
 
     sudo mkdir -p ${SPOKIT_INST_DIR}
     cd sjg-tools-${spokit_version}/scripts
@@ -100,15 +130,18 @@ EOF
 
     rm -rf $HOME/git/sjg-tools-${spokit_version}
 else
-    echo "Spokitはすでにインストールされています"
-    echo "spokit または spokit setup で起動できます"
+    echo -e ${YELLOW}"Spokitはすでにインストールされています${NC}"
+    echo -e "${GREEN}spokit${NC} または ${GREEN}spokit setup${NC} で起動するかご確認ください"
+    echo
 fi
 
 
 ##------初期設定
-clear
+#clear
 if [ ! -d "${SPOKIT_HOME}" ]; then
-    gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokit v${spokit_version}" "ノードセットアップ初期設定"
+    clear
+    title_logo "v${spokit_version}" "ノードセットアップ初期設定"
+    #gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokit v${spokit_version}" "ノードセットアップ初期設定"
 
     if [ -d "${NODE_HOME}" ]; then 
         echo -e "既存のネットワーク設定が見つかりました : ${NODE_CONFIG}\n"
@@ -190,6 +223,15 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
         echo
 
         DotSpinner3 "初期設定を終了します"
+
+        echo "------------------------"
+        echo "source $HOME/.bashrc"
+        echo "------------------------"
+        echo -e "${RED}🔼上記コマンドを実行して環境変数を再読み込みしてください${NC}"
+        echo
+        echo -e "${YELLOW}プール構築開始コマンド${NC} ${GREEN}spokit setup${NC}"
+        echo -e "${YELLOW}プール運営コマンド${NC} ${GREEN}spokit${NC}"
+        echo
     else
         clear
         echo
@@ -199,9 +241,3 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
 
 fi
 
-echo "------------------------------------------------------------"
-echo "source $HOME/.bashrc"
-echo "上記コマンドを実行して環境変数を再読み込みしてください"
-echo
-echo "プール構築開始コマンド \"spokit setup\" "
-echo "プール運営コマンド \"spokit\" "

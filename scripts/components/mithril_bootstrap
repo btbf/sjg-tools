@@ -32,19 +32,15 @@ MithrilBootStrap(){
   ;;
   esac
 
-  AGGREGATOR_ENDPOINT="https://aggregator.${mithril_network}.api.mithril.network/aggregator"
-  GENESIS_VERIFICATION_KEY="$(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${mithril_network}/genesis.vkey)"
-  NETWORK=${NODE_CONFIG}
-  SNAPSHOT_DIGEST="latest"
-
-  export NETWORK
-  export AGGREGATOR_ENDPOINT
-  export GENESIS_VERIFICATION_KEY
-  export SNAPSHOT_DIGEST
+  export AGGREGATOR_ENDPOINT="https://aggregator.${mithril_network}.api.mithril.network/aggregator"
+  export GENESIS_VERIFICATION_KEY="$(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${mithril_network}/genesis.vkey)"
+  export ANCILLARY_VERIFICATION_KEY=$(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${mithril_network}/ancillary.vkey)
+  export NETWORK=${NODE_CONFIG}
+  export SNAPSHOT_DIGEST="latest"
 
   LglayStyle "Mithril-DBスナップショットダウンロード開始..."
   YellowStyle "この作業は30分以上かかる場合があります"
   sleep 2
-  mithril-client cardano-db download --download-dir ${NODE_HOME} latest
+  mithril-client cardano-db download --download-dir ${NODE_HOME} --include-ancillary latest
   DglayStyle "Mithril-DBスナップショットをダウンロードしました..."
 }

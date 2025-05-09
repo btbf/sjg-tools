@@ -1,80 +1,56 @@
 #!/bin/bash
 
-recommend_node_version="10.1.4"
-recommend_cabal_vrtsion="3.8.1.0"
-recommend_ghc_vrtsion="8.10.7"
+recommend_node_version="10.3.1"
+recommend_cabal_vrtsion="3.12.1.0"
+recommend_ghc_vrtsion="9.6.5"
 
 NodeVersionSelect(){
   version_list=""
   repo=IntersectMBO/cardano-node
   latest_node_version=$(curl -s --url "https://api.github.com/repos/$repo/releases/latest" | grep -oP '"tag_name": "\K(.*)(?=")')
-  if [[ $SYNC_NETWORK == "mainnet" ]]; then
-    echo
-    printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
-    printf "推奨バージョン: $(GreenStyle $recommend_node_version)\n"
-    echo
+  # if [[ $SYNC_NETWORK == "mainnet" ]]; then
 
-    if [[ $latest_node_version == $recommend_node_version ]]; then
-      Gum_Confirm_YesNo "最新バージョン: $(GreenStyle $latest_node_version) をインストールしますか？" "Yes" "手動選択"
-      select_node_version=$latest_node_version
-    else
-      echo 
-      Gum_Confirm_YesNo "推奨バージョン: $(GreenStyle $recommend_node_version) をインストールしますか？" "Yes" "手動選択"
-      select_node_version=$recommend_node_version
-    fi
-
-    if [[ $iniSettings == "手動選択" ]]; then
-      
-      select_node_version=""
-      version_list=""
-      echo $SYNC_NETWORK
-      # 最新リリース名を取得
-      ##メインネット用
-      count=0
-      max_count=3
-      while [ $count -lt $max_count ]; do
-        value=$(curl -s --url "https://api.github.com/repos/$repo/releases" | jq -r .[$count].tag_name)
-        node_version="$value"
-        version_list="$version_list $node_version"
-        count=$((count + 1))
-      done
-      # 先頭のスペースを削除
-      version_list=$(echo $version_list | sed 's/^ *//')
-      version_list="$version_list キャンセル"
+    #推奨と最新に差異がある場合
+    if [[ $latest_node_version != $recommend_node_version ]]; then
       echo
-      select_node_version=$(gum choose --header.foreground="244" --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
-      printf "選択バージョン: $(GreenStyle $select_node_version)\n"
+      printf "推奨バージョン: $(GreenStyle $recommend_node_version)\n"
+      printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
+      echo
+      echo "推奨バージョンと最新バージョンに差異があります"
+      echo "最新バージョンは現在SJGで検証中のため次のリリースをお待ちいただくか、推奨バージョンをインストールしてください"
+      echo
     fi
-  else
-    #テストネット用
-    version_list=$(curl -s "https://github.com/$repo/tags" |
-    grep -oE \
-    -e ' href="/'"$repo"'/releases/tag/[^"]+" data-' \
-    -e ' datetime=.*UTC$' \
-    -e ' href="/'"$repo"'/commit/[0-9a-f]{40,}"' |
-    cut -d'"' -f2 |
-    sed -E 's,^.*/(commit|tag)/,,' |
-    {
-    count=0
-    while read name && read hash; do
-      [ "$count" -ge 5 ] && break
-      echo -n "$name "
-      count=$((count+1))
-    done
-    echo -n "キャンセル"
-    })
 
-    printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
-    select_node_version=$(gum choose --header.foreground="244" --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
-    printf "選択バージョン: $(GreenStyle $select_node_version)\n"
-  fi
-  echo
-  if [[ $select_node_version != "キャンセル" ]]; then
+    Gum_Confirm_YesNo "推奨バージョン: $(GreenStyle $latest_node_version) をインストールしますか？" "Yes" "No"
+    select_node_version=$latest_node_version
+
+    if [[ $iniSettings == "No" ]]; then
+      return
+    fi
+
+  # else
+  #   #テストネット用
+  #   version_list=$(curl -s "https://api.github.com/repos/$repo/releases" \
+  # | jq -r '.[].tag_name' \
+  # | head -n 2 \
+  # | while read tag; do
+  #     echo -n "$tag "
+  #     count=$((count + 1))
+  #   done
+  #   echo -n "${tag}キャンセル"
+  #   )
+
+  #   printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
+  #   select_node_version=$(gum choose --header.foreground="244" --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
+  #   printf "選択バージョン: $(GreenStyle $select_node_version)\n"
+  # fi
+  # echo
+  # if [[ $select_node_version != "キャンセル" ]]; then
     IOHKNIX_VERSION=$(curl -s https://raw.githubusercontent.com/IntersectMBO/cardano-node/$select_node_version/flake.lock | jq -r '.nodes.iohkNix.locked.rev')
     SODIUM_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.sodium.original.rev')
     SECP256K1_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.secp256k1.original.ref')
     BLST_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/master/flake.lock | jq -r '.nodes.blst.original.ref')
-  fi
+  # fi
 
 }
 
@@ -222,15 +198,16 @@ NodeConfigDownload(){
   sleep 2
   mkdir -p ${NODE_HOME}
   cd ${NODE_HOME} || exit
-  wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/byron-genesis.json -O ${NODE_CONFIG}-byron-genesis.json
-  wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/topology.json -O ${NODE_CONFIG}-topology.json
-  wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/shelley-genesis.json -O ${NODE_CONFIG}-shelley-genesis.json
-  wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/alonzo-genesis.json -O ${NODE_CONFIG}-alonzo-genesis.json
-  wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/conway-genesis.json -O ${NODE_CONFIG}-conway-genesis.json
+  wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-byron-genesis.json -O ${NODE_CONFIG}-byron-genesis.json
+  wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-topology.json -O ${NODE_CONFIG}-topology.json
+  wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-shelley-genesis.json -O ${NODE_CONFIG}-shelley-genesis.json
+  wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-alonzo-genesis.json -O ${NODE_CONFIG}-alonzo-genesis.json
+  wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-conway-genesis.json -O ${NODE_CONFIG}-conway-genesis.json
+  wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-checkpoints.json -O ${NODE_CONFIG}-checkpoints.json
   if [ "${NODE_TYPE}" = "リレー" ]; then
-    wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/config.json -O ${NODE_CONFIG}-config.json
+    wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-config.json -O ${NODE_CONFIG}-config.json
   else
-    wget -q https://book.play.dev.cardano.org/environments/${NODE_CONFIG}/config-bp.json -O ${NODE_CONFIG}-config.json
+    wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-config-bp.json -O ${NODE_CONFIG}-config.json
   fi
 
   sed -i ${NODE_CONFIG}-config.json \
@@ -288,8 +265,13 @@ NodeInstall(){
   Header "ノードインストール"
   echo
   sleep 2
-  SystemUpdate
+  #ノードバージョン選択
   NodeVersionSelect
+  #ノード起動ポート選択
+  Select_NodePort
+  
+  SystemUpdate
+  
   #ノードバイナリダウンロード
   NodeDownload $select_node_version
 
@@ -300,9 +282,6 @@ NodeInstall(){
   fi
   #ノードコンフィグファイルダウンロード
   NodeConfigDownload
-
-  #ノード起動ポート選択
-  Select_NodePort
 
   LglayStyle "ノード起動用スクリプト作成..."
   sleep 2
@@ -369,23 +348,6 @@ EOF
   LglayStyle "カルダノノード起動中..."
   nodeSyncCheck
   if [[ -n $slot_value ]]; then
-    # YellowStyle "gLiveviewを起動します"
-    # sleep 2
-    # cd $NODE_HOME/scripts
-    # ./gLiveView.sh
-
-    if [[ $NODE_TYPE == "リレー" ]]; then
-      ufwStatus=$(UfwCheck)
-      if [[ $ufwStatus == "active" ]]; then
-        sudopass=$(InputSudoPass)
-        echo "$sudopass" | sudo -S ufw allow $select_node_port/tcp
-        sudo ufw reload
-        GreenStyle "$select_node_port番ポートを開放しました"
-      else
-        YellowStyle "ソフトウェアファイアウォール(ufw)が無効になっています"
-        YellowStyle ご契約のVPSでハードウェアファイアウォールを利用中の場合は $select_node_port/tcp をIP無指定で開放してください
-      fi
-    fi
     echo
     YellowStyle "日常オペレーションでノードの起動状況を確認するには、glive コマンドを使用してください。"
     Gum_OneSelect "戻る"
@@ -396,7 +358,7 @@ EOF
     Gum_OneSelect "戻る"
   fi
 else 
-  cardano-node --version
+  cardano-node version
   cardano-cli version
   echo
   echo ${nodeBinaryPath}
