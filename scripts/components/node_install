@@ -265,8 +265,13 @@ NodeInstall(){
   Header "ノードインストール"
   echo
   sleep 2
-  SystemUpdate
+  #ノードバージョン選択
   NodeVersionSelect
+  #ノード起動ポート選択
+  Select_NodePort
+  
+  SystemUpdate
+  
   #ノードバイナリダウンロード
   NodeDownload $select_node_version
 
@@ -277,9 +282,6 @@ NodeInstall(){
   fi
   #ノードコンフィグファイルダウンロード
   NodeConfigDownload
-
-  #ノード起動ポート選択
-  Select_NodePort
 
   LglayStyle "ノード起動用スクリプト作成..."
   sleep 2
