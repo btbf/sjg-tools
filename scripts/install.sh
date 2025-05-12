@@ -98,7 +98,9 @@ set -g default-terminal "screen-256color"
 EOF
 
     #ライブラリインストール
-    YellowStyle "ライブラリをインストール..."
+    printf "${YELLOW}関連ライブラリをインストールします${NC}\n"
+    printf "管理者(sudo)パスワードを入力してください\n"
+    echo
     sudo apt install git jq bc ccze automake tmux htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
     if [ ! -e "/usr/bin/gum" ]; then
         sudo mkdir -p /etc/apt/keyrings
