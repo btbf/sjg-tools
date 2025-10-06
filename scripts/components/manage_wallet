@@ -145,6 +145,7 @@ manageWallet(){
               fee=$(cardano-cli conway transaction calculate-min-fee \
                   --tx-body-file $NODE_HOME/tx.tmp \
                   --witness-count 2 \
+                  --output-text \
                   --protocol-params-file $NODE_HOME/params.json | awk '{ print $1 }')
 
 
@@ -191,7 +192,7 @@ manageWallet(){
             echo "出金には十分ご注意ください"
             echo '------------------------------------------------------------------------'
             printf "${FG_YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n\n"
-            if [ -e "$NODE_HOME/$PAYMENT_ADDR_FILENAME" ]; then
+            if [ -f "$NODE_HOME/$PAYMENT_ADDR_FILENAME" ]; then
               #出金先アドレスチェック
               echo
               send_address
@@ -242,6 +243,7 @@ manageWallet(){
               fee=$(cardano-cli conway transaction calculate-min-fee \
               --tx-body-file $NODE_HOME/tx.tmp \
               --witness-count 1 \
+              --output-text \
               --protocol-params-file $NODE_HOME/params.json | awk '{ print $1 }')
 
 

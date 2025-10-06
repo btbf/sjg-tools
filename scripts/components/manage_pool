@@ -127,7 +127,7 @@ blockGenerateCheck(){
     printf "=${PURPLE}[BPファイル存在確認]${NC} ----------------------------------------------------------------------\n"
     if [ $kes_path ]; then
       kes_name=${kes_path##*/}
-      if [ -e "$NODE_HOME/$kes_name" ]; then
+      if [ -f "$NODE_HOME/$kes_name" ]; then
         printf "$kes_name: ${GREEN}OK${NC} | "
         okCnt=$((${okCnt}+1))
       else
@@ -142,7 +142,7 @@ blockGenerateCheck(){
 
     if [ $vrf_path ]; then
       vrf_name=${vrf_path##*/}
-      if [ -e "$NODE_HOME/$vrf_name" ]; then
+      if [ -f "$NODE_HOME/$vrf_name" ]; then
         printf "$vrf_name: ${GREEN}OK${NC} | "
         okCnt=$((${okCnt}+1))
       else
@@ -157,7 +157,7 @@ blockGenerateCheck(){
 
     if [ $cert_path ]; then
     cert_name=${cert_path##*/}
-      if [ -e "$NODE_HOME/$cert_name" ]; then
+      if [ -f "$NODE_HOME/$cert_name" ]; then
         printf "$cert_name: ${GREEN}OK${NC}\n"
         okCnt=$((${okCnt}+1))
       else
@@ -344,7 +344,7 @@ managePool(){
         case $manage_pool_select in
         
         "[1] KES更新" )
-        createKes
+        ManagementKes "renewal"
         ;;
 
         "[2] ブロック生成状態チェック" )

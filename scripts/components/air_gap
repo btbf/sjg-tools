@@ -1,26 +1,124 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC1091,SC2086,SC1001,SC2317
+# shellcheck disable=SC1091,SC2086,SC1001,SC2317,SC2120
 # shellcheck source="$HOME/.bashrc"
+
+create_airgap_script(){
+  cat > $NODE_HOME/airgap_script << EOF
+#!/bin/bash
+# shellcheck disable=SC1091,SC2086,SC1001,SC2317
+# shellcheck source="\$HOME/.bashrc"
+
+clear
+script_title=${1}
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+CYAN='\e[36m'
+PURPLE='\e[35m'
+YELLOW='\e[33m'
+BLUE='\e[34m'
+WHITE='\e[37m'
+BOLD='\e[1m'
+UNDERLINE='\e[4m'
+NC='\033[0m' # No Color
+
+
+yes_no(){
+  while :
+      do
+        read -r -n 1 select_number < /dev/tty
+          case \${select_number} in
+            1) return 0 ;;                              # Yes
+            2) echo "スクリプトを終了します" > /dev/tty; return 1 ;;  # No
+            *) echo "1 か 2 を入力してください" > /dev/tty ;;
+          esac
+    done
+}
+
+Verify(){
+  echo
+  echo "BPからコピーしたairgap-set.tar.gzのハッシュを確認してください"
+  hash_value=\$(sha256sum \${NODE_HOME}/airgap-set.tar.gz | awk '{print \$1}')
+  echo -e "ハッシュ値：\${YELLOW}\${hash_value}\${NC}"
+  echo
+  echo "上記のハッシュ値をBPに表示されてるハッシュ値と照合してください"
+  echo
+  echo "[1] 一致する [2] 一致しない"
+  
+  if yes_no; then
+      tar -xzf \${NODE_HOME}/airgap-set.tar.gz -C \${NODE_HOME}
+      if [ $? -ne 0 ]; then
+          echo -e "\${RED}airgap-set.tar.gzの解凍に失敗しました。\${NC}"
+          exit 1
+      fi
+      rm -f \${NODE_HOME}/airgap-set.tar.gz
+      bash \${NODE_HOME}/airgap_script
+  else
+      echo "ハッシュ値が一致しません。再度BPからairgap-set.tar.gzをコピーしてください"
+      sleep 2
+      exit 1
+  fi
+}
+
+Main(){
+  echo
+  echo "\${script_title}処理を開始してもよろしいですか？"
+  echo "[1] はい [2] いいえ"
+  if ! yes_no; then
+      exit 0
+  fi
+}
+
+
+case \$1 in
+  "verify" )
+    Verify
+  ;;
+
+  "" )
+    Main
+    exit 0
+  ;;
+esac
+
+EOF
+}
+
 
 
 signStakeAddressTx(){
-    cardano-cli conway transaction sign --tx-body-file ${NODE_HOME}/tx.raw --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file ${NODE_HOME}/tx.signed
-    echo
-    echo "トランザクション署名ファイルを生成しました"
-    echo "${NODE_HOME}/tx.signed をBPの作業ディレクトリにコピーしてください"
-    echo
-    Gum_OneSelect "コピーしたらEnterを押して下さい"
+create_airgap_script "ステークアドレス委任Tx署名ファイル作成"
+cat >> "${NODE_HOME}/airgap_script" << EOF 
+#!/bin/bash
+cardano-cli conway transaction sign --tx-body-file \${NODE_HOME}/tx.raw --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file \${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file \${NODE_HOME}/tx.signed
+echo
+echo "トランザクション署名ファイルを生成しました(\${NODE_HOME}/tx.signed)"
+echo
+echo -e "\${GREEN}tx.signed\${NC}をBPの作業ディレクトリにコピーしてください"
+hash_value=\$(sha256sum \${NODE_HOME}/tx.signed | awk '{print \$1}')
+echo -e "ハッシュ値：\${YELLOW}\${hash_value}\${NC}"
+echo
+read -p "コピーしたらEnterを押して下さい" < /dev/tty
+rm -f \${NODE_HOME}/airgap_script
+EOF
+chmod 755 ${NODE_HOME}/airgap_script
 }
 
 
 signPoolRegisterTx(){
-    chmod u+rwx $HOME/cold-keys
-    cardano-cli conway transaction sign --tx-body-file ${NODE_HOME}/tx.raw  --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file ${NODE_HOME}/tx.signed
-    echo
-    echo "プール登録Tx署名ファイルを生成しました"
-    echo "${NODE_HOME}/tx.signed をBPの作業ディレクトリにコピーしてください"
-    echo
-    Gum_OneSelect "コピーしたらEnterを押して下さい"
+cat >> "${NODE_HOME}/airgap_script" << EOF
+cardano-cli conway transaction sign --tx-body-file \${NODE_HOME}/tx.raw  --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME} --signing-key-file \${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file \${NODE_HOME}/tx.signed
+chmod a-rwx ${COLDKEYS_DIR}
+echo
+echo "プール登録Tx署名ファイルを生成しました"
+echo "\${NODE_HOME}/tx.signed をBPの作業ディレクトリにコピーしてください"
+hash_value=\$(sha256sum \${NODE_HOME}/tx.signed | awk '{print \$1}')
+echo -e "ハッシュ値：\${YELLOW}\${hash_value}\${NC}"
+echo
+read -p "コピーしたらEnterを押して下さい" < /dev/tty
+rm -f \${NODE_HOME}/airgap_script
+EOF
+chmod 755 ${NODE_HOME}/airgap_script
 }
 
 
@@ -28,27 +126,39 @@ signPoolRegisterTx(){
 CreatePoolCert(){
   while :
   do
-    inputPledge=$(gum input --width=0 --header="Pledge誓約ADAを整数で入力して下さい(1-1000000)" --char-limit=7 --header.foreground="99" --no-show-help --placeholder "Pledge")
-    inputFixCost=$(gum input --value="170" --width=0 --header="固定手数料を整数で入力してください(170以上)" --char-limit=5 --header.foreground="99" --no-show-help --placeholder "Fix Cost")
-    inputFixMargin=$(gum input --value="0.5" --width=0 --header="変動手数料を入力してください(%不要)" --char-limit=3 --header.foreground="99" --no-show-help --placeholder "0.5 or 1.5 or 3 etc...")
+  inputPledge=$(gum input --width=0 --header="Pledge誓約ADAを整数で入力して下さい(例:10000)" --char-limit=7 --header.foreground="99" --no-show-help --placeholder "Pledge")
+  if [[ "$inputPledge" =~ ^[0-9]+$ ]]; then
+    if (( "$inputPledge" >= 1 )); then
+      break 1
+    else
+      echo "1以上の数字を入力してください"
+    fi
+  else
+    echo "数字を入力してください"
+  fi
+  done
+  inputFixCost=$(gum input --value="170" --width=0 --header="固定手数料を整数で入力してください(170以上)" --char-limit=5 --header.foreground="99" --no-show-help --placeholder "Fix Cost")
+  inputFixMargin=$(gum input --value="0.5" --width=0 --header="変動手数料率を入力してください(%不要)" --char-limit=3 --header.foreground="99" --no-show-help --placeholder "0.5 or 1.5 or 3 etc...")
 
-    while :
-    do
-      inputRelayNum=$(gum input --value="2" --width=0 --header="オンチェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
-        # 入力が数字かどうかを確認
-      if [[ "$inputRelayNum" =~ ^[0-9]+$ ]]; then
-        # 配列を使用して変数を管理
-        declare -a inputRelays
-        declare -a inputPorts
+  while :
+  do
+    inputRelayNum=$(gum input --value="2" --width=0 --header="オンチェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
+      # 入力が数字かどうかを確認
+    if [[ "$inputRelayNum" =~ ^[0-9]+$ ]]; then
+      # 配列を使用して変数を管理
+      declare -a inputRelays=()
+      declare -a inputPorts=()
+      poolRelaySet=""
 
-        # ループを実行
-        for ((i = 1; i <= $inputRelayNum; i++)); do
-          if [ "$i" -ge "2" ]; then poolRelaySet+="   "; fi
+      # ループを実行
+      for ((i = 1; i <= $inputRelayNum; i++)); do
+        if [ "$i" -ge "2" ]; then poolRelaySet+="   "; fi
+        
+        
+
+        while :
+        do
           inputRelayAddress=$(gum input --width=0 --header="リレー${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
-          inputRelays[$i]=${inputRelayAddress}
-          inputRelayPort=$(gum input --value="6000" --width=0 --header="リレー${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Realy Port")
-          inputPorts[$i]=${inputRelayPort}
-
           # 正規表現でIPv4アドレスの形式をチェック
           if [[ $inputRelayAddress =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
               # 各オクテットが0〜255の範囲内であることをチェック
@@ -61,91 +171,97 @@ CreatePoolCert(){
                   fi
               done
               if [ "$valid" = true ]; then
-                  poolRelaySet+="--pool-relay-ipv4 ${inputRelayAddress}   --pool-relay-port ${inputRelayPort}"
+                  poolRelaySet+="--pool-relay-ipv4 ${inputRelayAddress}"
+                  inputRelays[$i]=${inputRelayAddress}
+                  break 1
               else
                   echo "無効なIPアドレスです"
-                  break 1
               fi
+          elif [[ $inputRelayAddress =~ ^([a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$ ]]; then
+              poolRelaySet+="--single-host-pool-relay ${inputRelayAddress}"
+              inputRelays[$i]=${inputRelayAddress}
+              break 1
           else
-              poolRelaySet+="--single-host-pool-relay ${inputRelayAddress}   --pool-relay-port ${inputRelayPort}"
+              echo "無効なIPアドレスまたはDNSアドレスです"
           fi
         done
-        break 1
-      else
-        echo "数字を入力してください"
-        exit 1
-      fi
-    done
-    inputMetaUrl=$(gum input --width=0 --header="poolMetaData.jsonのURLを入力してください" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "Pool Homepage URL")
 
-    # ヘッダー行を出力
-    echo -e "誓約(Pledge)" ${B_YELLOW}"${inputPledge}ADA"${NC} >> table.out
-    echo -e "固定手数料" "${inputFixCost}ADA"  >> table.out
-    echo -e "変動手数料" "${inputFixMargin}%" >> table.out
-    echo -e "登録リレー数" "$inputRelayNum"  >> table.out
+        while :
+        do
+        inputRelayPort=$(gum input --value="6000" --width=0 --header="リレー${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Realy Port")
+        if [[ "$inputRelayPort" =~ ^([0-9]{1,5})$ ]]; then
+          if (( inputRelayPort >= 1 && inputRelayPort <= 65535 )); then
+          poolRelaySet+="   --pool-relay-port ${inputRelayPort}"
+          inputPorts[$i]=${inputRelayPort}
+          break 1
+          else
+            echo "1から65535の間の数字を入力してください"
+          fi
+        else
+            echo "入力のポート番号が無効な形式です"
+        fi
+        done
+        
 
-    for ((i = 1; i <= $inputRelayNum; i++)); do
-      echo -e "リレー$iアドレス" "${inputRelays[$i]}"  >> table.out
-      echo -e "リレー$iポート" "${inputPorts[$i]}"  >> table.out
-    done
-    echo -e "メタデータURL" "${inputMetaUrl}"  >> table.out
-    column -t < table.out
-    rm table.out
 
-echo
-echo "pool.cert生成実行コマンド確認"
-echo "コマンド上の入力数字はLovelace形式です"
-cmdPoolCert=$(cat << EOF
-cardano-cli conway stake-pool registration-certificate \
-  --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} \
-  --vrf-verification-key-file ${NODE_HOME}/${VRF_VKEY_FILENAME} \
-  --pool-pledge $(echo "${inputPledge}000000") \
-  --pool-cost $(echo "${inputFixCost}000000") \
-  --pool-margin $(echo 0)$(echo "scale=3; ${inputFixMargin} / 100" | bc) \
-  --pool-reward-account-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} \
-  --pool-owner-stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} \
-  $NODE_NETWORK \
-  $poolRelaySet \
-  --metadata-url ${inputMetaUrl} \
-  --metadata-hash $(cat ${NODE_HOME}/poolMetaDataHash.txt) \
-  --out-file ${NODE_HOME}/${POOL_CERT_FILENAME}
-EOF
-)
-    echo
-    echo -e ${GRAY}"$cmdPoolCert"${NC} | sed 's/   / \\\n/g'
-    echo
-    Gum_Confirm_YesNo "この値で${POOL_CERT_FILENAME}を生成しますか？" "Yes" "再度入力してください"
-    if [[ ${iniSettings} == "Yes" ]]; then
-      echo
-      chmod u+rwx $HOME/cold-keys
-      eval $cmdPoolCert
-      echo プール登録証明書 ${YELLOW}"${NODE_HOME}/${POOL_CERT_FILENAME}${NC} を生成しました"
-      echo
-      cardano-cli conway stake-address stake-delegation-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --out-file ${NODE_HOME}/deleg.cert
-      chmod u+rwx ${COLDKEYS_DIR}
-      cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format bech32 --out-file ${NODE_HOME}/pool.id-bech32
-      cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format hex --out-file ${NODE_HOME}/pool.id
-      chmod a-rwx ${COLDKEYS_DIR}
-      echo -e "委任証明書 ${YELLOW}${NODE_HOME}/deleg.cert${NC} を生成しました"
-      echo -e "プールID(Bech32) ${YELLOW}${NODE_HOME}/pool.id-bech32${NC} を生成しました"
-      echo -e "プールID(hex) ${YELLOW}${NODE_HOME}/pool.id${NC} を生成しました"
-      echo
-      echo -e "以下のファイルをBPの作業ディレクトへコピーしてください${NC}"
-      echo "${NODE_HOME}/${POOL_CERT_FILENAME}"
-      echo "${NODE_HOME}/deleg.cert"
-      echo "${NODE_HOME}/pool.id-bech32"
-      echo "${NODE_HOME}/pool.id"
-      echo '----------------------------------------'
-      echo ">> [エアギャップ] ⇒ [BP作業ディレクトリ]"
-      echo '----------------------------------------'
-      echo
-      Gum_OneSelect "BPにコピーしたらEnterを押して下さい"
+      done
       break 1
     else
-      echo ${iniSettings}
-      echo
+      echo "数字を入力してください"
+      exit 1
     fi
   done
 
+
+  # ヘッダー行を出力
+  echo -e "誓約(Pledge)" ${B_YELLOW}"${inputPledge}ADA"${NC} >> table.out
+  echo -e "固定手数料" "${inputFixCost}ADA"  >> table.out
+  echo -e "変動手数料" "${inputFixMargin}%" >> table.out
+  echo -e "登録リレー数" "$inputRelayNum"  >> table.out
+
+  for ((i = 1; i <= $inputRelayNum; i++)); do
+    echo -e "リレー$iアドレス" "${inputRelays[$i]}"  >> table.out
+    echo -e "リレー$iポート" "${inputPorts[$i]}"  >> table.out
+  done
+  echo -e "メタデータURL" "${POOL_METADATA_URL}"  >> table.out
+  column -t < table.out
+  rm table.out
+
+  echo
+  echo "pool.cert生成実行コマンド確認"
+  echo "コマンド上の入力数字はLovelace形式です"
+  cmdPoolCert=$(cat << EOF
+  cardano-cli conway stake-pool registration-certificate \
+  --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} \
+  --vrf-verification-key-file \${NODE_HOME}/${VRF_VKEY_FILENAME} \
+  --pool-pledge $(echo "${inputPledge}000000") \
+  --pool-cost $(echo "${inputFixCost}000000") \
+  --pool-margin $(echo 0)$(echo "scale=3; ${inputFixMargin} / 100" | bc) \
+  --pool-reward-account-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+  --pool-owner-stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+  $NODE_NETWORK \
+  $poolRelaySet \
+  --metadata-url ${POOL_METADATA_URL} \
+  --metadata-hash \$(cat ${NODE_HOME}/poolMetaDataHash.txt) \
+  --out-file ${NODE_HOME}/${POOL_CERT_FILENAME}
+EOF
+)
+  echo
+  echo -e ${GRAY}"$cmdPoolCert"${NC} | sed 's/   / \\\n/g'
+  echo
+  Gum_Confirm_YesNo "この値で${POOL_CERT_FILENAME}を生成しますか？" "Yes" "再度入力してください"
+  if [[ ${iniSettings} == "Yes" ]]; then
+    create_airgap_script "プール登録証明書作成"
+    cat >> "${NODE_HOME}/airgap_script" << EOF
+    echo
+    chmod u+rwx ${COLDKEYS_DIR}
+    $cmdPoolCert
+    echo -e プール登録証明書 \${YELLOW}"\${NODE_HOME}/${POOL_CERT_FILENAME}\${NC} を生成しました"
+EOF
+    return
+  else
+    echo ${iniSettings}
+    return 99
+  fi
 
 }

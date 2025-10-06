@@ -5,11 +5,10 @@
 source ${HOME}/.bashrc
 source ${SPOKIT_INST_DIR}/spokit.library
 source ${SPOKIT_INST_DIR}/components/node_install
-source ${SPOKIT_INST_DIR}/components/create_kes
 source ${SPOKIT_INST_DIR}/components/grafana_install
 source ${SPOKIT_INST_DIR}/components/create_metadata
 source ${SPOKIT_INST_DIR}/components/register_pool
-source ${SPOKIT_INST_DIR}/components/create_keys
+source ${SPOKIT_INST_DIR}/components/create_pool_keys
 source ${SPOKIT_INST_DIR}/components/topology_management
 source ${SPOKIT_INST_DIR}/components/check_poolwallet
 source ${SPOKIT_INST_DIR}/components/air_gap
@@ -17,7 +16,7 @@ source ${SPOKIT_INST_DIR}/components/manage_wallet
 source ${SPOKIT_INST_DIR}/components/manage_pool
 source ${SPOKIT_INST_DIR}/components/node_sync_check
 source ${SPOKIT_INST_DIR}/components/mithril_bootstrap
-source ${envPath}
+source ${env_path}
 
 clear
 
@@ -34,53 +33,40 @@ PoolSetupMenu(){
       do
       clear
       Header $headerTitle
-      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] プールメタデータ作成" "[3] トポロジー設定" "[4] プール運用キー作成" "[5] プール運用証明書作成" "[6] ウォレット準備" "[7] ステークアドレス登録" "[8] プール登録" "[9] 監視ツールセットアップ" "[q] 終了")
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードインストール" "[2] トポロジー設定" "[3] プール運用キー作成" "[4] ウォレット入金" "[5] ステークアドレス登録" "[6] プールメタデータ作成" "[7] プール登録" "[8] 監視ツールセットアップ" "[q] 終了")
       case $selection in
         "[1] ノードインストール" )
             NodeInstall
         ;;
 
-        "[2] プールメタデータ作成" )
-            createMetadata
-        ;;
-
-        "[3] トポロジー設定" )
+        "[2] トポロジー設定" )
             topologyManagement
         ;;
 
-        "[4] プール運用キー作成" )
-            createKeys
+        "[3] プール運用キー作成" )
+            create_pool_keys
         ;;
 
-        "[5] プール運用証明書作成" )
-          if [ ! -e "${NODE_HOME}"/"${KES_SKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${KES_VKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${NODE_CERT_FILENAME}" ]; then
-            createKes
-          else
-            echo
-            echo "以下のBP用ファイルが存在します"
-            FilePathAndHash ${NODE_HOME}/${KES_SKEY_FILENAME}
-            FilePathAndHash ${NODE_HOME}/${KES_VKEY_FILENAME}
-            FilePathAndHash ${NODE_HOME}/${NODE_CERT_FILENAME}
-            echo
-            Gum_OneSelect "戻る"
-          fi
+        "[4] ウォレット入金" )
+            checkPoolwallet
         ;;
 
-        "[6] ウォレット準備" )
-        checkPoolwallet
+        "[5] ステークアドレス登録" )
+            registerStakeadd
         ;;
 
-        "[7] ステークアドレス登録" )
-        registerStakeadd
+        "[6] プールメタデータ作成" )
+            createMetadata
         ;;
 
-        "[8] プール登録" )
-        registarPool
+        "[7] プール登録" )
+            registarPool
         ;;
 
-        "[9] 監視ツールセットアップ" )
-          prometheusInstall
+        "[8] 監視ツールセットアップ" )
+            prometheusInstall
         ;;
+
         "[q] 終了" )
           tmux kill-session -t spokit
         ;;
@@ -113,44 +99,6 @@ PoolSetupMenu(){
       esac
       done
     ;;
-    "エアギャップ" )
-      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIインストール" "プール運用キー作成" "ノード運用証明書作成" "ステークアドレスTx署名" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
-      case $selection in
-
-        "CLIインストール" )
-        
-        SystemUpdate
-        NodeVersionSelect
-        #ノードバイナリダウンロード
-        NodeDownload $select_node_version
-        echo
-        ;;
-      
-        "プール運用キー作成" )
-        createKeys
-        ;;
-
-        "ノード運用証明書作成" )
-        createKes
-        ;;
-
-        "ステークアドレスTx署名" )
-        signStakeAddressTx
-        ;;
-
-        "プール登録証明書作成" )
-        CreatePoolCert
-        ;;
-
-        "プール登録Tx署名" )
-        signPoolRegisterTx
-        ;;
-
-        "[q] 終了" )
-          tmux kill-session -t spokit
-        ;;
-      esac
-    ;;
 
   esac
 }
@@ -179,6 +127,7 @@ CnmMain(){
 
         "[3] ノードバージョンアップ" )
         echo "機能実装まで今しばらくお待ち下さい"
+        
         #NodeVirsionUp
         ;;
 
@@ -214,41 +163,21 @@ CnmMain(){
       esac
       done
     ;;
-
-    "エアギャップ" )
-     selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "CLIバージョンアップ" "ノード運用証明書作成" "プール登録証明書作成" "プール登録Tx署名" "[q] 終了")
-      case $selection in
-
-        "CLIバージョンアップ" )
-        ;;
-
-        "ノード運用証明書作成" )
-        createKes
-        ;;
-
-        "プール登録証明書作成" )
-        CreatePoolCert
-        ;;
-
-        "プール登録Tx署名" )
-        signPoolRegisterTx
-        ;;
-
-        "[q] 終了" )
-          tmux kill-session -t spokit
-        ;;
-      esac
-    ;;
   esac
 }
 
 
 clear
 #env再読み込み
-source ${envPath}
+source ${env_path}
 
 case $1 in
-  "setup" )
+  "ubuntu" )
+    source ${SPOKIT_INST_DIR}/components/ubuntu_setup
+    UbuntuSetup
+  ;;
+
+  "pool" )
     PoolSetupMenu
   ;;
 

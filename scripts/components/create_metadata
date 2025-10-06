@@ -4,108 +4,108 @@
 
 
 createMetadata(){
-poolMeta_reright=false
-
-if [[ -e ${NODE_HOME}/${POOL_META_FILENAME} ]]; then
-    echo "プールメタデータがすでに作成されています"
-    echo 
-    style "プール名:" "${META_POOL_NAME}"
-    style "ティッカー:" "${META_TICKER}"
-    style "プール説明:" "${META_DISCRIPTION}"
-    style "プールURL:" "${META_HOMEPAGE_URL}"
-    echo
-    Gum_Confirm_YesNo "プールメタデータを再作成しますか？" "Yes" "No"
-    if [ "${iniSettings}" == "Yes" ]; then
-        poolMeta_reright=true
-    else
-        return
-    fi
-fi
-
-metaPoolName=$(gum input --width=0 --value="${META_POOL_NAME}" --header="プール名を入力してください(日本語可)" --char-limit=100 --header.foreground="99" --no-show-help --placeholder "Pool Name")
-metaTicker=$(gum input --width=0 --value="${META_TICKER}" --header="プールティッカーを3～5文字で入力してください。(A-Zと0-9の組み合わせのみ)" --char-limit=5 --header.foreground="99" --no-show-help --placeholder "Ticker")
-metaDirscription=$(gum input --width=0 --value="${META_DISCRIPTION}" --header="プール説明を入力してください（255文字以内(255byte)※ただし日本語は2byte扱い)" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Discription")
-metaHomepageUrl=$(gum input --width=0 --value="${META_HOMEPAGE_URL}" --header="プールホームページURLを入力してください（64byte以内)" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "Pool Homepage URL")
-
-style "プール名:" "${metaPoolName}"
-style "ティッカー:" "${metaTicker}"
-style "プール説明:" "${metaDirscription}"
-style "プールURL:" "${metaHomepageUrl}"
-echo
-Gum_Confirm_YesNo "この値でよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
-
-if [ "${iniSettings}" == "Yes" ]; then
-    if $poolMeta_reright ; then
-        sed -i '/^META_POOL_NAME=/d' "${envPath}"
-        sed -i '/^META_TICKER=/d' "${envPath}"
-        sed -i '/^META_DISCRIPTION=/d' "${envPath}"
-        sed -i '/^META_HOMEPAGE_URL=/d' "${envPath}"
-        sed -i '/^POOL_METADATA_URL=/d' "${envPath}"
-    fi
-    echo META_POOL_NAME=\""${metaPoolName}"\" >> "${envPath}"
-    echo META_TICKER=\""${metaTicker}"\" >> "${envPath}"
-    echo META_DISCRIPTION=\""${metaDirscription}"\" >> "${envPath}"
-    echo META_HOMEPAGE_URL=\""${metaHomepageUrl}"\" >> "${envPath}"
-
-    Gum_DotSpinner3 "${POOL_META_FILENAME}を作成しています"
-    echo
-    echo "${POOL_META_FILENAME}を作成しました"
-    CreatePoolMetaJson "${metaPoolName}" "${metaDirscription}" "${metaTicker}" "${metaHomepageUrl}"
-    echo
-    echo "${NODE_HOME}/${POOL_META_FILENAME}をGithubまたはホームページサーバーにアップロードしてください"
-    echo
-    gum choose --header.foreground="244" --header="アップロードが完了したらEnterを押下し、オンライン上の${POOL_META_FILENAME}を検証します" --height=1 --no-show-help "OK"
-    echo
-
-    while :
-    do
-        poolMetaurl=$(gum input --width=0 --header="${POOL_META_FILENAME}をアップロードしたフルURLを入力してください" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "${POOL_META_FILENAME} URL")
-        httpResponsCode=$(curl -LI "${poolMetaurl}" -o /dev/null -w '%{http_code}\n' -s)
-        
-        if [ "${httpResponsCode}" == "200" ]; then
-        curl -s "${poolMetaurl}" | jq . > /dev/null 2>&1
-        # jqの終了ステータスを確認
-        if [ $? -ne 0 ]; then
-            echo "エラー: ${POOL_META_FILENAME}が正しいJSON形式ではありません"
-            echo
-        else
-            echo "サーバでホストされている${POOL_META_FILENAME}を参照しています"
-            curl -s "${poolMetaurl}" | jq .
-            echo
-            Gum_Confirm_YesNo "このデータでよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
-            
-            if [[ ${iniSettings} == "Yes" ]]; then
-                echo "オンラインファイルのフォーマットは正常です"
-                echo "POOL_METADATA_URL=\"${poolMetaurl}\"" >> "${envPath}"
-                
-                wget -q -O ${NODE_HOME}/${POOL_META_FILENAME} ${poolMetaurl}
-                cardano-cli conway stake-pool metadata-hash --pool-metadata-file ${NODE_HOME}/${POOL_META_FILENAME} > ${NODE_HOME}/poolMetaDataHash.txt
-                echo "${NODE_HOME}/poolMetaDataHash.txtを作成しました"
-                echo
-                echo -e "${YELLOW}1. BPのpoolMetaDataHash.txtエアギャップのcnodeディレクトリにコピーしてください${NC}"
-                echo '----------------------------------------'
-                echo ">> [BP] ⇒ poolMetaDataHash.txt ⇒ [エアギャップ]"
-                echo '----------------------------------------'
-                echo
-                Gum_OneSelect "コピーしたらEnterを押して「3.トポロジー設定」を実施してください"
-                break
-            else
-                echo
-                echo "${iniSettings}"
-                echo
-                Gum_OneSelect "戻る"
-            fi
-        fi
-        else
-        echo "URLが無効です。再度ご確認ください。${httpResponsCode}"
+    poolMeta_reright=false
+    if [[ -f ${NODE_HOME}/${POOL_META_FILENAME} ]]; then
+        echo "プールメタデータがすでに作成されています"
+        echo 
+        style "プール名:" "${POOL_NAME}"
+        style "ティッカー:" "${POOL_TICKER}"
+        style "プール説明:" "${POOL_DISCRIPTION}"
+        style "プールURL:" "${POOL_HOMEPAGE_URL}"
         echo
+        Gum_Confirm_YesNo "プールメタデータを再作成しますか？" "Yes" "No"
+        if [ "${iniSettings}" == "Yes" ]; then
+            poolMeta_reright=true
+        else
+            return
         fi
-    done
-else
+    fi
+    metaPoolName=$(gum input --width=0 --value="${POOL_NAME}" --header="プール名を入力してください(日本語可)" --char-limit=100 --header.foreground="99" --no-show-help --placeholder "例）SPO Japan Guild Pool")
+    style "プール名:" "${metaPoolName}"
+    metaTicker=$(gum input --width=0 --value="${POOL_TICKER}" --header="プールティッカーを3～5文字で入力してください。(A-Zと0-9の組み合わせのみ)" --char-limit=5 --header.foreground="99" --no-show-help --placeholder "例）SJG")
+    style "ティッカー:" "${metaTicker}"
+    metaDirscription=$(gum input --width=0 --value="${POOL_DISCRIPTION}" --header="プール説明を入力してください（255文字以内(255byte)※ただし日本語は2byte扱い)" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "例）SPO Japan Guildは日本のSPOグループです")
+    style "プール説明:" "${metaDirscription}"
+    metaHomepageUrl=$(gum input --width=0 --value="${POOL_HOMEPAGE_URL}" --header="プールホームページURLを入力してください（64byte以内)" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "例）https://spojapanguild.net")
+    style "プールURL:" "${metaHomepageUrl}"
+    metaFileName=$(gum input --width=0 --value="${POOL_META_FILENAME}" --header="メタデータファイル名を入力してください" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "例）poolMetaData.json")
+    style "メタデータファイル名:" "${metaFileName}"
+    
     echo
-    echo "${iniSettings}"
-    echo
-    Gum_OneSelect "戻る"
-fi
+    Gum_Confirm_YesNo "この値でよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
 
+    if [ "${iniSettings}" == "Yes" ]; then
+        if $poolMeta_reright ; then
+            sed -i '/^POOL_NAME=/d' "${env_path}"
+            sed -i '/^POOL_TICKER=/d' "${env_path}"
+            sed -i '/^POOL_DISCRIPTION=/d' "${env_path}"
+            sed -i '/^POOL_HOMEPAGE_URL=/d' "${env_path}"
+        fi
+        sed -i '/^POOL_META_FILENAME=/d' "${env_path}"
+        echo POOL_NAME=\""${metaPoolName}"\" >> "${env_path}"
+        echo POOL_TICKER=\""${metaTicker}"\" >> "${env_path}"
+        echo POOL_DISCRIPTION=\""${metaDirscription}"\" >> "${env_path}"
+        echo POOL_HOMEPAGE_URL=\""${metaHomepageUrl}"\" >> "${env_path}"
+        echo POOL_META_FILENAME=\""${metaFileName}"\" >> "${env_path}"
+        
+        Gum_DotSpinner3 "${metaFileName}を作成しています"
+        echo "${NODE_HOME}/${metaFileName}を作成しました"
+        CreatePoolMetaJson "${metaPoolName}" "${metaDirscription}" "${metaTicker}" "${metaHomepageUrl}" "${metaFileName}"
+        echo "ローカルPCにダウンロードし、事前に作成したGithubまたはホームページサーバーにアップロードしてください"
+        echo
+        GreenStyle "アップロードが完了したらEnterを押下し、オンライン上の${metaFileName}を検証します"
+        gum choose --header.foreground="244" --header="" --height=1 --no-show-help "OK"
+
+        while :
+        do
+            GreenStyle "${metaFileName}をアップロードしたフルURLを入力してください"
+            GreenStyle "キャンセルしたい場合は c を入力してください"
+            poolMetaurl=$(gum input --width=0 --value="${POOL_METADATA_URL}" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "例) https://spojapanguild.net/${metaFileName}")
+            httpResponsCode=$(gum spin --spinner dot --title "メタデータを検証しています" -- curl -LI "${poolMetaurl}" -o /dev/null -w '%{http_code}\n' -s)
+            
+            if [ "${httpResponsCode}" == "200" ]; then
+            curl -s "${poolMetaurl}" | jq . > /dev/null 2>&1
+            # jqの終了ステータスを確認
+                if [ $? -ne 0 ]; then
+                    echo "エラー: ${metaFileName}が正しいJSON形式ではありません"
+                    echo
+                else
+                    echo "サーバでホストされている${metaFileName}を参照しています"
+                    curl -s "${poolMetaurl}" | jq .
+                    echo
+                    Gum_Confirm_YesNo "このデータでよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
+                    
+                    if [[ ${iniSettings} == "Yes" ]]; then
+                        echo "オンラインファイルのフォーマットは正常です"
+                        sed -i '/^POOL_METADATA_URL=/d' "${env_path}"
+                        echo "POOL_METADATA_URL=\"${poolMetaurl}\"" >> "${env_path}"
+                        wget -q -O ${NODE_HOME}/${metaFileName} ${poolMetaurl}
+                        cardano-cli conway stake-pool metadata-hash --pool-metadata-file ${NODE_HOME}/${metaFileName} > ${NODE_HOME}/poolMetaDataHash.txt
+                        echo "${NODE_HOME}/poolMetaDataHash.txtを作成しました"
+                        Gum_OneSelect "戻る"
+                        break 2
+                    else
+                        echo
+                        echo "${iniSettings}"
+                        echo
+                        Gum_OneSelect "戻る"
+                    fi
+                fi
+            else
+                if [[ $poolMetaurl == "c" ]]; then
+                    echo "キャンセルされました"
+                    Gum_OneSelect "戻る"
+                    return
+                fi
+                echo "URLが無効です。再度ご確認ください"
+                style "エラーコード:" "${httpResponsCode}"
+                echo
+            fi
+        done
+    else
+        echo
+        echo "${iniSettings}"
+        echo
+        Gum_OneSelect "戻る"
+    fi
 }

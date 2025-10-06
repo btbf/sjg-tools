@@ -1,0 +1,506 @@
+#!/bin/bash
+# shellcheck disable=SC1091,SC2086,SC1001,SC2317
+# shellcheck source="$HOME/.bashrc"
+
+#####################
+# エアギャップnode.cert作成スクリプト
+#####################
+AirgapNodeCertCreateScript(){
+cat >> "${NODE_HOME}/airgap_script" << EOF 
+counter_no=${1}
+startKesPeriod=${2}
+
+chmod u+rwx ${COLDKEYS_DIR}
+cardano-cli conway node new-counter --cold-verification-key-file "${COLDKEYS_DIR}/${COLD_VKEY_FILENAME}" --counter-value \${counter_no} --operational-certificate-issue-counter-file "${COLDKEYS_DIR}/${COUNTER_FILENAME}"
+echo
+sleep 1
+
+echo
+echo -e "${YELLOW}4. カウンター番号確認${NC}"
+echo '----------------------------------------'
+counter_value=\$(cardano-cli conway text-view decode-cbor --in-file  ${COLDKEYS_DIR}/${COUNTER_FILENAME} | grep int | head -1 | cut -d"(" -f2 | cut -d")" -f1)
+echo "カウンターファイル番号:\${counter_value}"
+echo
+cardano-cli conway node issue-op-cert --kes-verification-key-file "\${NODE_HOME}/${KES_VKEY_FILENAME}" --cold-signing-key-file "${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}" --operational-certificate-issue-counter "${COLDKEYS_DIR}/${COUNTER_FILENAME}" --kes-period ${startKesPeriod} --out-file "\${NODE_HOME}/${NODE_CERT_FILENAME}"
+if [ \$? -eq 0 ]; then
+echo "\${NODE_HOME}/${NODE_CERT_FILENAME} ファイルを生成しました。"
+chmod a-rwx "${COLDKEYS_DIR}"
+sleep 2
+else
+echo "${NODE_CERT_FILENAME}ファイル生成に失敗しました"
+fi
+if [[ "${3}" == "renewal" ]]; then
+    echo
+    echo -e "${YELLOW}5. エアギャップの ${NODE_CERT_FILENAME} をBPのcnodeディレクトリにコピーしてください${NC}"
+    echo '----------------------------------------'
+    echo ">> [エアギャップ] ⇒ ${NODE_CERT_FILENAME} ⇒ [BP]"
+    echo '----------------------------------------'
+    read -p "コピーしたらEnterを押してください"
+    echo
+    echo "BP側で${NODE_CERT_FILENAME}のハッシュ値が完全一致していることを確認してください"
+    echo '----------------------------------------'
+    sha256sum "${NODE_HOME}/${NODE_CERT_FILENAME}" | awk '{print \$1}'
+    echo '----------------------------------------'
+fi
+EOF
+chmod 755 ${NODE_HOME}/airgap_script
+}
+
+
+
+
+####################
+# KESキー作成関数
+####################
+createKes(){
+#KEStimenig
+slotNumInt=$(curl -s http://localhost:12798/metrics | grep cardano_node_metrics_slotNum_int | awk '{ print $2 }')
+kesTiming=$(echo "scale=6; ${slotNumInt} / 129600" | bc | awk '{printf "%.5f\n", $0}')
+
+if [ "$iniSettings" != "Yes" ]; then return 1; fi
+
+echo 
+echo  "KES更新タイミングチェック:$(MagentaStyle ${kesTiming})"
+sleep 1
+
+kesTimingDecimal=${kesTiming#*.}
+if [ ${kesTimingDecimal} -ge 99800 ]; then
+    echo "KesStartがもうすぐ切り替わります(${kesTiming})"
+    nextkes=$(echo ${kesTiming} | awk '{echo("%d\n",$1+1)}')
+    echo "startKesPeriodが$nextkesへ切り替わってから再度実行してください"
+    return 1
+else
+    GreenStyle "OK"
+fi
+Gum_DotSpinner3 "準備中"
+echo
+#最新ブロックカウンター番号チェック
+if [ -f ${NODE_HOME}/${NODE_CERT_FILENAME} ]; then
+    cardano-cli conway query kes-period-info $NODE_NETWORK --op-cert-file ${NODE_HOME}/${NODE_CERT_FILENAME} --out-file ${NODE_HOME}/kesperiod.json 2> /dev/null
+    lastBlockCnt=$(cat ${NODE_HOME}/kesperiod.json | jq -r '.qKesNodeStateOperationalCertificateNumber')
+    rm ${NODE_HOME}/kesperiod.json
+fi
+
+#現在のKESPeriod算出
+slotNo=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
+slotsPerKESPeriod=$(cat ${NODE_HOME}/${NODE_CONFIG}-shelley-genesis.json | jq -r '.slotsPerKESPeriod')
+kesPeriod=$(( ${slotNo} / ${slotsPerKESPeriod} ))
+startKesPeriod=${kesPeriod}
+
+kesfolder="${NODE_HOME}/kes-backup"
+if [ ! -e "${kesfolder}" ]; then
+    mkdir -p $kesfolder
+    echo "$kesfolderディレクトリを作成しました"
+fi
+
+date=$(date +\%Y\%m\%d\%H\%M)
+if [ -f "${NODE_HOME}/${KES_SKEY_FILENAME}" ]; then
+    MagentaStyle "■旧KESファイルのバックアップ..."
+    cp ${NODE_HOME}/${KES_VKEY_FILENAME} $kesfolder/$date-${KES_VKEY_FILENAME}
+    YellowStyle "${NODE_HOME}/${KES_VKEY_FILENAME} を $kesfolder/$date-${KES_VKEY_FILENAME}へコピーしました"
+    cp ${NODE_HOME}/${KES_SKEY_FILENAME} $kesfolder/$date-${KES_SKEY_FILENAME}
+    YellowStyle "${NODE_HOME}/${KES_SKEY_FILENAME} を $kesfolder/$date-${KES_SKEY_FILENAME}へコピーしました"
+    cp ${NODE_HOME}/${NODE_CERT_FILENAME} $kesfolder/$date-${NODE_CERT_FILENAME}
+    YellowStyle "${NODE_HOME}/${NODE_CERT_FILENAME} を $kesfolder/$date-${NODE_CERT_FILENAME}へコピーしました"
+
+    # チェックするディレクトリを指定
+    # 特定のファイル名に含まれる文字列を指定（3種類）
+    oldKessKey="*${KES_SKEY_FILENAME}"
+    oldKesvKey="*${KES_VKEY_FILENAME}"
+    oldNodecertKey="*${NODE_CERT_FILENAME}"
+
+    # 関数: 古いファイルを削除する
+    KesCleanupFiles() {
+    local pattern=${1}
+    local dir=${2}
+    
+    # 該当するファイルをリストアップ
+    file_list=$(ls -1t ${dir} | grep ${pattern})
+    
+    # 該当するファイル数を取得
+    file_count=$(echo "${file_list}" | wc -l)
+    
+    # ファイルが5つ以上ある場合
+    if [ "$file_count" -ge 5 ]; then
+        # 古いファイルをリストアップし、5番目のファイル以降を削除
+        echo "$file_list" | tail -n +6 | while read -r file; do
+        rm "$dir/$file"
+        done
+    fi
+    }
+
+    # 各パターンについて関数を呼び出す
+    KesCleanupFiles "$oldKessKey" "$kesfolder"
+    KesCleanupFiles "$oldKesvKey" "$kesfolder"
+    KesCleanupFiles "$oldNodecertKey" "$kesfolder"
+
+    MagentaStyle "${MAGENTA}■旧KESファイルの削除...${NC}"
+    sleep 2
+    rm ${NODE_HOME}/${KES_VKEY_FILENAME}
+    YellowStyle "${NODE_HOME}/${KES_VKEY_FILENAME} を削除しました"
+    rm ${NODE_HOME}/${KES_SKEY_FILENAME}
+    YellowStyle "${NODE_HOME}/${KES_SKEY_FILENAME} を削除しました"
+fi
+
+PinkStyle "■新しいKESファイルの作成..."
+cardano-cli conway node key-gen-KES --verification-key-file ${NODE_HOME}/${KES_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${KES_SKEY_FILENAME}
+sleep 2
+
+kesVkey256=$(sha256sum ${NODE_HOME}/${KES_VKEY_FILENAME} | awk '{ print $1 }')
+kesSkey256=$(sha256sum ${NODE_HOME}/${KES_SKEY_FILENAME} | awk '{ print $1 }')
+
+FilePathAndHash "${NODE_HOME}/${KES_VKEY_FILENAME}"
+FilePathAndHash "${NODE_HOME}/${KES_SKEY_FILENAME}"
+echo
+#lastBlockCnt=" "
+if expr "$lastBlockCnt" : "[0-9]*$" >&/dev/null; then
+    counterValue=$(( $lastBlockCnt +1 ))
+    echo "チェーン上カウンター番号: ${lastBlockCnt}"
+    echo "今回更新のカウンター番号: ${counterValue}"
+else
+    counterValue=0
+    echo -e "カウンター番号: ${counterValue}"
+fi
+echo "現在のstartKesPeriod: ${startKesPeriod}"
+sleep 2
+cd ${NODE_HOME}
+AirgapNodeCertCreateScript ${counterValue} ${startKesPeriod} ${1}
+echo
+
+}
+
+
+#####################
+# KESキー管理関数
+#####################
+ManagementKes(){
+    case ${1} in
+    "new" )
+        iniSettings="Yes"
+        createKes ${1} 
+    ;;
+
+    "renewal" )
+        echo '------------------------------------------------------------------------'
+        echo "KES作成(更新)作業にはブロックプロデューサーとエアギャップを使用します"
+        echo
+        echo -e "■ 実行フロー"
+        echo ' 1.KESファイル/CERTファイル作成(バックアップ)'
+        echo ' 2.新規KESファイル作成'
+        echo " 3.KESファイルをエアギャップへコピー"
+        echo ' 4.エアギャップ操作/CERTファイルBPコピー(手動)'
+        echo ' 5.ノード再起動'
+        echo '------------------------------------------------------------------------'
+        echo
+        echo "KESファイルを更新する前に、1時間以内にブロック生成スケジュールが無いことを確認してください"
+        echo
+        Gum_Confirm_YesNo "KES更新作業を開始しますか？" "Yes" "最初からやり直す場合はツールを再実行してください"
+
+        #KESファイル作成
+        create_airgap_script "KES更新"
+        createKes ${1}
+
+        MagentaStyle "■エアギャップ転送ファイル作成"
+        tar -czvf airgap-set.tar.gz ${KES_VKEY_FILENAME} ${KES_SKEY_FILENAME} airgap_script
+        echo "エアギャップ転送ファイル(airgap-set.tar.gz)を作成しました"
+        echo
+        MagentaStyle "■Step1 エアギャップファイル転送"
+        echo "${NODE_HOME}/airgap-set.tar.gz"をエアギャップのcnodeディレクトリにコピーしてください
+        echo '------------------------------------------------'
+        echo ">> [BP] ⇒ airgap-set.tar.gz ⇒ [エアギャップ]"
+        echo '------------------------------------------------'
+        echo
+        MagentaStyle "■Step2 エアギャップ操作"
+        echo "エアギャップで以下のコマンドを実行してください"
+        echo '------------------------------------------------'
+        echo "airgap"
+        echo '------------------------------------------------'
+        FilePathAndHash "${NODE_HOME}/airgap-set.tar.gz"
+        echo
+        echo "エアギャップで作成したノード運用証明書(${NODE_CERT_FILENAME})をブロックプロデューサーのcnodeディレクトリにコピーしてください"
+        echo '----------------------------------------'
+        echo ">> [エアギャップ] ⇒ ${NODE_CERT_FILENAME} ⇒ [BP]"
+        echo '----------------------------------------'
+        echo
+        echo "BP側で${NODE_CERT_FILENAME}のハッシュ値が完全一致していることを確認してください"
+        echo '----------------------------------------'
+        FilePathAndHash "${NODE_HOME}/${NODE_CERT_FILENAME}"
+        echo '----------------------------------------'
+        read -p "コピーしたらEnterを押してください"
+        echo
+        echo "[1] このまま再起動する　[2] 手動で再起動する"
+        echo
+        while :
+        do
+            read -n 1 restartnum
+            if [ "$restartnum" == "1" ] || [ "$restartnum" == "2" ]; then
+            case ${restartnum} in
+                1) 
+                sudo systemctl reload-or-restart cardano-node
+                echo "\n${GREEN}ノードを再起動しました。${NC}\nglive viewを起動して同期状況を確認してください\n\n"
+                echo "${RED}ノード同期完了後、当ツールの[2] ブロック生成状態チェックを実行してください${NC}\n\n"
+                break
+                ;;
+                2) 
+                clear
+                echo "SPO JAPAN GUILD TOOL Closed!" 
+                exit ;;
+            esac
+            break
+            elif [ "$kesnum" == '' ]; then
+            echo "入力記号が不正です。再度入力してください\n"
+            else
+            echo "入力記号が不正です。再度入力してください\n"
+            fi
+        done
+        ;;
+    esac
+}
+
+
+create_pool_keys(){
+  case $NODE_TYPE in
+    "ブロックプロデューサー" )
+        if [ ! -f "${NODE_HOME}"/"${KES_SKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ]; then
+            echo
+            echo "この作業では以下のキーと証明書を作成します"
+            echo
+            YellowStyle "ブロックプロデューサー"
+            echo -e "${GREEN}${KES_SKEY_FILENAME}${NC} / ${GREEN}${KES_VKEY_FILENAME}${NC} (KESセキュリティキー)"
+            echo -e "${GREEN}${VRF_SKEY_FILENAME}${NC} / ${GREEN}${VRF_VKEY_FILENAME}${NC} (VRFランダム関数キー)"
+            echo
+            YellowStyle "エアギャップ"
+            echo -e "${GREEN}${COLD_SKEY_FILENAME}${NC} / ${GREEN}${COLD_VKEY_FILENAME}${NC} (プール運用コールドキー)"
+            echo -e "${GREEN}${NODE_CERT_FILENAME}${NC} (プール運用証明書)"
+            echo -e "${GREEN}${PAYMENT_SKEY_FILENAME}${NC} / ${GREEN}${PAYMENT_VKEY_FILENAME}${NC} (Paymentウォレットキー)"
+            echo -e "${GREEN}${STAKE_SKEY_FILENAME}${NC} / ${GREEN}${STAKE_VKEY_FILENAME}${NC} (Stakeアドレスキー)"
+            echo
+            Gum_Confirm_YesNo "作成してよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
+            if [ "$iniSettings" == "Yes" ]; then
+                create_airgap_script "プール運用キー作成"
+
+                #エアギャッププールコールドキー作成スクリプト
+                cat >> "${NODE_HOME}/airgap_script" << EOF
+                if [ ! -f "${COLDKEYS_DIR}/${COLD_VKEY_FILENAME}" ] && [ ! -e "${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}" ]; then
+                        echo "プール運営に必要なコールドキーを作成します"
+                        sleep 2
+                        mkdir ${COLDKEYS_DIR}
+                        cardano-cli conway node key-gen --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --cold-signing-key-file ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME} --operational-certificate-issue-counter ${COLDKEYS_DIR}/${COUNTER_FILENAME}
+                        if [ \$? -eq 0 ]; then
+                            echo
+                            printf "\${YELLOW}コールドキーを読み取り専用で作成しました\${NC}\n"
+                            echo ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME}
+                            echo ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}
+
+                            chmod 400 ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME}; chmod 400 ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}
+                            
+                            #プールIDファイル作成
+                            cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format bech32 --out-file ${NODE_HOME}/${POOL_ID_BECH32_FILENAME}
+                            cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format hex --out-file ${NODE_HOME}/${POOL_ID_FILENAME}
+                        else
+                            echo "コールドキーの生成に失敗しました"
+                        fi
+                    else 
+                        echo "すでにコールドキーが存在します"
+                fi
+EOF
+
+                #KESキー作成
+                ManagementKes "new"
+
+
+                ##ウォレットキー作成
+                cat >> "${NODE_HOME}/airgap_script" << EOF
+                ##ウォレットキー作成
+                if [ ! -f "${NODE_HOME}"/"${PAYMENT_SKEY_FILENAME}" ] && [ ! -f "${NODE_HOME}"/"${PAYMENT_VKEY_FILENAME}" ] && [ ! -f "${NODE_HOME}"/"${STAKE_SKEY_FILENAME}" ] && [ ! -f "${NODE_HOME}"/"${STAKE_VKEY_FILENAME}" ] ; then
+                    echo "プール運営に必要なウォレットとステークアドレスを作成します"
+                    sleep 2
+                    echo
+                    chmod u+rwx $HOME/cold-keys
+                    cardano-cli conway address key-gen --verification-key-file ${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
+                    cardano-cli conway stake-address key-gen --verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME}
+                    cardano-cli conway address build --payment-verification-key-file ${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file ${NODE_HOME}/${PAYMENT_ADDR_FILENAME} ${NODE_NETWORK}
+                    cardano-cli conway stake-address build --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file ${NODE_HOME}/${STAKE_ADDR_FILENAME} ${NODE_NETWORK}
+                    cardano-cli conway stake-address registration-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --key-reg-deposit-amt 2000000 --out-file ${NODE_HOME}/${STAKE_CERT_FILENAME}
+                    cardano-cli conway stake-address stake-delegation-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --out-file ${NODE_HOME}/deleg.cert
+
+                    chmod 400 ${NODE_HOME}/${PAYMENT_VKEY_FILENAME}
+                    chmod 400 ${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
+                    chmod 400 ${NODE_HOME}/${STAKE_VKEY_FILENAME}
+                    chmod 400 ${NODE_HOME}/${STAKE_SKEY_FILENAME}
+                    chmod 400 ${NODE_HOME}/${STAKE_ADDR_FILENAME}
+                    chmod 400 ${NODE_HOME}/${PAYMENT_ADDR_FILENAME}
+
+                    printf "\${YELLOW}ウォレットキーを作成しました\${NC}\n"
+                    find ${NODE_HOME} -type f -name "${PAYMENT_VKEY_FILENAME}"
+                    find ${NODE_HOME} -type f -name "${PAYMENT_SKEY_FILENAME}"
+                    find ${NODE_HOME} -type f -name "${STAKE_VKEY_FILENAME}"
+                    find ${NODE_HOME} -type f -name "${STAKE_SKEY_FILENAME}"
+
+                    echo
+                    printf "\${RED}各キーファイルの取り扱いについて\${NC}\n"
+                    printf "1.各skeyは秘密鍵です。オンラインマシン等にコピーしないでください\${NC}\n"
+                    printf "2.秘密鍵を紛失するとプール運営を継続できなくなりますのでご注意下さい\${NC}\n"
+                    printf "3.上記ファイルすべてを複数のUSBドライブなどにバックアップを推奨します\${NC}\n"
+
+                    read -p "上記を理解したらEnterを押してください" < /dev/tty
+                    echo
+                    sleep 1
+                    
+                    echo -e "ブロックプロデューサーで使用する6つのファイルを作成し\${GREEN}bp-set.tar.gz\${NC}にまとめました"
+                    tar -czf \${NODE_HOME}/bp-set.tar.gz -C "\${NODE_HOME}" ${PAYMENT_ADDR_FILENAME} ${STAKE_ADDR_FILENAME} ${STAKE_CERT_FILENAME} ${POOL_ID_BECH32_FILENAME} ${POOL_ID_FILENAME} ${NODE_CERT_FILENAME}
+
+                    echo -e "\${GREEN}${PAYMENT_ADDR_FILENAME}\${NC} / \${GREEN}${STAKE_ADDR_FILENAME}\${NC} (各アドレスファイル)"
+                    echo -e "\${GREEN}${STAKE_CERT_FILENAME}\${NC} (ステーク証明書)"
+                    echo -e "\${GREEN}${NODE_CERT_FILENAME}\${NC} (プール運用証明書)"
+                    echo -e "\${GREEN}${POOL_ID_BECH32_FILENAME}\${NC} / \${GREEN}${POOL_ID_FILENAME}\${NC} (プールIDファイル)"
+                    echo
+                    read -p "bp-set.tar.gzをブロックプロデューサー(${NODE_HOME})にコピーしたらEnterを押してください" < /dev/tty
+
+                    echo "ブロックプロデューサーにコピーしたファイルが以下のハッシュ値と一致することを確認してください"
+                    echo -e "\${GREEN}\$(sha256sum $NODE_HOME/bp-set.tar.gz | awk '{ print \$1 }' )\${NC}"
+                    echo
+                    echo "ブロックプロデューサーに戻ってください"
+                    echo
+                else
+                    echo "ウォレット作成済みです"
+                    echo
+                    printf "ウォレットアドレス： \$(cat "\${NODE_HOME}/${PAYMENT_ADDR_FILENAME}")\n"
+                    printf "ステークアドレス： \$(cat "\${NODE_HOME}/${STAKE_ADDR_FILENAME}")\n"
+                    printf "プールID(Bech32)： \$(cat "\${NODE_HOME}/${POOL_ID_BECH32_FILENAME}")\n"
+                    printf "プールID(hex)： \$(cat "\${NODE_HOME}/${POOL_ID_FILENAME}")\n"
+                    echo
+                fi
+
+                exit 0
+EOF
+
+                #VRFキー作成
+                cardano-cli conway query protocol-parameters $NODE_NETWORK --out-file ${NODE_HOME}/params.json
+                cardano-cli conway node key-gen-VRF --verification-key-file ${NODE_HOME}/${VRF_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${VRF_SKEY_FILENAME}
+                if [ $? -eq 0 ]; then
+                    chmod 400 ${NODE_HOME}/${VRF_VKEY_FILENAME}; chmod 400 ${NODE_HOME}/${VRF_SKEY_FILENAME}
+                    echo "VRFキーを読み取り専用で生成しました"
+                    FilePathAndHash ${NODE_HOME}/${VRF_VKEY_FILENAME}
+                    FilePathAndHash ${NODE_HOME}/${VRF_SKEY_FILENAME}
+                    echo
+                    sleep 3
+                    clear
+                    Gum_DotSpinner3 "■エアギャップ転送ファイル作成中..."
+                    tar -czvf airgap-set.tar.gz ${KES_VKEY_FILENAME} ${KES_SKEY_FILENAME} ${VRF_SKEY_FILENAME} ${VRF_VKEY_FILENAME} airgap_script | awk '{print $NF}' | paste -sd " / " -
+                    echo
+                    echo "エアギャップ転送ファイル(airgap-set.tar.gz)を作成しました"
+                    sleep 3
+                    echo
+                    CyanStyle "■Step1 エアギャップファイル転送"
+                    echo "${NODE_HOME}/airgap-set.tar.gz"をエアギャップのcnodeディレクトリにコピーしてください
+                    echo '------------------------------------------------'
+                    echo ">> [BP] ⇒ airgap-set.tar.gz ⇒ [エアギャップ]"
+                    echo '------------------------------------------------'
+                    echo
+                    sleep 2
+                    CyanStyle "■Step2 エアギャップ操作"
+                    echo '------------------------------------------------'
+                    echo -e "エアギャップで「${GREEN}airgap${NC}」コマンドを実行し以下のハッシュ値と一致するか確認してください"
+                    FilePathAndHash "${NODE_HOME}/airgap-set.tar.gz"
+                    echo '------------------------------------------------'
+                    
+                    echo
+                    sleep 2
+
+                    while :
+                    do
+                        read -p "エアギャップの作業が完了したらEnterを押してください"
+                        if  [[ -e "${NODE_HOME}/${PAYMENT_ADDR_FILENAME}" ]] && [[ -e "${NODE_HOME}/${STAKE_ADDR_FILENAME}" ]] && [[ -e "${NODE_HOME}/${STAKE_CERT_FILENAME}" ]]; then
+                            echo
+                            while :
+                            do 
+                                echo "エアギャップのファイルとハッシュ値が完全一致していることを確認してください"
+                                echo '----------------------------------------'
+                                FilePathAndHash "${NODE_HOME}/bp-set.tar.gz"
+                                echo '----------------------------------------'
+                                Gum_Confirm_YesNo "ハッシュ値が一致していますか？" "Yes" "ハッシュ値が一致しない場合は再度コピーしてください"
+                                if [ "$iniSettings" == "Yes" ]; then
+                                    echo "解凍します"
+                                    sleep 2
+                                    tar -xzf ${NODE_HOME}/bp-set.tar.gz -C ${NODE_HOME}
+                                    echo
+                                    echo "以下のファイルが作成されました"
+                                    echo -e "\${GREEN}${PAYMENT_ADDR_FILENAME}\${NC} / \${GREEN}${STAKE_ADDR_FILENAME}\${NC} (各アドレスファイル)"
+                                    echo -e "\${GREEN}${STAKE_CERT_FILENAME}\${NC} (ステーク証明書)"
+                                    echo -e "\${GREEN}${NODE_CERT_FILENAME}\${NC} (プール運用証明書)"
+                                    echo -e "\${GREEN}${POOL_ID_BECH32_FILENAME}\${NC} / \${GREEN}${POOL_ID_FILENAME}\${NC} (プールIDファイル)"
+                                    sleep 3
+                                    rm ${NODE_HOME}/airgap_script
+                                    rm ${NODE_HOME}/airgap-set.tar.gz
+
+                                    echo "ブロックプロデューサー起動ファイルを修正します"
+                                    sudo systemctl stop cardano-node
+
+                                    PORT=$(grep "PORT=" $NODE_HOME/startBlockProducingNode.sh)
+                                    b_PORT=${PORT#"PORT="}
+                                    cat > $NODE_HOME/startBlockProducingNode.sh << EOF 
+#!/bin/bash
+DIRECTORY=$NODE_HOME
+PORT=${b_PORT}
+HOSTADDR=0.0.0.0
+TOPOLOGY=\${DIRECTORY}/${NODE_CONFIG}-topology.json
+DB_PATH=\${DIRECTORY}/db
+SOCKET_PATH=\${DIRECTORY}/db/socket
+CONFIG=\${DIRECTORY}/${NODE_CONFIG}-config.json
+KES=\${DIRECTORY}/kes.skey
+VRF=\${DIRECTORY}/vrf.skey
+CERT=\${DIRECTORY}/node.cert
+/usr/local/bin/cardano-node +RTS -N --disable-delayed-os-memory-return -I0.1 -Iw300 -A32m -n4m -F1.5 -H2500M -RTS run --topology \${TOPOLOGY} --database-path \${DB_PATH} --socket-path \${SOCKET_PATH} --host-addr \${HOSTADDR} --port \${PORT} --config \${CONFIG} --shelley-kes-key \${KES} --shelley-vrf-key \${VRF} --shelley-operational-certificate \${CERT}
+EOF
+                                    chmod 755 $NODE_HOME/startBlockProducingNode.sh
+                                    echo
+                                    echo "ノード起動ファイルを更新しました"
+                                    sleep 2
+                                    sudopass=$(InputSudoPass)
+                                    echo "$sudopass" | sudo -S systemctl start cardano-node
+                                    LglayStyle "カルダノノード起動中..."
+                                    nodeSyncCheck
+                                    if [[ -n $slot_value ]]; then
+                                        echo
+                                        YellowStyle "ノードが正常に再起動しました"
+                                        Gum_OneSelect "戻る"
+                                        echo
+                                    else
+                                        echo "ノード起動に失敗しました"
+                                        echo "エラーメッセージの原因を解決してください"
+                                        Gum_OneSelect "戻る"
+                                    fi
+                                    break 2
+                                else
+                                    echo "ハッシュ値が一致しない場合またはファイルが存在しない場合は再度コピーしてください"
+                                    Gum_OneSelect "再チェック"
+                                fi
+                            done
+                        else
+                            echo "ファイルが見つかりません。エアギャップからコピーしてください"
+                            Gum_OneSelect "再チェック"
+                        fi
+                    done
+                else
+                    echo "VRFキーの生成に失敗しました"
+                    Gum_OneSelect "戻る"
+                fi
+            else
+                echo "キー作成をキャンセルしました"
+                Gum_OneSelect "戻る"
+            fi
+        else
+            echo "KESファイルは作成済みです"
+            FilePathAndHash ${NODE_HOME}/${KES_VKEY_FILENAME}
+            FilePathAndHash ${NODE_HOME}/${KES_SKEY_FILENAME}
+            echo
+            echo "VRFファイルは作成済みです"
+            FilePathAndHash ${NODE_HOME}/${VRF_VKEY_FILENAME}
+            FilePathAndHash ${NODE_HOME}/${VRF_SKEY_FILENAME}
+            Gum_OneSelect "戻る"
+        fi
+    esac
+
+ 
+}

@@ -2,70 +2,156 @@
 # shellcheck disable=SC1091,SC2086,SC1001,SC2317
 # shellcheck source="$HOME/.bashrc"
 
+source ${env_path}
+
 registerStakeadd(){
-echo "ステークアドレスをチェーンに登録します"
-Cli_CurrentSlot
-CheckWallet &> /dev/null
-echo $fee
-stakeAddressDeposit=$(cat $NODE_HOME/params.json | jq -r '.stakeAddressDeposit')
-style "ステークアドレス:" "$(cat ${NODE_HOME}/${STAKE_ADDR_FILENAME})"
-echo
-cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+$(( ${total_balance} - ${stakeAddressDeposit} )) --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 200000 --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.tmp
-fee=$(cardano-cli conway transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --witness-count 2 --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
-txOut=$((${total_balance}-${stakeAddressDeposit}-${fee}))
-Gum_DotSpinner3 "トランザクションを構築しています"
-cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.raw
-if [ $? -eq 0 ]; then
-    message_file_transfer "tx.raw" "ステークアドレスTx署名"
-    Cli_TxSubmit
-else
-    echo "Txファイルの生成に失敗しました"
-    echo
-    Gum_OneSelect "戻る"
-fi
-}
-
-registarPool(){
-if [ -e ${NODE_HOME}/${POOL_CERT_FILENAME} ] && [ -e ${NODE_HOME}/deleg.cert ]; then
-    CheckWallet
-    currentSlot=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
-    
-    case $POOL_SETUP in
-    "Done" )
-        #新規登録
-        poolDeposit=$(cat ${NODE_HOME}/params.json | jq -r '.stakePoolDeposit')
-        cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+$(( ${total_balance} - ${poolDeposit})) --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 200000 --certificate-file ${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.tmp
-        fee=$(cardano-cli conway transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --witness-count 3 --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
-        txOut=$((${total_balance}-${poolDeposit}-${fee}))
-    ;;
-    "Notyet" )
-        #登録変更
-        cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${total_balance} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 200000 --certificate-file ${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.tmp
-        fee=$(cardano-cli conway transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --witness-count 3 --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
-        txOut=$((${total_balance}-${fee}))
-    ;;
-    esac
-
-    Gum_DotSpinner3 "トランザクションを構築しています"
-    cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file ${NODE_HOME}/deleg.cert --out-file ${NODE_HOME}/tx.raw
-    if [ $? -eq 0 ]; then
-        echo -e "プール登録料: ${poolDeposit}"
-        echo -e トランザクション手数料: $fee
+    if [[ ! -e ${NODE_HOME}/${STAKE_ADDR_FILENAME} ]]; then
+        echo "ステークアドレスが見つかりません"
+        echo "プール運用キー作成メニューからステークアドレスを作成してください"
         echo
-        message_file_transfer "tx.raw" "プール登録Tx署名"
-        Cli_TxSubmit
+        Gum_OneSelect "戻る"
+        return
+    fi
+
+    #ステークアドレスオンチェーン確認    
+    stakeAddrInfo=$(cardano-cli query stake-address-info --address $(cat ${NODE_HOME}/${STAKE_ADDR_FILENAME}) $NODE_NETWORK 2> /dev/null)
+    if [[ "$stakeAddrInfo" = "[]" ]]; then
         echo
-        echo "プールID:$(cat ${NODE_HOME}/pool.id-bech32)"
+        echo "ステークアドレスをチェーンに登録します"
+        style "ステークアドレス:" "$(cat ${NODE_HOME}/${STAKE_ADDR_FILENAME})"
+        Cli_CurrentSlot
+        CheckWallet &> /dev/null
+        if [[ ${total_balance} -lt 10000000 ]]; then
+            echo "ウォレット残高が不足しています"
+            echo "10 ADA以上の入金を確認してください"
+            echo
+            Gum_OneSelect "戻る"
+            return
+        fi
+        echo $fee
+        stakeAddressDeposit=$(cat $NODE_HOME/params.json | jq -r '.stakeAddressDeposit')
+        cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+$(( ${total_balance} - ${stakeAddressDeposit} )) --invalid-hereafter $(( ${currentSlot} + 10000)) --fee 200000 --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.tmp
+        fee=$(cardano-cli conway transaction calculate-min-fee --tx-body-file ${NODE_HOME}/tx.tmp --witness-count 2 --output-text --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
+        txOut=$((${total_balance}-${stakeAddressDeposit}-${fee}))
+        Gum_DotSpinner3 "トランザクションを構築しています"
+        cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.raw
+        signStakeAddressTx
+        cd ${NODE_HOME} || exit
+        tar -czvf airgap-set.tar.gz tx.raw airgap_script
+        if [ $? -eq 0 ]; then
+            message_file_transfer "airgap-set.tar.gz" "airgap"
+            Cli_TxSubmit
+        else
+            echo "Txファイルの生成に失敗しました"
+            echo
+            Gum_OneSelect "戻る"
+        fi
     else
-        echo "Txファイルの生成に失敗しました"
+        echo "ステークアドレスはオンチェーンに登録されています"
+        style "ステークアドレス:" "$(cat ${NODE_HOME}/${STAKE_ADDR_FILENAME})"
         echo
         Gum_OneSelect "戻る"
     fi
-else
-    echo "プール登録用ファイルが見つかりません"
-    echo "エアギャップでプール登録証明書を作成してください"
-    Gum_OneSelect "戻る"
-fi
+}
+
+registarPool(){
+    #プールIDオンチェーン確認
+    registar_flag="new"
+    poolIdInfo=$(cardano-cli query stake-pools $NODE_NETWORK | grep $(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME}) 2> /dev/null)
+    if [[ "$poolIdInfo" != "" ]]; then
+        echo
+        echo "プールIDはオンチェーンに登録されています"
+        echo "プールID:$(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME})"
+        registar_flag="renew"
+        Gum_Confirm_YesNo "プール情報を変更しますか？" "Yes" "No"
+        if [[ ${iniSettings} != "Yes" ]]; then
+            echo "キャンセルされました"
+            Gum_OneSelect "メニューへ戻る"
+            return
+        fi
+        Gum_OneSelect "メニューへ戻る"
+        return
+    else
+        echo
+        echo "プールIDはオンチェーンに登録されていません"
+        style "プールID:" "$(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME})"
+        echo
+        Gum_Confirm_YesNo "プール登録を続行しますか？" "Yes" "No"
+        registar_flag="new"
+        if [[ ${iniSettings} != "Yes" ]]; then
+            echo "キャンセルされました"
+            Gum_OneSelect "メニューへ戻る"
+            return
+        fi
+    fi
+
+    #プールパラメータ設定
+    CreatePoolCert
+    if [ $? -eq 99 ]; then
+        Gum_OneSelect "メニューへ戻る"
+        return
+    fi
+    CheckWallet
+    currentSlot=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
+    
+    case $registar_flag in
+    "new" )
+        cat >> "${NODE_HOME}/airgap_script" << EOF
+        #新規登録
+        poolDeposit=\$(cat \${NODE_HOME}/params.json | jq -r '.stakePoolDeposit')
+        echo -e "プール登録料: \${GREEN}\${poolDeposit}\${NC} Lovelace"
+        cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+\$(( ${total_balance} -   \${poolDeposit})) --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee 200000 --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.tmp
+        fee=\$(cardano-cli conway transaction calculate-min-fee --tx-body-file \${NODE_HOME}/tx.tmp --witness-count 3 --output-text --protocol-params-file \${NODE_HOME}/params.json | awk '{ print \$1 }')
+        txOut=\$((${total_balance}-\${poolDeposit}-\${fee}))
+EOF
+    ;;
+    "renew" )
+        cat >> "${NODE_HOME}/airgap_script" << EOF
+        #登録変更
+        cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${total_balance} --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee 200000 --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.tmp
+        fee=\$(cardano-cli conway transaction calculate-min-fee --tx-body-file \${NODE_HOME}/tx.tmp --witness-count 3 --output-text --protocol-params-file \${NODE_HOME}/params.json | awk '{ print \$1 }')
+        txOut=\$((${total_balance}-\${fee}))
+EOF
+    ;;
+    esac
+    cat >> "${NODE_HOME}/airgap_script" << EOF
+    echo "トランザクションを構築しています"
+    sleep 3
+    cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+\${txOut} --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee \${fee} --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.raw
+EOF
+    signPoolRegisterTx
+    cd ${NODE_HOME} || exit
+    tar -czvf airgap-set.tar.gz poolMetaDataHash.txt params.json airgap_script | awk '{print $NF}' | paste -sd " / " -
+    if [ $? -eq 0 ]; then
+        echo
+        message_file_transfer "airgap-set.tar.gz" "airgap"
+        echo
+        Cli_TxSubmit
+        echo
+        
+        if [[ $registar_flag = "new" ]]; then
+            while :
+            do
+                echo "オンチェーンプール登録ステータスを確認しています"
+                pool_registar_status=$(curl -s -X POST "${KOIOS_API}/pool_info" -H "Accept: application/json" -H "Content-Type: application/json" -d '{"_pool_bech32_ids":["'$(cat $NODE_HOME/pool.id-bech32)'"]}' | jq .[].pool_status)
+                if [[ ${pool_registar_status} == "\"registered\"" ]]; then
+                    echo "おめでとうございます！プール登録が完了しました"
+                    echo "プールID:$(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME})"
+                    read -p "メニューに戻る"
+                    break
+                else
+                    echo "まだ登録されていません"
+                    echo "10秒後に再度確認します"
+                    sleep 10
+                fi
+            done
+            echo "プールID:$(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME})"
+        fi
+    else
+        echo "転送ファイル作成に失敗しました"
+        echo
+        Gum_OneSelect "戻る"
+    fi
 }
 
 

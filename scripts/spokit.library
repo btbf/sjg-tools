@@ -1,9 +1,12 @@
 #!/bin/bash
-version="0.3.8"
+version="0.3.9"
 
-envPath=$HOME/spokit/env
-nodeBinaryPath=$(which cardano-node)
-cliBinaryPath=$(which cardano-cli)
+env_path=$HOME/spokit/env
+node_path=$(which cardano-node)
+cli_path=$(which cardano-cli)
+
+node_version=$(cardano-node version | head -1 | cut -d' ' -f2)
+cli_version=$(cardano-cli version | head -1 | cut -d' ' -f2)
 
 
 # フォアグラウンドカラー
@@ -65,7 +68,7 @@ VariableEnabledCheck(){
 
 #パスチェック
 PathEnabledCheck(){
-  if [ -e "${1}" ]; then
+  if [ -f "${1}" ]; then
     echo -e "${2}"
   else
     echo -e "${3}"
@@ -90,7 +93,7 @@ UfwCheck(){
 #ファイル生成関数
 #--------------------
 CreatePoolMetaJson(){
-cat <<-EOF > ${NODE_HOME}/${POOL_META_FILENAME}
+cat <<-EOF > ${NODE_HOME}/${5}
 {
   "name": "$1",
   "description": "$2",
@@ -175,6 +178,7 @@ Cli_FeeCal(){
     $NODE_NETWORK \
     --witness-count 2 \
     --byron-witness-count 0 \
+    --output-text \
     --protocol-params-file ${NODE_HOME}/params.json | awk '{ print $1 }')
 echo fee: $fee
 echo
@@ -185,7 +189,7 @@ CheckWallet(){
   echo 
   style "アドレス：" "$(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})"
   echo 
-  gum spin --spinner dot --show-output --title "ウォレット残高を確認しています" -- cardano-cli conway query utxo --address "$(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})" $NODE_NETWORK > ${NODE_HOME}/fullUtxo.out
+  gum spin --spinner dot --show-output --title "ウォレット残高を確認しています" -- cardano-cli conway query utxo --address $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME}) $NODE_NETWORK --output-text --out-file ${NODE_HOME}/fullUtxo.out
   #echo $0 >> fullUtxo.out
   tail -n +3 ${NODE_HOME}/fullUtxo.out | sort -k3 -nr > ${NODE_HOME}/balance.out
   cat ${NODE_HOME}/balance.out
@@ -197,11 +201,12 @@ reward_Balance(){
   if [[ -e "${NODE_HOME}/${STAKE_ADDR_FILENAME}" ]]; then
     echo "■stakeアドレス"
     printf "${FG_YELLOW}$(cat ${NODE_HOME}/$STAKE_ADDR_FILENAME)${NC}\n\n"
-    pool_reward=$(cardano-cli conway query stake-address-info --address $(cat ${NODE_HOME}/$STAKE_ADDR_FILENAME) $NODE_NETWORK | jq .[].rewardAccountBalance)
+    pool_reward=$(cardano-cli conway query stake-address-info --address "$(cat "${NODE_HOME}/${STAKE_ADDR_FILENAME}")" $NODE_NETWORK | jq .[].rewardAccountBalance)
     #pool_reward=$(cat $PARENT/stake_json.txt | grep rewardAccountBalance | awk '{ print $2 }')
     if [[ -n ${pool_reward} ]]; then
       pool_reward_Amount=$(scale1 ${pool_reward})
       printf "報酬額:${FG_GREEN}$pool_reward_Amount${NC} ADA ($pool_reward Lovelace)\n"
+      Gum_OneSelect "戻る"
     else
       echo "報酬はまだ発生していません"
       Gum_OneSelect "戻る"
@@ -232,60 +237,72 @@ tx_Check(){
 Cli_TxSubmit(){
   while :
   do
-  Gum_OneSelect "1～3が完了したらEnterを押して下さい"
-  echo
-  if [ -e ${NODE_HOME}/tx.signed ]; then
-    break
-  else
-    echo "tx.signedが見つかりません。正しいディレクトリにコピーしてください"
+    Gum_OneSelect "1～3が完了したらEnterを押して下さい"
     echo
-    Gum_OneSelect "コピーしたらEnterを押して下さい"
-  fi
+    if [ -f ${NODE_HOME}/tx.signed ]; then
+      FilePathAndHash ${NODE_HOME}/tx.signed
+      echo "上記のハッシュ値とエアギャップに表示されてるハッシュ値と照合してください"
+      Gum_Confirm_YesNo "ハッシュ値は一致していますか？" "Yes" "No"
+      if [[ ${iniSettings} == "Yes" ]]; then
+        break 1
+      else
+        echo "tx.signedを再度エアギャップからコピーしてください"
+        Gum_OneSelect "コピーしたらEnterを押して下さい"
+        echo
+      fi
+    else
+      echo "tx.signedが見つかりません。正しいディレクトリにコピーしてください"
+      echo
+      Gum_OneSelect "コピーしたらEnterを押して下さい"
+    fi
   done
+
   echo
+
   Gum_Confirm_YesNo "トランザクションを送信しますか？" "Yes" "再度トランザクション作成から実施してください"
   if [[ ${iniSettings} == "Yes" ]]; then
-    local txId=$(cardano-cli conway transaction txid --tx-body-file ${NODE_HOME}/tx.raw)
-    local txResult=$(cardano-cli conway transaction submit --tx-file ${NODE_HOME}/tx.signed $NODE_NETWORK)
+    local tx_result=$(cardano-cli conway transaction submit --tx-file ${NODE_HOME}/tx.signed $NODE_NETWORK)
     echo
-    if [[ ${txResult} == "Transaction"* ]]; then
-      echo '----------------------------------------'
-      echo 'Tx送信結果'
-      echo '----------------------------------------'
-      echo ${txResult}
+    echo '----------------------------------------'
+    echo 'Tx送信結果'
+    echo '----------------------------------------'
+    if [[ -n $tx_result ]]; then
+      if dpkg --compare-versions "$node_version" ge "10.2.1"; then
+        tx_id=$(echo $tx_result | jq .txhash | sed 's/"//g')
+      else
+        tx_id=$(cardano-cli conway transaction txid --tx-body-file ${NODE_HOME}/tx.raw)
+        echo $tx_result
+      fi
+      echo 'TxID:' $tx_id
       echo
       echo 'トランザクションURL'
       if [ ${NODE_CONFIG} == 'mainnet' ]; then
-        echo "https://cardanoscan.io/transaction/${txId}"
+        echo "https://cardanoscan.io/transaction/${tx_id}"
       elif [ ${NODE_CONFIG} == 'preprod' ]; then
-        echo "https://preprod.cardanoscan.io/transaction/${txId}"
+        echo "https://preprod.cardanoscan.io/transaction/${tx_id}"
       elif [ ${NODE_CONFIG} == 'preview' ]; then
-        echo "https://preview.cardanoscan.io/transaction/${txId}"
+        echo "https://preview.cardanoscan.io/transaction/${tx_id}"
       else
-        echo "TxID:${txId}"
+        echo "TxID:${tx_id}"
       fi
-      
       printf "\n${FG_GREEN}Tx送信に成功しました${NC}\n"
       echo
       #トランザクション確認
       printf "\n${FG_YELLOW}Tx承認を確認しています。このまましばらくお待ち下さい...${NC}\n\n"
       while :
         do
-        koios_tx_status=$(curl -s -X POST "$KOIOS_API/tx_status" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_tx_hashes\":[\"${txId}\"]}" | jq -r '.[].num_confirmations')
+        koios_tx_status=$(curl -s -X POST "$KOIOS_API/tx_status" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_tx_hashes\":[\"${tx_id}\"]}" | jq -r '.[].num_confirmations')
         if [[ ${koios_tx_status} != "null" ]] && [ ${koios_tx_status} -gt 1 ]; then
           printf "確認済みブロック:$koios_tx_status ${FG_GREEN}Txが承認されました${NC}\n\n"
           sleep 3s
           break
         else
-          sleep 30s
+          sleep 10s
         fi
       done
       echo
       Gum_OneSelect "戻る"
     else
-      echo '----------------------------------------'
-      echo 'Tx送信結果'
-      echo '----------------------------------------'
       echo ${txResult}
       echo
       printf "${FG_RED}Tx送信に失敗しました${NC}\n"
@@ -307,29 +324,29 @@ Cli_TxSubmit(){
 #--------------------
 
 FilePathAndHash(){
-  echo -e "${1} >> ${YELLOW}$(sha256sum ${1} | awk '{ print $1 }')${NC}\n"
+  echo -e "${1} >> ${YELLOW}$(sha256sum ${1} | awk '{ print $1 }')${NC}"
 }
 
 message_file_transfer(){
   echo
-  echo "■${1}ファイルを作成しました。エアギャップオフラインマシンで以下の操作を実施してください"
+  echo "【エアギャップへファイル転送】"
   echo
-  echo -e "${FG_YELLOW}1. BPの ${1} をエアギャップのcnodeディレクトリにコピーしてください${NC}"
+  echo -e "${YELLOW}1. BPの ${1} をエアギャップのcnodeディレクトリにコピーしてください${NC}"
   echo '----------------------------------------'
-  echo ">> [BP] ⇒ ${1}  ⇒ [エアギャップ]"
-  echo '----------------------------------------'
-  echo
-  echo -e "${FG_YELLOW}2. エアギャップでトランザクションファイルに署名してください${NC}"
-  echo 
-  echo "エアギャップで「$2」を実行してください"
-  echo
-  echo -e "${FG_YELLOW}3. エアギャップの tx.signed をBPのcnodeディレクトリにコピーしてください${NC}"
-  echo '----------------------------------------'
-  echo ">> [エアギャップ] ⇒ tx.signed ⇒ [BP]"
+  echo -e ">> [BP] ⇒ ${GREEN}${1}${NC}  ⇒ [エアギャップ]"
   echo '----------------------------------------'
   echo
-  echo "1～3の操作が終わったらEnterを押してください"
-  Gum_OneSelect "Enter"
+  echo -e "${YELLOW}2. エアギャップ作業${NC}"
+  echo '----------------------------------------'
+  echo -e "エアギャップで「${GREEN}$2${NC}」コマンドを実行し以下のハッシュ値と一致するか確認してください"
+  FilePathAndHash "${NODE_HOME}/${1}"
+  echo '----------------------------------------'
+  echo
+  echo -e "${YELLOW}3. エアギャップの tx.signed をBPのcnodeディレクトリにコピーしてください${NC}"
+  echo '----------------------------------------'
+  echo -e ">> [エアギャップ] ⇒ ${GREEN}tx.signed${NC} ⇒ [BP]"
+  echo '----------------------------------------'
+  echo
 }
 
 
@@ -351,26 +368,53 @@ get_pooldata(){
   fi
 }
 
-Select_NodePort(){
-  case $NODE_TYPE in
-    "ブロックプロデューサー" )
+select_port(){
+case $1 in
+  "node" )
+    local min_range=49152
+    local max_range=57343
+    case $NODE_TYPE in
+      "ブロックプロデューサー" )
+        local loop_count=5
+        port_set=""
+      ;;
+
+      "リレー" )
+        local loop_count=3
+        port_set="3000 3001 6000 6001"
+      ;;
+    esac
+    ;;
+  "ssh" )
+      local min_range=57344
+      local max_range=65535
       local loop_count=5
       port_set=""
     ;;
-
-    "リレー" )
-      local loop_count=3
-      port_set="3000 3001 6000 6001"
-    ;;
-  esac
+esac
 
   for i in $(seq 1 $loop_count); do
-    port_set="$port_set $((49152 + RANDOM % (65535 - 49152 + 1)))"
+    port_set="$port_set $(($min_range + RANDOM % ($max_range - $min_range + 1)))"
   done
 
-  echo
-  select_node_port=$(gum choose --header.foreground="244" --header="任意の$NODE_TYPEノード起動ポートを選択してください" --no-show-help $port_set)
-  printf "選択ポート番号: $(GreenStyle $select_node_port)\n"
+    port_set="$port_set カスタム"
+
+  port_number=$(gum choose --header.foreground="244" --header="任意ポート番号を設定してください" --no-show-help $port_set)
+  if [[ $port_number == "カスタム" ]]; then
+    while :
+    do
+      port_number=$(gum input --char-limit=5 --no-show-help --placeholder="任意のポート番号を入力してください")
+      if [[ $port_number =~ ^[0-9]+$ ]]; then
+        break
+      else
+        echo
+        echo "$整数を入力してください"
+        echo
+        sleep 2
+      fi
+    done
+  fi
+  echo $port_number
 }
 
 
@@ -444,4 +488,5 @@ Gum_OneSelect(){
 
 Gum_Confirm_YesNo(){
   gum confirm "${1}" --default=true --affirmative="はい" --negative="いいえ" --no-show-help && iniSettings="${2}" || iniSettings="${3}"
+  echo
 }
