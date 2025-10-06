@@ -8,8 +8,7 @@ clear
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
 gum_version="0.16.2"
-#spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
-spokit_version=0.3.9
+spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
 
 source ${HOME}/.bashrc
 
@@ -148,34 +147,34 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
         sleep 1
     fi
 
-    # #Spokitインストール
+    #Spokitインストール
     
-    # printf "${YELLOW}SPOKITをインストール...${NC}\n"
-    # mkdir -p $HOME/git
-    # cd $HOME/git
+    printf "${YELLOW}SPOKITをインストール...${NC}\n"
+    mkdir -p $HOME/git
+    cd $HOME/git
 
-    # wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
+    wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
 
-    # if [ $? -ne 0 ]; then
-    #     echo -e "${RED}SPOKITのダウンロードに失敗しました。インターネット接続を確認してください。${NC}"
-    #     exit 1
-    # fi
-    # tar -xzf spokit.tar.gz
-    # if [ $? -ne 0 ]; then
-    #     echo -e "${RED}SPOKITの解凍に失敗しました。${NC}"
-    #     exit 1
-    # fi
-    # rm spokit.tar.gz
-    # sudo mkdir -p ${SPOKIT_INST_DIR}
-    # #cd sjg-tools-${spokit_version}/scripts
-    # cd $HOME/sjg-tools/scripts
-    # sudo cp -pR ./* ${SPOKIT_INST_DIR}
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}SPOKITのダウンロードに失敗しました。インターネット接続を確認してください。${NC}"
+        exit 1
+    fi
+    tar -xzf spokit.tar.gz
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}SPOKITの解凍に失敗しました。${NC}"
+        exit 1
+    fi
+    rm spokit.tar.gz
+    sudo mkdir -p ${SPOKIT_INST_DIR}
+    #cd sjg-tools-${spokit_version}/scripts
+    cd $HOME/sjg-tools/scripts
+    sudo cp -pR ./* ${SPOKIT_INST_DIR}
 
-    # chmod 755 spokit_run.sh
-    # chmod 755 spokit.sh
+    chmod 755 spokit_run.sh
+    chmod 755 spokit.sh
 
-    # printf "${YELLOW}SPOKITをインストールしました${NC}\n"
-    # rm -rf $HOME/git/sjg-tools-${spokit_version}
+    printf "${YELLOW}SPOKITをインストールしました${NC}\n"
+    rm -rf $HOME/git/sjg-tools-${spokit_version}
 
     echo
     case "${sync_network}" in
