@@ -1,62 +1,12 @@
 #!/bin/bash
 
-recommend_node_version="10.3.1"
+recommend_node_version="10.5.1"
 recommend_cabal_vrtsion="3.12.1.0"
 recommend_ghc_vrtsion="9.6.5"
 
-NodeVersionSelect(){
-  version_list=""
-  repo=IntersectMBO/cardano-node
-  latest_node_version=$(curl -s --url "https://api.github.com/repos/$repo/releases/latest" | grep -oP '"tag_name": "\K(.*)(?=")')
-  # if [[ $SYNC_NETWORK == "mainnet" ]]; then
-
-    #推奨と最新に差異がある場合
-    if [[ $latest_node_version != $recommend_node_version ]]; then
-      echo
-      printf "推奨バージョン: $(GreenStyle $recommend_node_version)\n"
-      printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
-      echo
-      echo "推奨バージョンと最新バージョンに差異があります"
-      echo "最新バージョンは現在SJGで検証中のため次のリリースをお待ちいただくか、推奨バージョンをインストールしてください"
-      echo
-    fi
-
-    Gum_Confirm_YesNo "推奨バージョン: $(GreenStyle $latest_node_version) をインストールしますか？" "Yes" "No"
-    select_node_version=$latest_node_version
-
-    if [[ $iniSettings == "No" ]]; then
-      return
-    fi
-
-  # else
-  #   #テストネット用
-  #   version_list=$(curl -s "https://api.github.com/repos/$repo/releases" \
-  # | jq -r '.[].tag_name' \
-  # | head -n 2 \
-  # | while read tag; do
-  #     echo -n "$tag "
-  #     count=$((count + 1))
-  #   done
-  #   echo -n "${tag}キャンセル"
-  #   )
-
-  #   printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
-  #   select_node_version=$(gum choose --header.foreground="244" --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
-  #   printf "選択バージョン: $(GreenStyle $select_node_version)\n"
-  # fi
-  # echo
-  # if [[ $select_node_version != "キャンセル" ]]; then
-    IOHKNIX_VERSION=$(curl -s https://raw.githubusercontent.com/IntersectMBO/cardano-node/$select_node_version/flake.lock | jq -r '.nodes.iohkNix.locked.rev')
-    SODIUM_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.sodium.original.rev')
-    SECP256K1_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.secp256k1.original.ref')
-    BLST_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/master/flake.lock | jq -r '.nodes.blst.original.ref')
-  # fi
-
-}
 
 LibsodiumInstall(){
 #Libsodium Install
-  LglayStyle "Libsodiumインストール..."
   sleep 3
   cd ${HOME}/git || exit
   git clone https://github.com/IntersectMBO/libsodium
@@ -66,10 +16,10 @@ LibsodiumInstall(){
   ./configure
   make
   sudo make install
+  YellowStyle "Libsodiumインストール完了"
 }
 
 Secp256k1Install(){
-  LglayStyle "Secp256k1インストール..."
   sleep 3
   cd ${HOME}/git || exit
   git clone https://github.com/bitcoin-core/secp256k1.git
@@ -79,10 +29,10 @@ Secp256k1Install(){
   ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental
   make
   sudo make install
+  YellowStyle "Secp256k1インストール完了"
 }
 
 BlstInstall(){
-  LglayStyle "blstインストール..."
   sleep 3
   cd ${HOME}/git || exit
   git clone https://github.com/supranational/blst
@@ -108,10 +58,10 @@ BlstInstall(){
   sudo cp bindings/blst_aux.h bindings/blst.h bindings/blst.hpp  /usr/local/include/
   sudo cp libblst.a /usr/local/lib
   sudo chmod u=rw,go=r /usr/local/{lib/{libblst.a,pkgconfig/libblst.pc},include/{blst.{h,hpp},blst_aux.h}}
+  YellowStyle "blstインストール完了"
 }
 
 GhcupInstall(){
-  LglayStyle "GHCUPインストール..."
   sleep 3
   cd ${HOME} || exit
   BOOTSTRAP_HASKELL_NONINTERACTIVE=1
@@ -132,6 +82,7 @@ GhcupInstall(){
 
   cabal update
   cabal --version; ghc --version
+  YellowStyle "GHCUPインストール完了"
 }
 
 
@@ -160,7 +111,6 @@ NodeDownload(){
 
     cd $HOME/git
     gitURL="https://github.com/IntersectMBO/cardano-node.git"
-    LglayStyle "cardano-nodeリポジトリダウンロード..."
     echo "git-URL: $(DglayStyle $gitURL)" 
     git clone $gitURL
     cd cardano-node
@@ -184,17 +134,15 @@ NodeDownload(){
       node_install_result="failure"
     fi
   fi
-  cardano-cli version
-  cardano-node version
 
   rm -rf ${HOME}/git/cardano-node
-  DglayStyle "ノード(v${1})をインストールしました"
+  YellowStyle "ノード(v${1})をインストールしました"
   sleep 2
 }
 
 
 NodeConfigDownload(){
-  LglayStyle "ノード設定ファイルダウンロード開始..."
+  LglayStyle "ノード設定ファイルをダウンロードします..."
   sleep 2
   mkdir -p ${NODE_HOME}
   cd ${NODE_HOME} || exit
@@ -204,31 +152,18 @@ NodeConfigDownload(){
   wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-alonzo-genesis.json -O ${NODE_CONFIG}-alonzo-genesis.json
   wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-conway-genesis.json -O ${NODE_CONFIG}-conway-genesis.json
   wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-checkpoints.json -O ${NODE_CONFIG}-checkpoints.json
+  wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-peer-snapshot.json -O ${NODE_CONFIG}-peer-snapshot.json
   if [ "${NODE_TYPE}" = "リレー" ]; then
     wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-config.json -O ${NODE_CONFIG}-config.json
   else
     wget -q https://spojapanguild.net/node_config/${recommend_node_version}/${NODE_CONFIG}-config-bp.json -O ${NODE_CONFIG}-config.json
   fi
+  #
 
-  sed -i ${NODE_CONFIG}-config.json \
-      -e 's!"AlonzoGenesisFile": "alonzo-genesis.json"!"AlonzoGenesisFile": "'${NODE_CONFIG}'-alonzo-genesis.json"!' \
-      -e 's!"ByronGenesisFile": "byron-genesis.json"!"ByronGenesisFile": "'${NODE_CONFIG}'-byron-genesis.json"!' \
-      -e 's!"CheckpointsFile": "checkpoints.json"!"CheckpointsFile": "'${NODE_CONFIG}'-checkpoints.json"!' \
-      -e 's!"ShelleyGenesisFile": "shelley-genesis.json"!"ShelleyGenesisFile": "'${NODE_CONFIG}'-shelley-genesis.json"!' \
-      -e 's!"ConwayGenesisFile": "conway-genesis.json"!"ConwayGenesisFile": "'${NODE_CONFIG}'-conway-genesis.json"!' \
-      -e "s/TraceMempool\": false/TraceMempool\": true/g" \
-      -e 's!"TraceBlockFetchDecisions": false!"TraceBlockFetchDecisions": true!' \
-      -e 's!"rpKeepFilesNum": 10!"rpKeepFilesNum": 30!' \
-      -e 's!"rpMaxAgeHours": 24!"rpMaxAgeHours": 48!' \
-      -e '/"defaultScribes": \[/a\    \[\n      "FileSK",\n      "'${NODE_HOME}'/logs/node.json"\n    \],' \
-      -e '/"setupScribes": \[/a\    \{\n      "scFormat": "ScJson",\n      "scKind": "FileSK",\n      "scName": "'${NODE_HOME}'/logs/node.json"\n    \},' \
-      -e "s/127.0.0.1/0.0.0.0/g"
-
-  DglayStyle "ノード設定ファイルをダウンロードしました"
+  YellowStyle "ノード設定ファイルをダウンロードしました"
 }
 
 GliveViewDowndload(){
-  LglayStyle "gliveViewインストール開始..."
   sleep 2
   mkdir -p ${NODE_HOME}/scripts
   cd ${NODE_HOME}/scripts || exit
@@ -245,13 +180,13 @@ GliveViewDowndload(){
   -e '1,73s!#CONFIG="${CNODE_HOME}/files/config.json"!CONFIG="${CNODE_HOME}/'${NODE_CONFIG}'-config.json"!' \
   -e '1,73s!#SOCKET="${CNODE_HOME}/sockets/node0.socket"!SOCKET="${CNODE_HOME}/db/socket"!'
 
-  DglayStyle "gliveViewをインストールしました..."
+  YellowStyle "gliveViewをインストールしました..."
 }
 
 #ノードインストール
 NodeInstall(){
 
-  if [ ! -e "${nodeBinaryPath}" ]; then
+  if [ ! -e "${node_path}" ]; then
   clear
   case "$NODE_TYPE" in
 
@@ -266,10 +201,60 @@ NodeInstall(){
   Header "ノードインストール"
   echo
   sleep 2
+
   #ノードバージョン選択
-  NodeVersionSelect
+
+  repo=IntersectMBO/cardano-node
+  latest_node_version=$(curl -s --url "https://api.github.com/repos/$repo/releases/latest" | grep -oP '"tag_name": "\K(.*)(?=")')
+  # if [[ $SYNC_NETWORK == "mainnet" ]]; then
+
+    #推奨と最新に差異がある場合
+    if [[ $latest_node_version != $recommend_node_version ]]; then
+      echo
+      printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
+      printf "SJG推奨バージョン: $(GreenStyle $recommend_node_version)\n"
+
+      echo
+      echo "最新バージョンとSJG推奨バージョンとに差異があります"
+      echo "最新バージョンは現在SJGで検証中のため次のリリースをお待ちください。最新バージョンをインストールしたい場合は手動インストールを行ってください"
+      echo
+    fi
+
+    Gum_Confirm_YesNo "SJG推奨バージョン: $(GreenStyle $recommend_node_version) をインストールしますか？" "Yes" "No"
+    select_node_version=$recommend_node_version
+
+    if [[ $iniSettings == "Yes" ]]; then
+      IOHKNIX_VERSION=$(curl -s https://raw.githubusercontent.com/IntersectMBO/cardano-node/$select_node_version/flake.lock | jq -r '.nodes.iohkNix.locked.rev')
+      SODIUM_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.sodium.original.rev')
+      SECP256K1_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.secp256k1.original.ref')
+      BLST_VERSION=$(curl -s https://raw.githubusercontent.com/input-output-hk/iohk-nix/master/flake.lock | jq -r '.nodes.blst.original.ref')
+    else
+      return
+    fi
+
+  # else
+  #   #テストネット用
+  #   version_list=$(curl -s "https://api.github.com/repos/$repo/releases" \
+  # | jq -r '.[].tag_name' \
+  # | head -n 2 \
+  # | while read tag; do
+  #     echo -n "$tag "
+  #     count=$((count + 1))
+  #   done
+  #   echo -n "${tag}キャンセル"
+  #   )
+
+  #   printf "最新バージョン: $(YellowStyle $latest_node_version)\n"
+  #   select_node_version=$(gum choose --header.foreground="244" --header="インストールするノードバージョンを選択してください" --no-show-help $version_list)
+  #   printf "選択バージョン: $(GreenStyle $select_node_version)\n"
+  # fi
+  # echo
+  # if [[ $select_node_version != "キャンセル" ]]; then
+
+  # fi
+
   #ノード起動ポート選択
-  Select_NodePort
+  select_port "node"
   
   SystemUpdate
   
@@ -284,13 +269,10 @@ NodeInstall(){
   #ノードコンフィグファイルダウンロード
   NodeConfigDownload
 
-  LglayStyle "ノード起動用スクリプト作成..."
-  sleep 2
-
 cat <<-EOF > ${NODE_HOME}/${node_run_filename}
 #!/bin/bash
 DIRECTORY=${NODE_HOME}
-PORT=${select_node_port}
+PORT=${port_number}
 HOSTADDR=0.0.0.0
 TOPOLOGY=\${DIRECTORY}/${NODE_CONFIG}-topology.json
 DB_PATH=\${DIRECTORY}/db
@@ -302,15 +284,14 @@ EOF
   cd ${NODE_HOME} || exit
   chmod +x ${node_run_filename}
 
-  DglayStyle "起動スクリプトを作成しました"
+  YellowStyle "起動スクリプトを作成しました"
 
   #gLiveViewインストール
-  GliveViewDowndload $select_node_port
+  GliveViewDowndload $port_number
 
   #Mithril DBブートストラップ
   MithrilBootStrap
 
-  LglayStyle "ノード起動サービスファイル作成..."
   sleep 2
 cat > ${NODE_HOME}/cardano-node.service <<-EOF
 # The Cardano node service (part of systemd)
@@ -345,7 +326,7 @@ EOF
   sudo systemctl enable cardano-node
   sudo systemctl start cardano-node
 
-  DglayStyle "ノード起動サービスファイルを作成しました"
+  YellowStyle "ノード起動サービスファイルを作成しました"
   LglayStyle "カルダノノード起動中..."
   nodeSyncCheck
   if [[ -n $slot_value ]]; then
@@ -362,8 +343,7 @@ else
   cardano-node version
   cardano-cli version
   echo
-  echo ${nodeBinaryPath}
-  echo "cardano-nodeはインストール済みです"
+  YellowStyle "cardano-nodeはインストール済みです"
   Gum_OneSelect "戻る"
 fi
 }

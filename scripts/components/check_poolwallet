@@ -41,7 +41,7 @@ if [ "${checkPaymentFile}" == "Yes" ]; then
     done
 else
     echo "${PAYMENT_ADDR_FILENAME}ファイルが見つかりません"
-    echo "エアギャップマシンで当ツールを起動し、「プール運用キー作成」を実行してください"
+    echo "エアギャップマシンにある${PAYMENT_ADDR_FILENAME}ファイルを${NODE_HOME}にアップロードしてください"
     echo
     Gum_OneSelect "戻る"
 fi

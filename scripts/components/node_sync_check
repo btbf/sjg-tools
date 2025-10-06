@@ -100,7 +100,7 @@ while IFS= read -r line; do
                         # slot 行が存在すれば、値を抽出（値が空でなければ終了）
                         slot_value=$(echo "$slot_line" | awk '{print $2}')
                         if [ -n "$slot_value" ]; then
-                            DglayStyle "エポックスロットを検出しました: $slot_value"
+                            YellowStyle "エポックスロットを検出しました: $slot_value"
                             GreenStyle "ノードが最新ブロックと同期しました！"
                             sleep 2
                             break 2

@@ -1,0 +1,277 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC1091,SC2086,SC1001,SC2317
+# shellcheck source="$HOME/.bashrc"
+UbuntuSetup(){
+
+    Header "Ubuntu初期設定"
+
+    sudopass=$(InputSudoPass)
+    echo $sudopass | sudo -S -v
+    # パッケージ自動更新ツールインストール
+    if ! command -v unattended-upgrade &> /dev/null; then
+        echo
+        echo -e "${YELLOW}セキュリティアップデート自動適用ツール(unattended-upgrade)をインストールします${NC}\n"
+        sudo apt install unattended-upgrades -y > /dev/null 2>&1
+        sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -f noninteractive unattended-upgrades
+        echo -e "${YELLOW}unattended-upgradeをインストールしました${NC}\n"
+        sleep 1
+    else
+        echo -e "${GREEN}unattended-upgradeは既にインストールされています${NC}\n"
+        sleep 1
+    fi
+
+    read -p "Enterを押すと続行します..." 
+
+    #共有メモリ設定強化
+    if ! grep -qE '^[^#]*tmpfs[[:space:]]+/dev/shm' /etc/fstab; then
+        echo -e "${YELLOW}セキュアな共有メモリ領域設定${NC}\n"
+        echo -e "fstabにtmpfsを設定します\n"
+        sleep 2
+        echo "tmpfs   /dev/shm    tmpfs   rw,noexec,nosuid,nodev   0 0" | sudo tee -a /etc/fstab
+        echo -e "${YELLOW}/dev/shmにtmpfsを設定しました${NC}\n"
+        sleep 1
+    else
+        echo -e "${GREEN}/dev/shmにはすでにtmpfsが設定されています${NC}\n"
+        sleep 1
+    fi
+    read -p "Enterを押すと続行します..."
+
+    # ed25519 SSH鍵作成
+    if [ ! -f "${HOME}/.ssh/authorized_keys" ]; then
+        #SSH鍵ファイル作成選択
+        Gum_Confirm_YesNo "ed25519 SSH鍵を作成しますか?" "Yes" "No"
+        if [ $iniSettings = "Yes" ]; then
+            sleep 1
+            ssh-keygen -t ed25519 -N '' -C ssh_connect -f ~/.ssh/ssh_ed25519
+            echo -e "${YELLOW}SSH鍵を作成しました${NC}\n"
+            cat ~/.ssh/ssh_ed25519.pub >> ~/.ssh/authorized_keys
+            chmod 600 ~/.ssh/authorized_keys
+            echo -e "${YELLOW}公開鍵をauthorized_keysに追加しました${NC}\n"
+            chmod 700 ~/.ssh
+            echo -e "鍵ペアを作成しました。${YELLOW}~/.ssh/ssh_ed25519(秘密鍵)${NC}と${YELLOW}~/.ssh/ssh_ed25519.pub(公開鍵)${NC}に保存されています。\n"
+            echo -e "2つのファイルを安全な場所にバックアップしてください。\n"
+            echo -e "次回SSH接続の際は、ターミナルソフトに${YELLOW}ssh_ed25519${NC}を設定して接続してください。\n"
+            sleep 2
+        else
+            echo -e "${YELLOW}ed25519 SSH鍵の作成をスキップしました${NC}\n"
+            sleep 1
+        fi
+    else
+        echo -e "${GREEN}ed25519 SSH鍵は既に存在します${NC}\n"
+        sleep 1
+    fi
+
+    read -p "Enterを押すと続行します..." 
+
+    # chrony設定
+    if ! command -v chronyc &> /dev/null; then
+        echo -e "${YELLOW}内部クロック同期ツールchronyがインストールされていません${NC}\n"
+        echo ブロック伝播遅延や、ブロック生成ミスを防ぐためにchronyのインストールを強く推奨します
+        echo
+        Gum_Confirm_YesNo "chronyをインストールしますか?" "Yes" "No"
+        if [ $iniSettings = "Yes" ]; then
+            echo -e "${YELLOW}chronyをインストールします${NC}\n"
+            sudo apt install chrony -y > /dev/null 2>&1
+            cat > $HOME/chrony.conf << EOF
+pool time.google.com       iburst minpoll 2 maxpoll 2 maxsources 3 maxdelay 0.3
+pool time.facebook.com     iburst minpoll 2 maxpoll 2 maxsources 3 maxdelay 0.3
+pool time.euro.apple.com   iburst minpoll 2 maxpoll 2 maxsources 3 maxdelay 0.3
+pool time.apple.com        iburst minpoll 2 maxpoll 2 maxsources 3 maxdelay 0.3
+pool ntp.ubuntu.com        iburst minpoll 2 maxpoll 2 maxsources 3 maxdelay 0.3
+
+# This directive specify the location of the file containing ID/key pairs for
+# NTP authentication.
+keyfile /etc/chrony/chrony.keys
+
+# This directive specify the file into which chronyd will store the rate
+# information.
+driftfile /var/lib/chrony/chrony.drift
+
+# Uncomment the following line to turn logging on.
+#log tracking measurements statistics
+
+# Log files location.
+logdir /var/log/chrony
+
+# Stop bad estimates upsetting machine clock.
+maxupdateskew 5.0
+
+# This directive enables kernel synchronisation (every 11 minutes) of the
+# real-time clock. Note that it can’t be used along with the 'rtcfile' directive.
+rtcsync
+
+# Step the system clock instead of slewing it if the adjustment is larger than
+# one second, but only in the first three clock updates.
+makestep 0.1 -1
+
+# Get TAI-UTC offset and leap seconds from the system tz database
+leapsectz right/UTC
+
+# Serve time even if not synchronized to a time source.
+local stratum 10
+EOF
+            sudo mv $HOME/chrony.conf /etc/chrony/chrony.conf
+            sudo systemctl restart chrony
+            echo -e "${YELLOW}chronyをインストールしました${NC}\n"
+            sleep 1
+        else
+            echo -e "${YELLOW}chronyのインストールをスキップしました${NC}\n"
+            sleep 1
+        fi
+    else
+        echo -e "${GREEN}chronyは既にインストールされています${NC}\n"
+        sleep 1
+    fi
+    read -p "Enterを押すと続行します..."
+
+
+    # ssh設定変更
+    iniSettings=""
+    echo -e "${YELLOW}ssh設定を確認します${NC}\n"
+    sleep 2
+
+    KbdInteractiveAuthentication=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i kbdinteractiveauthentication | awk '{print $2}')
+    PasswordAuthentication=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i passwordauthentication | awk '{print $2}')
+    PermitRootLogin=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i permitrootlogin | awk '{print $2}')
+    PermitEmptyPasswords=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i permitemptypasswords| awk '{print $2}')
+
+    if [[ $KbdInteractiveAuthentication != "no" ]]; then
+        echo -e "現在値 ${YELLOW}KbdInteractiveAuthentication: ${RED}$KbdInteractiveAuthentication${NC}\n"
+        echo -e "推奨値 ${YELLOW}KbdInteractiveAuthentication:${NC} ${GREEN}no${NC}\n"
+
+        Gum_Confirm_YesNo "KbdInteractiveAuthenticationをNoに変更しますか?" "Yes" "No"
+        if [ $iniSettings = "Yes" ]; then
+            echo -e "${YELLOW}KbdInteractiveAuthenticationをNoに変更します${NC}\n"
+            sudo sed -i '/^#Port 22/i KbdInteractiveAuthentication no' /etc/ssh/sshd_config
+        fi
+    fi
+
+    if [[ $PasswordAuthentication != "no" ]]; then
+        echo -e "現在値 ${YELLOW}PasswordAuthentication: ${RED}$PasswordAuthentication${NC}"
+        echo -e "推奨値 ${YELLOW}PasswordAuthentication:${NC} ${GREEN}no${NC}\n"
+
+        Gum_Confirm_YesNo "PasswordAuthenticationをNoに変更しますか?" "Yes" "No"
+        if [ $iniSettings = "Yes" ]; then
+            echo -e "${YELLOW}PasswordAuthenticationをNoに変更します${NC}\n"
+            sudo sed -i '/^#Port 22/i PasswordAuthentication no' /etc/ssh/sshd_config
+        fi
+    fi
+
+    if [[ $PermitRootLogin != "no" ]]; then
+        echo -e "現在値 ${YELLOW}PermitRootLogin: ${RED}$PermitRootLogin${NC}"
+        echo -e "推奨値 ${YELLOW}PermitRootLogin:${NC} ${GREEN}no${NC}\n"
+
+        Gum_Confirm_YesNo "PermitRootLoginをNoに変更しますか?" "Yes" "No"
+        if [ $iniSettings = "Yes" ]; then
+            echo -e "${YELLOW}PermitRootLoginをNoに変更します${NC}\n"
+            sudo sed -i '/^#Port 22/i PermitRootLogin no' /etc/ssh/sshd_config
+        fi
+    fi
+
+    if [[ $PermitEmptyPasswords != "no" ]]; then
+        echo -e "現在値 ${YELLOW}PermitEmptyPasswords: ${RED}$PermitEmptyPasswords${NC}"
+        echo -e "推奨値 ${YELLOW}PermitEmptyPasswords:${NC} ${GREEN}no${NC}\n"
+
+        Gum_Confirm_YesNo "PermitEmptyPasswordsをNoに変更しますか?" "Yes" "No"
+        if [ $iniSettings = "Yes" ]; then
+            echo -e "${YELLOW}PermitEmptyPasswordsをNoに変更します${NC}\n"
+            sudo sed -i '/^#Port 22/i PermitEmptyPasswords no' /etc/ssh/sshd_config
+        fi
+    fi
+
+    port_number=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i ^port | awk '{print $2}')
+    if [[ $port_number = "22" ]]; then
+        echo -e "${GREEN}sshのPort番号は22に設定されています${NC}\n"
+        echo -e "${YELLOW}セキュリティの観点からPort番号を変更することを強く推奨します${NC}\n"
+
+        Gum_Confirm_YesNo "Portを変更しますか?" "Yes" "No"
+        if [ $iniSettings = "Yes" ]; then
+            select_port "ssh"
+            echo -e "${YELLOW}sshのPort番号を22から$port_numberに変更します${NC}\n"
+            sudo sed -i "s/^#\?Port.*/Port ${port_number}/" /etc/ssh/sshd_config
+        fi
+        sleep 2
+    else
+        echo -e "${GREEN}sshのPort番号は${port_number}です${NC}\n"
+        sleep 2
+    fi
+
+    sudo sshd -t
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}ssh設定にエラーがあります。設定を確認してください。${NC}"
+        exit 1
+    fi
+
+    #fail2ban設定
+    if ! grep -qE '^[^#]*tmpfs[[:space:]]+/dev/shm' /etc/fstab; then
+        Gum_Confirm_YesNo "fail2banをインストールしますか?" "Yes" "No"
+        if [ $iniSettings = "Yes" ]; then
+            echo -e "${YELLOW}fail2banをインストールします${NC}\n"
+            sudo apt install fail2ban -y > /dev/null 2>&1
+            sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
+
+[sshd]
+enabled = true
+port = ${port_number}
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+EOF
+            echo -e "${YELLOW}fail2banをインストールしました${NC}\n"
+            echo -e "ポート番号: ${GRREN}$port_number${NC} をfail2banに設定しました\n"
+            sudo systemctl restart fail2ban
+            echo -e "${YELLOW}fail2banを再起動しました${NC}\n"
+            sleep 1
+        else
+            echo -e "${YELLOW}fail2banのインストールをスキップしました${NC}\n"
+            sleep 1
+        fi
+    else
+        echo -e "${GREEN}fail2banは既にインストールされています${NC}\n"
+        sleep 1
+    fi
+    read -p "Enterを押すと続行します..." 
+    
+
+    #ufw有効化
+    echo -e "${YELLOW}ufwの設定を確認します${NC}\n"
+    sleep 1
+    echo $sudopass | sudo -S -v
+    if [[ $(sudo ufw status | grep -i Status) = "Status: inactive" ]]; then
+        echo -e "${YELLOW}ufwが無効になっています${NC}\n"
+        echo -e "${YELLOW}セキュリティの観点からufwを有効にすることを強く推奨します${NC}\n"
+        echo -e "ただしご利用のVPS側でハードウェアファイアウォールが有効になっている場合は、二重に有効化しないでください\n"
+        Gum_Confirm_YesNo "ufwを有効にしますか?" "Yes" "No"
+        if [ $iniSettings = "Yes" ]; then
+            echo -e "${YELLOW}ufwを有効にします${NC}\n"
+            sudo ufw allow ${port_number}/tcp > /dev/null 2>&1
+            sudo ufw --force enable > /dev/null 2>&1
+            echo -e "sshポート番号: ${GRREN}$port_number${NC} をufwに設定しました\n"
+            echo -e "${YELLOW}ufwを有効にしました${NC}\n"
+            sleep 1
+        else
+            echo -e "${YELLOW}ufwの有効化をスキップしました${NC}\n"
+            echo -e "${YELLOW}ufwを有効にしていない場合は、VPS側のハードウェアファイアウォールにSSHポート(${GRREN}$port_number${NC})を追加してください${NC}\n"
+            echo -e 
+            sleep 1
+        fi
+    else
+        echo -e "${GREEN}ufwは既に有効になっています${NC}\n"
+        sleep 1
+    fi
+
+    sudo service sshd reload
+    echo -e "ssh設定を変更しました\n"
+    echo -e "変更後のsshポート番号:${GREEN}$port_number${NC}\n"
+    echo -e "${YELLOW}新しいssh設定で接続確認するためにsshの再接続が必要です${NC}\n"
+    echo
+    echo -e "${RED}ssh再接続に関する注意事項${NC}\n"
+    echo -e "1.現在の接続を維持しながら新しいウィンドウで再接続してください${NC}\n"
+    echo -e "2.再接続する際には新しいポート番号${YELLOW}$port_number${NC}に変更してください\n"
+    echo -e "${YELLOW}3.接続プロファイルに${YELLOW}ssh_ed25519${NC}を設定して接続してください\n"
+    echo -e "${YELLOW}4.再接続できない場合はこのウィンドウでSSH設定またはFW設定を確認してください${NC}\n"
+    echo
+    echo -e "新しいウィンドウで再接続できたらこのウィンドウでEnterを押してください${NC}"
+    read -p "Enterを押すとセッションを終了します..."
+    tmux kill-session -t spokit
+}

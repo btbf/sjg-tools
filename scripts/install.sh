@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091,SC2086,SC1001,SC2317
 # shellcheck source="$HOME/.bashrc"
-# shellcheck source="${envPath}"
+# shellcheck source="${env_path}"
 
+clear
 
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
-gum_version="0.16.0"
+gum_version="0.16.2"
+spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
 
 source ${HOME}/.bashrc
 
@@ -16,7 +18,7 @@ style(){
 }
 
 
-CreateEnv(){
+create_env_file(){
 mkdir -p ${SPOKIT_HOME}
 cat <<-EOF > ${SPOKIT_HOME}/env
 #!/bin/bash
@@ -44,17 +46,19 @@ STAKE_CERT_FILENAME="stake.cert"
 POOL_META_FILENAME="poolMetaData.json"
 POOL_ID_FILENAME="pool.id"
 POOL_ID_BECH32_FILENAME="pool.id-bech32"
-KOIOS_API="${3}"
+KOIOS_API="${4}"
 NODE_PROMETHEUS_PORT="12798"
+UFW_STATUS="${3}"
 EOF
 }
+
 
 DotSpinner3(){
     gum spin --spinner dot --title "${1}" -- sleep 3
 }
 
 
-title_logo(){
+view_title_logo(){
     echo -e "${CYAN}"
     cat << "EOF"
 ███████╗██████╗  ██████╗ ██╗  ██╗██╗████████╗
@@ -68,7 +72,7 @@ EOF
     echo -e "${GREEN}                   ${1}                    ${NC}"
     echo -e "${WHITE}============================================${NC}"
     echo -e "${CYAN}           Cardano SPO Tool Kit              ${NC}"
-    echo -e "${YELLOW}            ${2}                           ${NC}"
+    echo -e "${YELLOW}         ${2}                           ${NC}"
     echo -e "${WHITE}============================================${NC}"
 }
 
@@ -87,48 +91,29 @@ NC='\033[0m' # No Color
 #起動タイトル
 ##############
 
-title_logo "" "Spokitインストール"
-#title_logo "" ""
-sleep 3
+if [[ $whoami = "root" ]]; then
+    echo -e "${RED}rootユーザーでは実行できません${NC}"
+    exit 1
+fi
 
 if [[ ! -d $SPOKIT_INST_DIR ]]; then
 #環境設定
 cat > ~/.tmux.conf << EOF
 set -g default-terminal "screen-256color"
 EOF
-
+    view_title_logo "${spokit_version}" "ライブラリインストール"
     #ライブラリインストール
-    YellowStyle "ライブラリをインストール..."
+    printf "管理者(sudo)パスワードを入力してください\n"
+    echo
     sudo apt install git jq bc ccze automake tmux htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
-    if [ ! -e "/usr/bin/gum" ]; then
+    if [ ! -f "/usr/bin/gum" ]; then
         sudo mkdir -p /etc/apt/keyrings
         curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
         echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
         sudo apt update && sudo apt install gum=${gum_version}
     fi
     sudo apt-mark hold gum
-    gum --version
-    echo
-
-    #Spokitインストール
-    spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
-    YellowStyle "Spokitをインストール..."
-    mkdir -p $HOME/git
-    cd $HOME/git
-
-    wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
-    tar xzvf spokit.tar.gz
-    rm spokit.tar.gz
-    YellowStyle "Spokitをインストールしました"
-
-    sudo mkdir -p ${SPOKIT_INST_DIR}
-    cd sjg-tools-${spokit_version}/scripts
-    sudo cp -pR ./* ${SPOKIT_INST_DIR}
-
-    chmod 755 spokit_run.sh
-    chmod 755 spokit.sh
-
-    rm -rf $HOME/git/sjg-tools-${spokit_version}
+    echo -e "${GREEN}関連ライブラリをインストールしました${NC}"
 else
     echo -e ${YELLOW}"Spokitはすでにインストールされています${NC}"
     echo -e "${GREEN}spokit${NC} または ${GREEN}spokit setup${NC} で起動するかご確認ください"
@@ -137,39 +122,75 @@ fi
 
 
 ##------初期設定
-#clear
+clear
 if [ ! -d "${SPOKIT_HOME}" ]; then
-    clear
-    title_logo "v${spokit_version}" "ノードセットアップ初期設定"
-    #gum style --foreground 110  --border-foreground 111  --border rounded --align center --width 60 --margin "1 1 0 1" --padding "0 0" "Spokit v${spokit_version}" "ノードセットアップ初期設定"
+    view_title_logo "${spokit_version}" "ノードセットアップ初期設定"
 
     if [ -d "${NODE_HOME}" ]; then 
         echo -e "既存のネットワーク設定が見つかりました : ${NODE_CONFIG}\n"
-        workDir=${NODE_HOME}
-        syncNetwork=${NODE_CONFIG}
+        work_dir=${NODE_HOME}
+        sync_network=${NODE_CONFIG}
     else
-        syncNetwork=$(gum choose --header.foreground="244" --header="接続ネットワークを選択してください" --no-show-help "mainnet" "preview" "preprod" "Sancho-net")
-        workDir=$(gum input --value "${HOME}/cnode" --width=0 --no-show-help --header.foreground="244" --header="プール管理ディレクトリを作成します。デフォルトの場合はそのままEnterを押して下さい" --header.foreground="99" --placeholder "${HOME}/cnode")
+        NODE_TYPE=$(gum choose --header.foreground="244" --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" --no-show-help)
+        sync_network=$(gum choose --header.foreground="244" --header="接続ネットワークを選択してください" --no-show-help "Mainnet" "Preview-Testnet" "Preprod-Testnet" "Sancho-net")
+        work_dir=$(gum input --value "${HOME}/cnode" --width=0 --no-show-help --header.foreground="244" --header="プール作業ディレクトリを作成します。デフォルトの場合はそのままEnterを押して下さい" --header.foreground="99" --placeholder "${HOME}/cnode")
     fi
 
-    NODE_TYPE=$(gum choose --header.foreground="244" --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" "エアギャップ" --no-show-help)
+        # ufw確認
+    UFW_STATUS=$(sudo ufw status | grep -i "Status:" | awk '{print $2}')
+    if [ "${UFW_STATUS}" != "active" ]; then
+        echo -e "${YELLOW}UFW(内部ファイアウォール)が無効になっています。${NC}"
+        gum confirm "UFWを有効にしますか？" --default=true --no-show-help --affirmative="はい" --negative="いいえ" && UFW_STATUS="enabled" || UFW_STATUS="disabled"
+    else
+        echo -e "${GREEN}UFW(内部ファイアウォール)は有効になっています${NC}"
+        UFW_STATUS="enabled"
+        sleep 1
+    fi
+
+    #Spokitインストール
     
+    printf "${YELLOW}SPOKITをインストール...${NC}\n"
+    mkdir -p $HOME/git
+    cd $HOME/git
+
+    wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}SPOKITのダウンロードに失敗しました。インターネット接続を確認してください。${NC}"
+        exit 1
+    fi
+    tar -xzf spokit.tar.gz
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}SPOKITの解凍に失敗しました。${NC}"
+        exit 1
+    fi
+    rm spokit.tar.gz
+    sudo mkdir -p ${SPOKIT_INST_DIR}
+    #cd sjg-tools-${spokit_version}/scripts
+    cd $HOME/sjg-tools/scripts
+    sudo cp -pR ./* ${SPOKIT_INST_DIR}
+
+    chmod 755 spokit_run.sh
+    chmod 755 spokit.sh
+
+    printf "${YELLOW}SPOKITをインストールしました${NC}\n"
+    rm -rf $HOME/git/sjg-tools-${spokit_version}
 
     echo
-    case "${syncNetwork}" in
-        "mainnet" )
+    case "${sync_network}" in
+        "Mainnet" )
             NODE_CONFIG=mainnet
             NODE_NETWORK='"--mainnet"'
             CARDANO_NODE_NETWORK_ID=mainnet
             KOIOS_DOMAIN="https://api.koios.rest/api/v1"
         ;;
-        "preview" )
+        "Preview-Testnet" )
             NODE_CONFIG=preview
             NODE_NETWORK='"--testnet-magic 2"'
             CARDANO_NODE_NETWORK_ID=2
             KOIOS_DOMAIN="https://preview.koios.rest/api/v1"
         ;;
-        "preprod" )
+        "Preprod-Testnet" )
             NODE_CONFIG=preprod
             NODE_NETWORK='"--testnet-magic 1"'
             CARDANO_NODE_NETWORK_ID=1
@@ -184,8 +205,9 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
     esac
 
     style "ノードタイプ:" "${NODE_TYPE}"
-    style "ネットワーク:" "${NODE_CONFIG}"
-    style "プール管理ディレクトリ:" "${workDir}"
+    style "ネットワーク:" "${sync_network}"
+    style "プール作業ディレクトリ:" "${work_dir}"
+    style "UFWステータス:" "${UFW_STATUS}"
     echo
     gum confirm "この設定でよろしいですか？" --default=true --no-show-help --affirmative="はい" --negative="いいえ" && iniSettings="Yes" || iniSettings="No"
 
@@ -196,41 +218,55 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             echo export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" >> "${HOME}"/.bashrc
             echo export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> "${HOME}"/.bashrc
             echo export NODE_HOME="${HOME}"/cnode >> "${HOME}"/.bashrc
-            echo export CARDANO_NODE_SOCKET_PATH="${HOME}/cnode/db/socket" >> "${HOME}"/.bashrc
-            echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
-            echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
             echo export NODE_CONFIG="${NODE_CONFIG}" >> "${HOME}"/.bashrc
             echo export NODE_NETWORK="${NODE_NETWORK}" >> "${HOME}"/.bashrc
-            echo export CARDANO_NODE_NETWORK_ID="${CARDANO_NODE_NETWORK_ID}" >> "${HOME}"/.bashrc
-            echo alias cnode='"sudo journalctl -u cardano-node -f | ccze -A"' >> "${HOME}"/.bashrc
-            echo alias cnstart='"sudo systemctl start cardano-node"' >> "${HOME}"/.bashrc
-            echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> "${HOME}"/.bashrc
-            echo alias cnstop='"sudo systemctl stop cardano-node"' >> "${HOME}"/.bashrc
-            echo alias cnreload='"kill -HUP $(pidof cardano-node)"' >> "${HOME}"/.bashrc
-            echo alias glive="'cd ${HOME}/cnode/scripts; ./gLiveView.sh'" >> "${HOME}"/.bashrc
+            echo export CARDANO_NODE_SOCKET_PATH="$NODE_HOME/db/socket" >> $HOME/.bashrc
+            echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
+            echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
             echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> $HOME/.bashrc
+            echo alias cnode='"journalctl -u cardano-node -f"' >> $HOME/.bashrc
+            echo alias cnstart='"sudo systemctl start cardano-node"' >> $HOME/.bashrc
+            echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> $HOME/.bashrc
+            echo alias cnstop='"sudo systemctl stop cardano-node"' >> $HOME/.bashrc
+            echo alias cnreload='"pkill -HUP cardano-node"' >> $HOME/.bashrc
+            echo alias glive="'cd $NODE_HOME/scripts; ./gLiveView.sh'" >> $HOME/.bashrc
+            
+
         else
             echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
             echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
             echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> $HOME/.bashrc
         fi
-        
+
+
         #設定ファイル作成
-        CreateEnv "${NODE_TYPE}" "${NODE_CONFIG}" "${UFW_STATUS}" "${KOIOS_DOMAIN}"
+        create_env_file "${NODE_TYPE}" "${NODE_CONFIG}" "${UFW_STATUS}" "${KOIOS_DOMAIN}"
 
         echo
         style "設定ファイルを作成しました" "${SPOKIT_HOME}/env"
         echo
 
         DotSpinner3 "初期設定を終了します"
-
+        echo
+        echo -e "${RED}①下記コマンドを実行して環境変数を再読み込みしてください${NC}"
         echo "------------------------"
         echo "source $HOME/.bashrc"
         echo "------------------------"
-        echo -e "${RED}🔼上記コマンドを実行して環境変数を再読み込みしてください${NC}"
         echo
-        echo -e "${YELLOW}プール構築開始コマンド${NC} ${GREEN}spokit setup${NC}"
-        echo -e "${YELLOW}プール運営コマンド${NC} ${GREEN}spokit${NC}"
+        echo -e "${YELLOW}①Ubuntuセキュリティ設定${NC}"
+        echo "------------------------"
+        echo -e "${GREEN}spokit ubuntu${NC}"
+        echo "------------------------"
+        echo
+        echo -e "${YELLOW}②プール構築${NC}"
+        echo "------------------------"
+        echo -e "${GREEN}spokit pool${NC}"
+        echo "------------------------"
+        echo
+        echo -e "${YELLOW}②プール運用${NC}"
+        echo "------------------------"
+        echo -e "${GREEN}spokit${NC}"
+        echo "------------------------"
         echo
     else
         clear

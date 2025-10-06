@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091,SC2086,SC1001,SC2317
 # shellcheck source="$HOME/.bashrc"
-# shellcheck source="${envPath}"
+# shellcheck source="${env_path}"
 
 source ${HOME}/.bashrc
 

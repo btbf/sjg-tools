@@ -3,6 +3,18 @@
 # shellcheck source="$HOME/.bashrc"
 
 inputConnections(){
+#topologyファイル有無確認
+if [ -f $NODE_HOME/${NODE_CONFIG}-topology.json ]; then
+    echo "$NODE_HOME/${NODE_CONFIG}-topology.json は既に存在します。"
+    cat $NODE_HOME/${NODE_CONFIG}-topology.json
+    echo
+    Gum_Confirm_YesNo "上書きしますか？" "Yes" "No"
+    if [[ ${iniSettings} == "No" ]]; then
+        echo "処理を中止しました。"
+        Gum_OneSelect "メニューに戻る"
+        return 1
+    fi
+fi
 topologyAccessPoints=""
 while :
 do
@@ -69,11 +81,62 @@ done
 }
 
 topologyManagement(){
+
+case $NODE_CONFIG in
+    "mainnet" )
+        bootstrapPeers=$(cat <<EOF
+    {
+    "address": "backbone.cardano.iog.io",
+    "port": 3001
+    },
+    {
+    "address": "backbone.mainnet.emurgornd.com",
+    "port": 3001
+    },
+    {
+    "address": "backbone.mainnet.cardanofoundation.org",
+    "port": 3001
+    }
+EOF
+        )
+        peerSnapshotFile=""
+    ;;
+
+    "preview" )
+        bootstrapPeers=$(cat <<EOF
+    {
+      "address": "preview-node.play.dev.cardano.org",
+      "port": 3001
+    }
+EOF
+        )
+        peerSnapshotFile=$(cat <<EOF
+"peerSnapshotFile": "preview-peer-snapshot.json",
+EOF
+        )
+    ;;
+
+    "preprod" )
+        bootstrapPeers=$(cat <<EOF
+    {
+      "address": "preprod-node.play.dev.cardano.org",
+      "port": 3001
+    }
+EOF
+        )
+        peerSnapshotFile=$(cat <<EOF
+"peerSnapshotFile": "preprod-peer-snapshot.json",
+EOF
+        )
+    ;;
+esac
+
+
 case $NODE_TYPE in
 
 "ブロックプロデューサー" )
 
-inputConnections "リレー"
+inputConnections "リレー" || return 1
 
 createTopology=$(cat <<- EOF
 {
@@ -89,6 +152,7 @@ ${topologyAccessPoints}
       "warmValency": $((${inputConnectionNum}+1))
     }
 ],
+${peerSnapshotFile}
 "publicRoots": [],
 "useLedgerAfterSlot": -1 
 }
@@ -97,29 +161,18 @@ EOF
 ;;
 
 "リレー" )
-inputConnections "BP"
+inputConnections "BP" || return 1
 bp_accessPoint=$topologyAccessPoints
 bp_connectNum=$inputConnectionNum
 
-inputConnections "リレー"
+inputConnections "リレー" || return 1
 relay_accessPoint=$topologyAccessPoints
 relay_connectNum=$inputConnectionNum
 
 createTopology=$(cat <<- EOF
 {
 "bootstrapPeers": [
-    {
-    "address": "backbone.cardano.iog.io",
-    "port": 3001
-    },
-    {
-    "address": "backbone.mainnet.emurgornd.com",
-    "port": 3001
-    },
-    {
-    "address": "backbone.mainnet.cardanofoundation.org",
-    "port": 3001
-    }
+${bootstrapPeers}
 ],
 "localRoots": [
     {
@@ -141,6 +194,7 @@ ${relay_accessPoint}
       "warmValency": $((${relay_connectNum}+1))
     }
 ],
+${peerSnapshotFile}
 "publicRoots": [],
 "useLedgerAfterSlot": 128908821 
 }

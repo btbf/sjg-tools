@@ -13,7 +13,7 @@ MithrilBootStrap(){
   sudo chmod +x /usr/local/bin/mithril-client
   rm mithril.tar.gz mithril-client
   mithril-client -V
-  DglayStyle "Mithrilクライアントをインストールしました"
+  YellowStyle "Mithrilクライアントをインストールしました"
   case ${NODE_CONFIG} in
   "mainnet" )
       mithril_network=release-${NODE_CONFIG}
@@ -42,5 +42,5 @@ MithrilBootStrap(){
   YellowStyle "この作業は30分以上かかる場合があります"
   sleep 2
   mithril-client cardano-db download --download-dir ${NODE_HOME} --include-ancillary latest
-  DglayStyle "Mithril-DBスナップショットをダウンロードしました..."
+  YellowStyle "Mithril-DBスナップショットをダウンロードしました..."
 }
