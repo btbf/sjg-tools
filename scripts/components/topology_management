@@ -5,10 +5,12 @@
 inputConnections(){
 #topologyファイル有無確認
 if [ -f $NODE_HOME/${NODE_CONFIG}-topology.json ]; then
-    echo "$NODE_HOME/${NODE_CONFIG}-topology.json は既に存在します。"
+    YellowStyle "$NODE_HOME/${NODE_CONFIG}-topology.json は既に存在します。"
+    echo "現在の内容は以下の通りです。"
+    echo
     cat $NODE_HOME/${NODE_CONFIG}-topology.json
     echo
-    Gum_Confirm_YesNo "上書きしますか？" "Yes" "No"
+    Gum_Confirm_YesNo "更新しますか？" "Yes" "No"
     if [[ ${iniSettings} == "No" ]]; then
         echo "処理を中止しました。"
         Gum_OneSelect "メニューに戻る"
