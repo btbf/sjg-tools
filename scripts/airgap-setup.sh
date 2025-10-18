@@ -43,6 +43,7 @@ Main(){
 
     if [[ $whoami = "root" ]]; then
         echo -e "${RED}rootユーザーでは実行できません${NC}"
+        echo "一般ユーザーで再度実行してください"
         exit 1
     fi
 
@@ -58,6 +59,25 @@ Main(){
         echo $NODE_HOME
     else
         echo "環境変数は設定済みです。"
+    fi
+
+    #cardano-cliインストール
+    source <(curl -fsSL https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/main/scripts/components/node_install)
+    nodeBinary_URL="https://github.com/IntersectMBO/cardano-node/releases/download/${recommend_node_version}/cardano-node-${recommend_node_version}-linux.tar.gz"
+    wget --spider -q "$nodeBinary_URL"
+    local status=$?
+    if [ $status -eq 0 ]; then
+        echo -e "${YELLOW}ノードインストール開始${NC}"
+        mkdir -p ${HOME}/git/cardano-node
+        cd ${HOME}/git/cardano-node || exit
+        wget -q "$nodeBinary_URL"
+        tar zxvf "cardano-node-${recommend_node_version}-linux.tar.gz" ./bin/cardano-cli > /dev/null 2>&1
+        sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-cli")" /usr/local/bin/cardano-cli
+        echo -e "${GREEN}cardano-cliをインストールしました${NC}"
+        echo -e "${GREEN}バージョン: $(cardano-cli --version | head -n 1)${NC}"
+    else
+        echo -e "${RED}cardano-cliのダウンロードに失敗しました。 インターネット接続を確認してください。${NC}"
+        exit 1
     fi
 }
 

@@ -93,6 +93,7 @@ NC='\033[0m' # No Color
 
 if [[ $whoami = "root" ]]; then
     echo -e "${RED}rootユーザーでは実行できません${NC}"
+    echo "一般ユーザーで再度実行してください"
     exit 1
 fi
 
