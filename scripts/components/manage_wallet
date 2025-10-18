@@ -29,7 +29,7 @@ send_address(){
           printf "\n${FG_RED}現在のネットワーク${NC}(${FG_GREEN}${NODE_CONFIG}${NC})${FG_RED}と異なるアドレスが入力されました。再度ご確認ください${NC}\n"
         fi
       elif [ "$destinationAddress" == "1" ]; then
-        printf "\n${FG_YELLOW}出金手続きをキャンセルしました${NC}\n"
+        printf "${FG_YELLOW}出金手続きをキャンセルしました${NC}\n"
         Gum_OneSelect "戻る"
         manageWallet
       elif [ -z $destinationAddress ]; then
@@ -75,7 +75,6 @@ manageWallet(){
     select=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット残高確認" "[2] プール報酬確認" "[3] 報酬/資金出金" "[b] 戻る" "[q] 終了")
     case $select in
       "[1] ウォレット残高確認" )
-        echo
         if [[ -e "${NODE_HOME}/${PAYMENT_ADDR_FILENAME}" ]]; then
 
           CheckWallet
@@ -114,8 +113,8 @@ manageWallet(){
               #stake.addr残高算出
               echo
               reward_Balance
-							if [[ -z ${pool_reward} ]]; then
-								break
+							if [[ -z ${pool_reward} ]] || [[ $pool_reward == 0 ]]; then
+								break 1
 							fi
               printf "\n${FG_YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n\n"
               #出金先アドレスチェック
@@ -287,7 +286,7 @@ manageWallet(){
         done
         ;;
       "[b] 戻る" )
-      Cnm_main
+      break
       ;;
       "[q] 終了" )
       tmux kill-session -t spokit

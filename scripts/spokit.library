@@ -167,7 +167,6 @@ WalletBalance(){
   done < ${NODE_HOME}/balance.out
   txcnt=$(cat ${NODE_HOME}/balance.out | wc -l)
   style "ADA残高:" "$(scale1 ${total_balance})"
-  style "未使用UTXO:" ${txcnt}
 }
 
 Cli_FeeCal(){
@@ -185,16 +184,17 @@ echo
 }
 
 #ウォレットUtxO確認
-CheckWallet(){
-  echo 
-  style "アドレス：" "$(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})"
-  echo 
+CheckWallet(){ 
+  echo "アドレス:" 
+  YellowStyle "$(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})"
   gum spin --spinner dot --show-output --title "ウォレット残高を確認しています" -- cardano-cli conway query utxo --address $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME}) $NODE_NETWORK --output-text --out-file ${NODE_HOME}/fullUtxo.out
   #echo $0 >> fullUtxo.out
   tail -n +3 ${NODE_HOME}/fullUtxo.out | sort -k3 -nr > ${NODE_HOME}/balance.out
-  cat ${NODE_HOME}/balance.out
   echo
   WalletBalance
+  echo
+  echo "UTXO一覧"
+  LglayStyle "$(cat ${NODE_HOME}/balance.out)"
 }
 
 reward_Balance(){
