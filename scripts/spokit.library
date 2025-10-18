@@ -325,6 +325,16 @@ FilePathAndHash(){
   echo -e "${1} >> ${YELLOW}$(sha256sum ${1} | awk '{ print $1 }')${NC}"
 }
 
+#adahandleConvert
+adahandleConvert(){
+  adahandlePolicyID="f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a"
+  assetNameHex=$(echo -n "${1}" | xxd -b -ps -c 80 | tr -d '\n')
+  if [[ $NODE_CONFIG != "mainnet" ]]; then
+    assetNameHex="000de140${assetNameHex}"
+  fi
+  curl -s -X GET "$KOIOS_API/asset_addresses?_asset_policy=${adahandlePolicyID}&_asset_name=${assetNameHex}" -H "Accept: application/json" | jq -r '.[].payment_address'
+}
+
 message_file_transfer(){
   echo
   echo "【エアギャップへファイル転送】"

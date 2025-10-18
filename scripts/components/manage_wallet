@@ -39,10 +39,9 @@ send_address(){
         adahandleADDRESS=$(adahandleConvert $destinationAddress)
         #echo $adahandleADDRESS
         if [ -n "$adahandleADDRESS" ]; then
-          echo
           echo '------------------------------------------------'
-          printf "ADA Handle　　: ${YELLOW}$destinationAddress${NC}\n"
-          printf "出金先アドレス: ${GREEN}$adahandleADDRESS${NC}\n"
+          printf "ハンドル: ${YELLOW}\$$destinationAddress${NC}\n"
+          printf "アドレス: ${GREEN}$adahandleADDRESS${NC}\n"
           echo '------------------------------------------------'
           echo
           destinationAddress=$adahandleADDRESS
@@ -116,7 +115,7 @@ manageWallet(){
 							if [[ -z ${pool_reward} ]] || [[ $pool_reward == 0 ]]; then
 								break 1
 							fi
-              printf "\n${YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n\n"
+              printf "\n${YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n"
               #出金先アドレスチェック
               send_address
 
@@ -186,14 +185,13 @@ manageWallet(){
             echo "資金移動"
             echo -e ">> ${YELLOW}$PAYMENT_ADDR_FILENAME${NC} から ${YELLOW}任意のアドレス(ADAHandle)${NC} への出金"
             echo
-            echo "■ 注意 ■"
+            echo -e"${RED}■ 注意 ■${NC}"
             echo "$PAYMENT_ADDR_FILENAMEには誓約で設定した額以上のADAが入金されてる必要があります"
             echo "出金には十分ご注意ください"
             echo '------------------------------------------------------------------------'
-            printf "${YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n\n"
+            printf "${YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n"
             if [ -f "$NODE_HOME/$PAYMENT_ADDR_FILENAME" ]; then
               #出金先アドレスチェック
-              echo
               send_address
               
               #出金額指定
