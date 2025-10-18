@@ -221,6 +221,7 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             echo export NODE_HOME="${HOME}"/cnode >> "${HOME}"/.bashrc
             echo export NODE_CONFIG="${NODE_CONFIG}" >> "${HOME}"/.bashrc
             echo export NODE_NETWORK="${NODE_NETWORK}" >> "${HOME}"/.bashrc
+            echo export CARDANO_NODE_NETWORK_ID="${CARDANO_NODE_NETWORK_ID}" >> "${HOME}"/.bashrc
             echo export CARDANO_NODE_SOCKET_PATH="$NODE_HOME/db/socket" >> $HOME/.bashrc
             echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
             echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
