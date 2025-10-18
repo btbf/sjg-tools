@@ -62,7 +62,8 @@ Verify(){
 
 Main(){
   echo
-  echo "\${script_title}処理を開始してもよろしいですか？"
+  echo "\${script_title}処理を開始してもよろしいですか?"
+  echo
   echo "[1] はい [2] いいえ"
   if ! yes_no; then
       exit 0
@@ -85,12 +86,20 @@ EOF
 }
 
 
-
-signStakeAddressTx(){
-create_airgap_script "ステークアドレス委任Tx署名ファイル作成"
-cat >> "${NODE_HOME}/airgap_script" << EOF 
-#!/bin/bash
-cardano-cli conway transaction sign --tx-body-file \${NODE_HOME}/tx.raw --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file \${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file \${NODE_HOME}/tx.signed
+signing_tx_file(){
+  case $1 in
+    "pool_register" )
+      sing_cli="cardano-cli conway transaction sign --tx-body-file \${NODE_HOME}/tx.raw --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME} --signing-key-file \${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file \${NODE_HOME}/tx.signed"
+    ;;
+    "stake_address" )
+      sing_cli="cardano-cli conway transaction sign --tx-body-file \${NODE_HOME}/tx.raw --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file \${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file \${NODE_HOME}/tx.signed"
+    ;;
+    "payment_address" )
+      sing_cli="cardano-cli conway transaction sign --tx-body-file \${NODE_HOME}/tx.raw --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME} $NODE_NETWORK --out-file \${NODE_HOME}/tx.signed"
+    ;;
+  esac
+  cat >> "${NODE_HOME}/airgap_script" << EOF 
+$sing_cli
 echo
 echo "トランザクション署名ファイルを生成しました(\${NODE_HOME}/tx.signed)"
 echo
@@ -103,24 +112,6 @@ rm -f \${NODE_HOME}/airgap_script
 EOF
 chmod 755 ${NODE_HOME}/airgap_script
 }
-
-
-signPoolRegisterTx(){
-cat >> "${NODE_HOME}/airgap_script" << EOF
-cardano-cli conway transaction sign --tx-body-file \${NODE_HOME}/tx.raw  --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME} --signing-key-file ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME} --signing-key-file \${NODE_HOME}/${STAKE_SKEY_FILENAME} $NODE_NETWORK --out-file \${NODE_HOME}/tx.signed
-chmod a-rwx ${COLDKEYS_DIR}
-echo
-echo "プール登録Tx署名ファイルを生成しました"
-echo "\${NODE_HOME}/tx.signed をBPの作業ディレクトリにコピーしてください"
-hash_value=\$(sha256sum \${NODE_HOME}/tx.signed | awk '{print \$1}')
-echo -e "ハッシュ値：\${YELLOW}\${hash_value}\${NC}"
-echo
-read -p "コピーしたらEnterを押して下さい" < /dev/tty
-rm -f \${NODE_HOME}/airgap_script
-EOF
-chmod 755 ${NODE_HOME}/airgap_script
-}
-
 
 
 CreatePoolCert(){

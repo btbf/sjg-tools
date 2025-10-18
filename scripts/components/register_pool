@@ -35,7 +35,10 @@ registerStakeadd(){
         txOut=$((${total_balance}-${stakeAddressDeposit}-${fee}))
         Gum_DotSpinner3 "トランザクションを構築しています"
         cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.raw
-        signStakeAddressTx
+        
+        create_airgap_script "ステークアドレス委任Tx署名ファイル作成"
+        signing_tx_file "stake_address"
+
         cd ${NODE_HOME} || exit
         tar -czvf airgap-set.tar.gz tx.raw airgap_script
         if [ $? -eq 0 ]; then
@@ -125,7 +128,7 @@ EOF
     sleep 3
     cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+\${txOut} --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee \${fee} --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.raw
 EOF
-    signPoolRegisterTx
+    signing_tx_file "pool_register"
     cd ${NODE_HOME} || exit
     tar -czvf airgap-set.tar.gz poolMetaDataHash.txt params.json airgap_script | awk '{print $NF}' | paste -sd " / " -
     if [ $? -eq 0 ]; then

@@ -223,13 +223,10 @@ reward_Balance(){
 
 #出金前チェック
 tx_Check(){
-  rows36="%15s ${FG_CYAN}%-15s${NC}\n"
-  rows32="%15s ${FG_GREEN}%-15s${NC}\n"
-  #printf "$rows" "Send_Address:" "${destinationAddress::20}...${destinationAddress: -20}"
-  printf "$rows36" "送金先アドレス:" "$1"
-  printf "$rows32" "       送金ADA:" "$(scale1 $2) ADA"
-  printf "$rows32" "　　　  手数料:" "$(scale3 $3) ADA"
-  printf "$rows32" "    Wallet残高:" "$(scale1 $4) ADA"
+  printf "%-8s : ${YELLOW}%-15s${NC}\n" "送金先" "$1"
+  printf "%-8s : ${GREEN}%-15s${NC}\n" "送金額" "$(scale1 $2) ADA"
+  printf "%-8s : ${GREEN}%-15s${NC}\n" "手数料" "$(scale3 $3) ADA"
+  printf "%-8s : ${GREEN}%-15s${NC}\n" "残高額" "$(scale1 $4) ADA"
 
 }
 
@@ -242,6 +239,7 @@ Cli_TxSubmit(){
     if [ -f ${NODE_HOME}/tx.signed ]; then
       FilePathAndHash ${NODE_HOME}/tx.signed
       echo "上記のハッシュ値とエアギャップに表示されてるハッシュ値と照合してください"
+      echo
       Gum_Confirm_YesNo "ハッシュ値は一致していますか？" "Yes" "No"
       if [[ ${iniSettings} == "Yes" ]]; then
         break 1

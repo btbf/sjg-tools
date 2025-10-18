@@ -225,7 +225,7 @@ manageWallet(){
               Cli_CurrentSlot
 
               #ウォレット残高とUTXO参照
-              CheckWallet
+              CheckWallet > /dev/null
               
               #echo UTXOs: ${txcnt}
               tempBalanceAmont=$(( ${total_balance}-${amountToSend} ))
@@ -248,23 +248,22 @@ manageWallet(){
 
               #残高-手数料-出金額
               txOut=$((${total_balance}-${fee}-${amountToSend}))
-              
               tx_Check $destinationAddress $amountToSend $fee ${txOut}
 
               #printf "$rows" "出金後残高:" "$(scale1 ${txOut}) ADA"
 
               #最終トランザクションファイル作成
-              cardano-cli conway transaction build-raw \
-                  ${tx_in} \
-                  --tx-out $(cat $NODE_HOME/$PAYMENT_ADDR_FILENAME)+${txOut} \
-                  --tx-out ${destinationAddress}+${amountToSend} \
-                  --invalid-hereafter $(( ${currentSlot} + 10000)) \
-                  --fee ${fee} \
-                  --out-file $NODE_HOME/tx.raw
+              cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat $NODE_HOME/$PAYMENT_ADDR_FILENAME)+${txOut} --tx-out ${destinationAddress}+${amountToSend} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --out-file $NODE_HOME/tx.raw
               
+              create_airgap_script "paymentアドレス引き出しTx署名ファイル作成"
+              signing_tx_file "payment_address"
+
+              cd ${NODE_HOME} || exit
+              tar -czf airgap-set.tar.gz tx.raw airgap_script
+
               #エアギャップ操作メッセージ
-              message_file_transfer "tx.raw" "一般Tx署名"
-        
+              message_file_transfer "airgap-set.tar.gz" "airgap"
+
               #トランザクション送信
               Cli_TxSubmit
             else
