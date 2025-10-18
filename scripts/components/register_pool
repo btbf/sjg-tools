@@ -59,9 +59,17 @@ registarPool(){
     registar_flag="new"
     poolIdInfo=$(cardano-cli query stake-pools $NODE_NETWORK | grep $(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME}) 2> /dev/null)
     if [[ "$poolIdInfo" != "" ]]; then
+        get_pooldata
+        
         echo
-        echo "プールIDはオンチェーンに登録されています"
+        YellowStyle "オンチェーン登録情報"
+        echo "${pooldata_chk}" | jq -r '.[].meta_json.name' | awk '{print "プール名:"$0}'
         echo "プールID:$(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME})"
+        echo "${pooldata_chk}" | jq -r '.[].margin' | awk '{print "マージン:"$1*100"%"}'
+        echo "${pooldata_chk}" | jq -r '.[].pledge' | awk '{print "プレッジ:"$1/1000000" ADA"}'
+        echo "${pooldata_chk}" | jq -r '.[].cost' | awk '{print "固定費:"$1/1000000" ADA"}'
+        echo "${pooldata_chk}" | jq -r '.[].meta_url' | awk '{print "メタデータURL:"$1}'
+        echo
         registar_flag="renew"
         Gum_Confirm_YesNo "プール情報を変更しますか？" "Yes" "No"
         if [[ ${iniSettings} != "Yes" ]]; then
@@ -69,8 +77,6 @@ registarPool(){
             Gum_OneSelect "メニューへ戻る"
             return
         fi
-        Gum_OneSelect "メニューへ戻る"
-        return
     else
         echo
         echo "プールIDはオンチェーンに登録されていません"
