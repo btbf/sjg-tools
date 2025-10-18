@@ -106,6 +106,11 @@ EOF
 
 Header(){
   echo -e "${CYAN}"
+  color_text="${YELLOW}${1}${NC}"
+  plain_text="${1}"
+
+  width=20
+  pad=$((width - ${#plain_text}))
   cat << "EOF"
   ███████╗██████╗  ██████╗ ██╗  ██╗██╗████████╗
   ██╔════╝██╔══██╗██╔═══██╗██║ ██╔╝██║╚══██╔══╝
@@ -121,7 +126,7 @@ EOF
   echo -e "${YELLOW}ノードタイプ:${NC} ${NODE_TYPE}"
   echo
   echo -e "${WHITE}----------------------------------------------------${NC}"
-  echo -e "                 ${YELLOW}${1}${NC}                         "
+  printf "%*s%b\n" "$pad" "" "$color_text"
   echo -e "${WHITE}----------------------------------------------------${NC}"
   #gum style --align center --width 60 --margin "0 2 1 2" --padding "0 0" "ネットワーク:$(gum style --foreground 011 ${NODE_CONFIG}) | ノードタイプ:$(gum style --foreground 011 ${NODE_TYPE})"
 }
