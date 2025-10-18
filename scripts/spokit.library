@@ -200,12 +200,12 @@ CheckWallet(){
 reward_Balance(){
   if [[ -e "${NODE_HOME}/${STAKE_ADDR_FILENAME}" ]]; then
     echo "■stakeアドレス"
-    printf "${FG_YELLOW}$(cat ${NODE_HOME}/$STAKE_ADDR_FILENAME)${NC}\n\n"
+    printf "${YELLOW}$(cat ${NODE_HOME}/$STAKE_ADDR_FILENAME)${NC}\n\n"
     pool_reward=$(cardano-cli conway query stake-address-info --address "$(cat "${NODE_HOME}/${STAKE_ADDR_FILENAME}")" $NODE_NETWORK | jq .[].rewardAccountBalance)
     #pool_reward=$(cat $PARENT/stake_json.txt | grep rewardAccountBalance | awk '{ print $2 }')
     if [[ -n ${pool_reward} ]]; then
       pool_reward_Amount=$(scale1 ${pool_reward})
-      printf "報酬額:${FG_GREEN}$pool_reward_Amount${NC} ADA ($pool_reward Lovelace)\n"
+      printf "報酬額:${GREEN}$pool_reward_Amount${NC} ADA ($pool_reward Lovelace)\n"
       Gum_OneSelect "戻る"
     else
       echo "報酬はまだ発生していません"
@@ -283,15 +283,15 @@ Cli_TxSubmit(){
       else
         echo "TxID:${tx_id}"
       fi
-      printf "\n${FG_GREEN}Tx送信に成功しました${NC}\n"
+      printf "\n${GREEN}Tx送信に成功しました${NC}\n"
       echo
       #トランザクション確認
-      printf "\n${FG_YELLOW}Tx承認を確認しています。このまましばらくお待ち下さい...${NC}\n\n"
+      printf "\n${YELLOW}Tx承認を確認しています。このまましばらくお待ち下さい...${NC}\n\n"
       while :
         do
         koios_tx_status=$(curl -s -X POST "$KOIOS_API/tx_status" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_tx_hashes\":[\"${tx_id}\"]}" | jq -r '.[].num_confirmations')
         if [[ ${koios_tx_status} != "null" ]] && [ ${koios_tx_status} -gt 1 ]; then
-          printf "確認済みブロック:$koios_tx_status ${FG_GREEN}Txが承認されました${NC}\n\n"
+          printf "確認済みブロック:$koios_tx_status ${GREEN}Txが承認されました${NC}\n\n"
           sleep 3s
           break
         else
@@ -303,7 +303,7 @@ Cli_TxSubmit(){
     else
       echo ${txResult}
       echo
-      printf "${FG_RED}Tx送信に失敗しました${NC}\n"
+      printf "${RED}Tx送信に失敗しました${NC}\n"
       Gum_OneSelect "戻る"
     fi
   else 
