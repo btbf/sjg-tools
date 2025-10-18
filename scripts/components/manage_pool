@@ -26,28 +26,21 @@ blockGenerateCheck(){
       Gum_OneSelect "戻る"
     fi
 
-    active_ST_check(){
-      if [ $1 != 0 ]; then
-        printf "${CYAN}$(scale1 $1)${NC} ADA"
-      else
-        printf "$1 ADA \n (ライブステークが有効になるまでスケジュール割り当てはありません)\n"
-      fi
-    }
     live_Stake=$(cat $NODE_HOME/pooldata.txt | jq -r ".[].live_stake")
     live_Stake=$(scale1 $live_Stake)
     active_Stake=$(cat $NODE_HOME/pooldata.txt | jq -r ".[].active_stake")
-
-    active_Stake=$(active_ST_check $active_Stake)
+    active_Stake=$(scale1 $active_Stake)
     pledge=$(cat $NODE_HOME/pooldata.txt | jq -r ".[].pledge")
     pledge_scale=$(scale1 $pledge)
 
     active_epoch=$(cat $NODE_HOME/pooldata.txt | jq -r ".[].active_epoch_no")
     future_pledge=$(cardano-cli conway query pool-params --stake-pool-id $(cat $NODE_HOME/$POOL_ID_BECH32_FILENAME) | jq .[].futurePoolParams.pledge)
     current_pledge=$(cardano-cli conway query pool-params --stake-pool-id $(cat $NODE_HOME/$POOL_ID_BECH32_FILENAME) | jq .[].poolParams.pledge)
-
   
-    printf "=${PURPLE}[プール情報]${NC}-------------------------------------------------------------------------------\n"
-    printf "${CYAN}[$(cat $NODE_HOME/pooldata.txt | jq -r ".[].meta_json.ticker")] $(cat $NODE_HOME/pooldata.txt | jq -r ".[].meta_json.name")${NC} (${CYAN}$(cat $NODE_HOME/pooldata.txt | jq -r ".[].pool_id_bech32")${NC})\n"
+    YellowStyle "[プール情報]"
+    printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    printf "${CYAN}[$(cat $NODE_HOME/pooldata.txt | jq -r ".[].meta_json.ticker")] $(cat $NODE_HOME/pooldata.txt | jq -r ".[].meta_json.name")${NC}\n(${GRAY}$(cat $NODE_HOME/pooldata.txt | jq -r ".[].pool_id_bech32")${NC})\n"
+    echo
     printf "%-16s : ${CYAN}%s${NC} ADA | %-16s : ${CYAN}%s${NC} \n" "ライブステーク" "$live_Stake" "有効ステーク" "$active_Stake" 
     
     echo
@@ -62,7 +55,8 @@ blockGenerateCheck(){
     cat $NODE_HOME/metaCheck/poolMetaData.json | jq . > $NODE_HOME/metaCheck/metaCheck.json 2>&1
     metaCheck=$(cat $NODE_HOME/metaCheck/metaCheck.json | grep name)
     if [ -z "$metaCheck" ]; then
-      printf "=${PURPLE}[メタデータチェック]${NC} ${RED}NG${NC} -------------------------------------------------------------------\n"
+      printf "${YELLOW}[メタデータチェック]${NC} ${RED}NG${NC}\n"
+      printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
       printf "メタデータ構文エラーです\n"
       echo "サーバー(またはGithub)にアップロードされているpoolMetaData.jsonの構文エラーを修正し"
       echo "プール運用マニュアルの「プール情報更新」で再登録してください"
@@ -70,12 +64,14 @@ blockGenerateCheck(){
     else
       metaFileHash=$(cardano-cli conway stake-pool metadata-hash --pool-metadata-file $NODE_HOME/metaCheck/poolMetaData.json)
       if [ $metaChainHash == $metaFileHash ]; then
-        printf "=${PURPLE}[メタデータチェック]${NC} ${GREEN}OK${NC} -------------------------------------------------------------------\n"
+        printf "${YELLOW}[メタデータチェック]${NC} ${GREEN}OK${NC}\n"
+        printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         printf "%-34s : ${YELLOW}%-64s${NC} \n" "オンチェーンハッシュ" "$metaChainHash"
         printf "%-30s : ${YELLOW}%-64s${NC} \n" "ローカルファイルハッシュ" "$metaFileHash"
         okCnt=$((${okCnt}+1))
       else
-        printf "=${PURPLE}[メタデータチェック]${NC} ${RED}NG${NC} -------------------------------------------------------------------\n"
+        printf "${YELLOW}[メタデータチェック]${NC} ${RED}NG${NC}\n"
+        printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         printf "チェーン登録ハッシュとファイルハッシュが異なります。\n"
         printf "%-34s : ${YELLOW}%s${NC} \n" "オンチェーンハッシュ" "$metaChainHash"
         printf "%-30s : ${YELLOW}%s${NC} \n" "ローカルファイルハッシュ" "$metaFileHash"
@@ -93,21 +89,24 @@ blockGenerateCheck(){
       future_pledge_scale=$(scale1 $future_pledge)
       print_pledge="${YELLOW}$pledge_scale${NC} ADA → ${RED}$future_pledge_scale${NC} ADA ($active_epoch エポックで有効)\n"
     else
-      print_pledge="${YELLOW}$pledge_scale${NC} ADA\n"
+      print_pledge="${YELLOW}${pledge_scale}${NC} ADA\n"
     fi
 
     #誓約チェック
     if [[ $koios_stake_total -ge $pledge ]]; then
       echo
-      printf "=${PURPLE}[誓約チェック]${NC} ${GREEN}OK${NC} -------------------------------------------------------------------------\n"
+      printf "${YELLOW}[誓約チェック]${NC} ${GREEN}OK${NC}\n"
+      printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
       okCnt=$((${okCnt}+1))
     else
       echo
-      printf "=${PURPLE}[誓約チェック]${NC} ${RED}NG${NC} -------------------------------------------------------------------------\n"
-      printf "${YELLOW}payment.addrに宣言済み誓約(Pledge)以上のADAを入金してください${NC}\n"
+      printf "${YELLOW}[誓約チェック]${NC} ${RED}NG${NC}\n"
+      printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+      printf "${RED}payment.addrに宣言済み誓約(Pledge)以上のADAを入金してください${NC}\n"
+      echo
     fi
-      printf "宣言済み誓約　:$print_pledge"
-      printf "委任合計　　　:$(scale1 ${koios_stake_total}) ADA (payment.addr + stake.addr報酬合計)\n"
+      printf "%-10s : %b" "誓約" "${print_pledge}"
+      printf "%-10s : %-8s\n" "委任合計" "$(scale1 ${koios_stake_total}) ADA (payment.addr + stake.addr報酬合計)"
 
    #ノード起動スクリプトファイル名読み取り
     exec_path=$(grep -H "ExecStart" /etc/systemd/system/cardano-node.service)
@@ -124,7 +123,8 @@ blockGenerateCheck(){
     node_pid=$(pgrep -fn "$(basename cardano-node).*.--port ${node_port}")
 
     echo
-    printf "=${PURPLE}[BPファイル存在確認]${NC} ----------------------------------------------------------------------\n"
+    printf "${YELLOW}[BPファイル存在確認]${NC}\n" 
+    printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     if [ $kes_path ]; then
       kes_name=${kes_path##*/}
       if [ -f "$NODE_HOME/$kes_name" ]; then
@@ -187,7 +187,8 @@ blockGenerateCheck(){
       Gum_OneSelect "戻る"
     else
       echo
-      printf "=${PURPLE}[ノード同期状況]${NC} ${GREEN}OK${NC} ----------------------------------------------------------------------\n"
+      printf "${YELLOW}[ノード同期状況]${NC} ${GREEN}OK${NC}\n" 
+      printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
       printf "%-32s : ${YELLOW}%-8s${NC} | %-32s : ${YELLOW}%-8s${NC} \n" "オンチェーン最新ブロック" "$koios_blockNo" "ローカルノード最新ブロック" "$currentblock"
       okCnt=$((${okCnt}+1))
     fi
@@ -245,8 +246,9 @@ blockGenerateCheck(){
       peer_out_judge="OK"
       okCnt=$((${okCnt}+1))
     fi
-    printf "=${PURPLE}[Peer接続状況]${NC} ----------------------------------------------------------------------------\n"
-    printf "%s ${GREEN}%-15s${NC} : ${YELLOW}%-8s${NC} | %s ${GREEN}%-17s${NC} : ${YELLOW}%-8s${NC}\n" "incoming" "$peer_in_judge" "$peers_in" "outgoing" "$peer_out_judge" "$peers_out"
+    printf "${YELLOW}[Peer接続状況]${NC}\n"
+    printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    printf "%s ${GREEN}%-1s${NC} : ${YELLOW}%-3s${NC} | %s ${GREEN}%-1s${NC} : ${YELLOW}%-8s${NC}\n" "incoming" "$peer_in_judge" "$peers_in" "outgoing" "$peer_out_judge" "$peers_out"
 
     chain_Vrf_hash=$(cat $NODE_HOME/pooldata.txt | jq -r ".[].vrf_key_hash")
 
@@ -265,7 +267,8 @@ blockGenerateCheck(){
     fi
 
     echo
-    printf "=${PURPLE}[VRFハッシュ値チェック]${NC} $hash_check ----------------------------------------------------------------\n"
+    printf "${YELLOW}[VRFハッシュ値チェック]${NC} $hash_check\n"
+    printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     printf "%-34s : ${YELLOW}%s${NC} \n" "オンチェーンハッシュ" "$chain_Vrf_hash"
     printf "%-30s : ${YELLOW}%s${NC} \n" "ローカルファイルハッシュ" "$local_vrf_hash"
 
@@ -308,28 +311,29 @@ blockGenerateCheck(){
     fi
 
     echo
-    printf "=${PURPLE}[プール運用証明書チェック]${NC} ($NODE_CERT_FILENAME) $cc --------------------------------\n"
-    printf "%-12s : ${YELLOW}%s/${YELLOW}%s${NC} %s | %-12s : ${YELLOW}%s${NC}日 | %s : %s ${GREEN}%s${NC}" "カウンター" "$chain_cert_counter" "$local_cert_counter" "(オンチェーン/CERTファイル)" "KES残日数" "$kes_days" "KES整合性" "$kes_int" "$kic"
-    echo
+    printf "${YELLOW}[プール運用証明書チェック]${NC} ($NODE_CERT_FILENAME) $cc\n"
+    printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    printf "%-12s : ${YELLOW}%s${NC}日 | %s : %s ${GREEN}%s${NC}\n" "KES残日数" "$kes_days" "KES整合性" "$kes_int" "$kic"
+    printf "%-12s : ${YELLOW}%s/${YELLOW}%s${NC} %s\n" "カウンター" "$chain_cert_counter" "$local_cert_counter" "(オンチェーン/CERTファイル)"
     printf "%-31s : ${YELLOW}%s${NC} \n" "証明書KESハッシュ" "$cert_cborHex"
     printf "%-32s : ${YELLOW}%s${NC} \n" "KESファイルKESハッシュ" "$kes_cborHex"
     echo
     if [ $mempool_CHK == "false" ]; then
-      echo -e "----${YELLOW}確認${NC}--------------------------------------------------------------"
+      echo -e "----${YELLOW}確認${NC}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       printf "$CONFIGのTraceMempoolが${YELLOW}false${NC}になっています\n"
       printf "正確にチェックする場合は${GREEN}true${NC}へ変更し、ノード再起動後再度チェックしてください\n"
-      echo "--------------------------------------------------------------------"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       echo
     fi
 
     if [ $okCnt -eq 13 ]; then
-      echo -e "----${GREEN}OK${NC}--------------------------------------------------------"
+      echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       printf " > 全ての項目が ${GREEN}OK${NC} になりブロック生成の準備が整いました！\n"
-      echo "--------------------------------------------------------------"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     else
-      echo -e "----${RED}NG${NC}--------------------------------------------------------"
+      echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       printf " > 1つ以上 ${RED}NG${NC} がありました。プール構成を見直してください\n"
-      echo "--------------------------------------------------------------"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     fi
     Gum_OneSelect "戻る"
 }
@@ -340,15 +344,15 @@ managePool(){
         clear
         Header "プール情報管理メニュー"
         # selection=$(gum choose --header.foreground="244" --header="" --height=12 --no-show-help "1.ノードインストール ${installCheck}" "2.プールメタデータ作成 ${metaDataCheck}" "3.トポロジー設定" "4.プールキー作成${bpKeyCreateCheck}" "5.運用ウォレット準備${walletCheck}" "6.ステークアドレス登録" "7.プール登録" "8.監視ツールインストール" "メインメニュー")
-        manage_pool_select=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] KES更新" "[2] ブロック生成状態チェック" "[3] トポロジー変更" "[4] プールメタデータ変更" "[5] プール登録証明書変更" "[q] 終了")
+        manage_pool_select=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ブロック生成状態チェック" "[2] KES更新" "[3] トポロジー変更" "[4] プールメタデータ変更" "[5] プール登録証明書変更" "[q] 終了")
         case $manage_pool_select in
         
-        "[1] KES更新" )
-        ManagementKes "renewal"
+        "[1] ブロック生成状態チェック" )
+        blockGenerateCheck
         ;;
 
-        "[2] ブロック生成状態チェック" )
-        blockGenerateCheck
+        "[2] KES更新" )
+        ManagementKes "renewal"
         ;;
 
         "[3] トポロジー変更" )
