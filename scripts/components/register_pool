@@ -59,11 +59,9 @@ registerStakeadd(){
 
 registarPool(){
     #プールIDオンチェーン確認
-    registar_flag="new"
     poolIdInfo=$(cardano-cli query stake-pools $NODE_NETWORK | grep $(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME}) 2> /dev/null)
     if [[ "$poolIdInfo" != "" ]]; then
         get_pooldata
-        
         echo
         YellowStyle "オンチェーン登録情報"
         echo "${pooldata_chk}" | jq -r '.[].meta_json.name' | awk '{print "プール名:"$0}'
@@ -73,10 +71,15 @@ registarPool(){
         echo "${pooldata_chk}" | jq -r '.[].cost' | awk '{print "固定費:"$1/1000000" ADA"}'
         echo "${pooldata_chk}" | jq -r '.[].meta_url' | awk '{print "メタデータURL:"$1}'
         echo
-        registar_flag="renew"
-        Gum_Confirm_YesNo "プール情報を変更しますか？" "Yes" "No"
-        if [[ ${iniSettings} != "Yes" ]]; then
+        if [[ ${1} == "renewal" ]]; then
+            Gum_Confirm_YesNo "プール情報を変更しますか？" "Yes" "No"
+            if [[ ${iniSettings} != "Yes" ]]; then
             echo "キャンセルされました"
+            Gum_OneSelect "メニューへ戻る"
+            return
+            fi
+        else
+            echo "プールIDは既にオンチェーンに登録されています"
             Gum_OneSelect "メニューへ戻る"
             return
         fi
@@ -86,7 +89,6 @@ registarPool(){
         style "プールID:" "$(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME})"
         echo
         Gum_Confirm_YesNo "プール登録を続行しますか？" "Yes" "No"
-        registar_flag="new"
         if [[ ${iniSettings} != "Yes" ]]; then
             echo "キャンセルされました"
             Gum_OneSelect "メニューへ戻る"
@@ -103,7 +105,7 @@ registarPool(){
     CheckWallet
     currentSlot=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
     
-    case $registar_flag in
+    case ${1} in
     "new" )
         cat >> "${NODE_HOME}/airgap_script" << EOF
         #新規登録
@@ -114,7 +116,7 @@ registarPool(){
         txOut=\$((${total_balance}-\${poolDeposit}-\${fee}))
 EOF
     ;;
-    "renew" )
+    "renewal" )
         cat >> "${NODE_HOME}/airgap_script" << EOF
         #登録変更
         cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${total_balance} --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee 200000 --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.tmp

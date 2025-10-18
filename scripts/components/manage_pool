@@ -364,7 +364,7 @@ managePool(){
         ;;
 
         "[5] プール登録証明書変更" )
-        registarPool
+        registarPool "renewal"
         ;;
 
         "[b] 戻る" )
