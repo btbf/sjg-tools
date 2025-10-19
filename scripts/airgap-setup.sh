@@ -48,14 +48,17 @@ Main(){
     fi
 
     #環境変数確認
-    if [[ -d ${NODE_HOME} ]]; then
-        echo export NODE_HOME=$HOME/cnode >> $HOME/.bashrc
-        echo export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> $HOME/.bashrc
-        echo alias airgap="'cd $NODE_HOME; tar -xOzf airgap-set.tar.gz airgap_script | bash -s verify'" >> $HOME/.bashrc
-        echo "環境変数を設定しました。"
-        mkdir -p $NODE_HOME
-        echo "プール作業ディレクトリを作成しました"
-        echo $NODE_HOME
+    if ! alias airgap >/dev/null 2>&1; then
+        echo alias airgap="'cd $HOME/cnode; tar -xOzf airgap-set.tar.gz airgap_script | bash -s verify'" >> $HOME/.bashrc
+        if [[ ! -d $HOME/cnode ]]; then
+            echo PATH="$HOME/.local/bin:$PATH" >> $HOME/.bashrc
+            echo export NODE_HOME=$HOME/cnode >> $HOME/.bashrc
+            echo export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> $HOME/.bashrc
+            mkdir -p $HOME/cnode
+            echo "プール作業ディレクトリを作成しました"
+            echo "$HOME/cnode"
+        fi
+        echo "環境変数を設定しました"
     else
         echo "環境変数は設定済みです"
     fi
