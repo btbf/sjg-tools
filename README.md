@@ -6,7 +6,7 @@
   <br>
   <a href=https://spokit.spojapanguild.net/ ><img src="https://github.com/btbf/sjg-tools/blob/main/docs/images/spokit-logo-big.png?raw=true" width=500></a>
 </p>
-<p align="center">SPOKITはノーコマンドでカルダノステークプールを構築・管理できるSPO TOOLKITです！<br>
+<p align="center">SPOKITはノーコマンドでカルダノステークプールを構築・管理できるCARDANO SPO TOOL KITです！<br>
 Linux初級者から上級者までステークプール運営にかかる工数を削減します。</p>
 
 
