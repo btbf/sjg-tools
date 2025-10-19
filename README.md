@@ -1,22 +1,22 @@
 # SPOKIT
 
-SPOKIT v0.3.9
-※現時点でのご利用はテストネットを推奨します。プール運用機能に関しては既知のバグが残っております。v0.4.0で解消予定です。
+SPOKIT v0.4.0
 
-## 推奨スペック
-```
-- OS: ubunt22.04
-- RAM: 24GB
-- STRAGE: 500GB
-- sudo権限を持つ任意ユーザーでログイン
-```
+## インストール前の準備物
+- Ubuntuサーバー(メインネットの場合は最低3台)
+- エアギャップマシン
+- 各マシンはsudo権限を持つ一般ユーザーでログイン
+- ターミナルソフト(R-Login/Termius/etc...)
+- SFTPソフト(FileZilla/etc...)
 
-### インストール前の準備物
-- オフラインエアギャップマシン
-```
-airgap-setup.shを実行してセットアップ
-```
-- Ubuntuサーバー
+## 推奨サーバースペック
+項目 | BP/リレー | エアギャプ |
+|-----|-----|-----|
+OS | Ubuntu22.04 | Win/Mac/Ubuntu
+RAM | 24GB以上 | 8GB以上 |
+SSD | 500GB以上 | 100GB以上 |
+
+## プール用サーバーセットアップ
 
 ### インストール
 ```
@@ -42,4 +42,22 @@ spokit pool
 ③プール運用
 ```
 spokit
+```
+
+## エアギャップセットアップ
+
+```
+**Win/Macの場合は以下手順でUbuntu仮想環境を作成する**
+仮想環境セットアップ手順
+https://docs.spojapanguild.net/setup/air-gap-guid/
+```
+
+### インストール
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/main/scripts/airgap-setup.sh)"
+```
+
+### 環境変数再読み込み
+```
+source $HOME/.bashrc
 ```
