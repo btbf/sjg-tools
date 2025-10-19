@@ -3,11 +3,13 @@
   <a href="https://github.com/btbf/sjg-tools/releases">
     <img src="https://img.shields.io/github/release-pre/btbf/sjg-tools.svg?style=for-the-badge" />
   </a>
+  <br>
+  <a href=https://spokit.spojapanguild.net/ ><img src="https://github.com/btbf/sjg-tools/blob/main/docs/images/spokit-logo-big.png?raw=true" width=500></a>
 </p>
-![](https://github.com/btbf/sjg-tools/blob/main/docs/images/spokit-logo-big.png?raw=true)
+<p align="center">SPOKITはノーコマンドでカルダノステークプールを構築・管理できるSPO TOOLKITです！<br>
+Linux初級者から上級者までステークプール運営にかかる工数を削減します。</p>
 
-SPOKITはノーコマンドでカルダノステークプールを構築・管理できるSPO TOOLKITです！
-Linux初級者から上級者までステークプール運営にかかる工数を削減します。
+
 
 ## インストール前の準備物
 - Ubuntuサーバー(メインネットの場合は最低3台)
