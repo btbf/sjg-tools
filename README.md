@@ -4,7 +4,7 @@
     <img src="https://img.shields.io/github/release-pre/btbf/sjg-tools.svg?style=for-the-badge" />
   </a>
 </p>
-![](/docs/images/spokit-logo-big.png)
+![](https://github.com/btbf/sjg-tools/blob/main/docs/images/spokit-logo-big.png?raw=true)
 
 SPOKITはノーコマンドでカルダノステークプールを構築・管理できるSPO TOOLKITです！
 Linux初級者から上級者までステークプール運営にかかる工数を削減します。
