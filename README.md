@@ -1,6 +1,13 @@
 # SPOKIT
+<p align="center">
+  <a href="https://github.com/btbf/sjg-tools/releases">
+    <img src="https://img.shields.io/github/release-pre/btbf/sjg-tools.svg?style=for-the-badge" />
+  </a>
+</p>
+![](/docs/images/spokit-logo-big.png)
 
-SPOKIT v0.4.0
+SPOKITはノーコマンドでカルダノステークプールを構築・管理できるSPO TOOLKITです！
+Linux初級者から上級者までステークプール運営にかかる工数を削減します。
 
 ## インストール前の準備物
 - Ubuntuサーバー(メインネットの場合は最低3台)
