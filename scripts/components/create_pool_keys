@@ -181,25 +181,19 @@ ManagementKes(){
     ;;
 
     "renewal" )
-        echo '------------------------------------------------------------------------'
-        echo "KES作成(更新)作業にはブロックプロデューサーとエアギャップを使用します"
         echo
-        echo -e "■ 実行フロー"
-        echo ' 1.KESファイル/CERTファイル作成(バックアップ)'
-        echo ' 2.新規KESファイル作成'
-        echo " 3.KESファイルをエアギャップへコピー"
-        echo ' 4.エアギャップ操作/CERTファイルBPコピー(手動)'
-        echo ' 5.ノード再起動'
-        echo '------------------------------------------------------------------------'
-        echo
-        echo "KESファイルを更新する前に、1時間以内にブロック生成スケジュールが無いことを確認してください"
+        ErrorStyle "1時間以内にブロック生成スケジュールが無いことを確認してください"
         echo
         Gum_Confirm_YesNo "KES更新作業を開始しますか？" "Yes" "最初からやり直す場合はツールを再実行してください"
 
         #KESファイル作成
         create_airgap_script "KES更新"
         createKes ${1}
-
+        if [[ $iniSettings != "Yes" ]]; then
+            echo "KES更新作業を中止しました"
+            Gum_OneSelect "戻る"
+            return 1
+        fi
         MagentaStyle "■エアギャップ転送ファイル作成"
         tar -czvf airgap-set.tar.gz ${KES_VKEY_FILENAME} ${KES_SKEY_FILENAME} airgap_script
         echo "エアギャップ転送ファイル(airgap-set.tar.gz)を作成しました"

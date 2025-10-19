@@ -94,7 +94,7 @@ NodeDownload(){
     LglayStyle "ノードインストール開始"
     mkdir -p ${HOME}/git/cardano-node
     cd ${HOME}/git/cardano-node || exit
-    wget -q "https://github.com/IntersectMBO/cardano-node/releases/download/${1}/cardano-node-${1}-linux.tar.gz"
+    wget -q "$nodeBinary_URL"
     tar zxvf "cardano-node-${1}-linux.tar.gz" ./bin/cardano-node ./bin/cardano-cli > /dev/null 2>&1
     sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-cli")" /usr/local/bin/cardano-cli
     sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-node")" /usr/local/bin/cardano-node

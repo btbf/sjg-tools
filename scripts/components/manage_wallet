@@ -13,7 +13,7 @@ send_address(){
         if { [ ${NODE_CONFIG} = "mainnet" ] && [[ "$destinationAddress" != *_test* ]]; } || { [ ${NODE_CONFIG} != "mainnet" ] && [[ "$destinationAddress" = *_test* ]]; } ; then
           echo
           echo '------------------------------------------------'
-          printf "出金先: ${FG_GREEN}$destinationAddress${NC}\n"
+          printf "出金先: ${GREEN}$destinationAddress${NC}\n"
           echo '------------------------------------------------'
           echo
 
@@ -21,28 +21,27 @@ send_address(){
           if [ $iniSettings = "Yes" ]; then
               break 1
           else
-            printf "\n${FG_RED}$iniSettings${NC}\n\n"
+            printf "\n${RED}$iniSettings${NC}\n\n"
             continue 1
           fi
 
         else
-          printf "\n${FG_RED}現在のネットワーク${NC}(${FG_GREEN}${NODE_CONFIG}${NC})${FG_RED}と異なるアドレスが入力されました。再度ご確認ください${NC}\n"
+          printf "\n${RED}現在のネットワーク${NC}(${GREEN}${NODE_CONFIG}${NC})${RED}と異なるアドレスが入力されました。再度ご確認ください${NC}\n"
         fi
       elif [ "$destinationAddress" == "1" ]; then
-        printf "\n${FG_YELLOW}出金手続きをキャンセルしました${NC}\n"
+        printf "${YELLOW}出金手続きをキャンセルしました${NC}\n"
         Gum_OneSelect "戻る"
         manageWallet
       elif [ -z $destinationAddress ]; then
-        printf "\n${FG_RED}出金先アドレスを再度入力してください${NC}\n\n"
+        printf "\n${RED}出金先アドレスを再度入力してください${NC}\n\n"
       else
       #adahandle
         adahandleADDRESS=$(adahandleConvert $destinationAddress)
         #echo $adahandleADDRESS
         if [ -n "$adahandleADDRESS" ]; then
-          echo
           echo '------------------------------------------------'
-          printf "ADA Handle　　: ${FG_YELLOW}$destinationAddress${NC}\n"
-          printf "出金先アドレス: ${FG_GREEN}$adahandleADDRESS${NC}\n"
+          printf "ハンドル: ${YELLOW}\$$destinationAddress${NC}\n"
+          printf "アドレス: ${GREEN}$adahandleADDRESS${NC}\n"
           echo '------------------------------------------------'
           echo
           destinationAddress=$adahandleADDRESS
@@ -50,11 +49,11 @@ send_address(){
           if [ $iniSettings = "Yes" ]; then
               break 1
           else
-            printf "\n${FG_RED}$iniSettings${NC}\n\n"
+            printf "\n${RED}$iniSettings${NC}\n\n"
             continue 1
           fi
         else
-          printf "\n${FG_RED}ADAHandleが見つかりません。再度入力してください${NC}\n\n"
+          printf "\n${RED}ADAHandleが見つかりません。再度入力してください${NC}\n\n"
           continue 1
         fi
       fi
@@ -75,7 +74,6 @@ manageWallet(){
     select=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット残高確認" "[2] プール報酬確認" "[3] 報酬/資金出金" "[b] 戻る" "[q] 終了")
     case $select in
       "[1] ウォレット残高確認" )
-        echo
         if [[ -e "${NODE_HOME}/${PAYMENT_ADDR_FILENAME}" ]]; then
 
           CheckWallet
@@ -104,7 +102,7 @@ manageWallet(){
             clear
             echo '------------------------------------------------------------------------'
             echo "資金移動"
-            echo -e ">> ${FG_YELLOW}$STAKE_ADDR_FILENAME${NC} から ${FG_YELLOW}任意のアドレス(ADAHandle)${NC} への出金"
+            echo -e ">> ${YELLOW}$STAKE_ADDR_FILENAME${NC} から ${YELLOW}任意のアドレス(ADAHandle)${NC} への出金"
             echo
             echo "■ 注意 ■"
             echo "報酬は全額引き出しのみとなります"
@@ -114,10 +112,10 @@ manageWallet(){
               #stake.addr残高算出
               echo
               reward_Balance
-							if [[ -z ${pool_reward} ]]; then
-								break
+							if [[ -z ${pool_reward} ]] || [[ $pool_reward == 0 ]]; then
+								break 1
 							fi
-              printf "\n${FG_YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n\n"
+              printf "\n${YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n"
               #出金先アドレスチェック
               send_address
 
@@ -185,22 +183,21 @@ manageWallet(){
             clear
             echo '------------------------------------------------------------------------'
             echo "資金移動"
-            echo -e ">> ${FG_YELLOW}$PAYMENT_ADDR_FILENAME${NC} から ${FG_YELLOW}任意のアドレス(ADAHandle)${NC} への出金"
+            echo -e ">> ${YELLOW}$PAYMENT_ADDR_FILENAME${NC} から ${YELLOW}任意のアドレス(ADAHandle)${NC} への出金"
             echo
-            echo "■ 注意 ■"
+            echo -e"${RED}■ 注意 ■${NC}"
             echo "$PAYMENT_ADDR_FILENAMEには誓約で設定した額以上のADAが入金されてる必要があります"
             echo "出金には十分ご注意ください"
             echo '------------------------------------------------------------------------'
-            printf "${FG_YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n\n"
+            printf "${YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n"
             if [ -f "$NODE_HOME/$PAYMENT_ADDR_FILENAME" ]; then
               #出金先アドレスチェック
-              echo
               send_address
               
               #出金額指定
               clear
               echo '------------------------------------------------------------------------'
-              echo -e ">> ${FG_YELLOW}$PAYMENT_ADDR_FILENAME${NC} から ${FG_YELLOW}任意のアドレス(ADAHandle)${NC} への出金"
+              echo -e ">> ${YELLOW}$PAYMENT_ADDR_FILENAME${NC} から ${YELLOW}任意のアドレス(ADAHandle)${NC} への出金"
               echo '------------------------------------------------------------------------'
               echo
               echo "出金額をlovelaces形式で入力してください"
@@ -226,7 +223,7 @@ manageWallet(){
               Cli_CurrentSlot
 
               #ウォレット残高とUTXO参照
-              CheckWallet
+              CheckWallet > /dev/null
               
               #echo UTXOs: ${txcnt}
               tempBalanceAmont=$(( ${total_balance}-${amountToSend} ))
@@ -249,23 +246,22 @@ manageWallet(){
 
               #残高-手数料-出金額
               txOut=$((${total_balance}-${fee}-${amountToSend}))
-              
               tx_Check $destinationAddress $amountToSend $fee ${txOut}
 
               #printf "$rows" "出金後残高:" "$(scale1 ${txOut}) ADA"
 
               #最終トランザクションファイル作成
-              cardano-cli conway transaction build-raw \
-                  ${tx_in} \
-                  --tx-out $(cat $NODE_HOME/$PAYMENT_ADDR_FILENAME)+${txOut} \
-                  --tx-out ${destinationAddress}+${amountToSend} \
-                  --invalid-hereafter $(( ${currentSlot} + 10000)) \
-                  --fee ${fee} \
-                  --out-file $NODE_HOME/tx.raw
+              cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat $NODE_HOME/$PAYMENT_ADDR_FILENAME)+${txOut} --tx-out ${destinationAddress}+${amountToSend} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --out-file $NODE_HOME/tx.raw
               
+              create_airgap_script "paymentアドレス引き出しTx署名ファイル作成"
+              signing_tx_file "payment_address"
+
+              cd ${NODE_HOME} || exit
+              tar -czf airgap-set.tar.gz tx.raw airgap_script
+
               #エアギャップ操作メッセージ
-              message_file_transfer "tx.raw" "一般Tx署名"
-        
+              message_file_transfer "airgap-set.tar.gz" "airgap"
+
               #トランザクション送信
               Cli_TxSubmit
             else
@@ -287,7 +283,7 @@ manageWallet(){
         done
         ;;
       "[b] 戻る" )
-      Cnm_main
+      break
       ;;
       "[q] 終了" )
       tmux kill-session -t spokit

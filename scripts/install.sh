@@ -93,6 +93,7 @@ NC='\033[0m' # No Color
 
 if [[ $whoami = "root" ]]; then
     echo -e "${RED}rootユーザーでは実行できません${NC}"
+    echo "一般ユーザーで再度実行してください"
     exit 1
 fi
 
@@ -116,8 +117,9 @@ EOF
     echo -e "${GREEN}関連ライブラリをインストールしました${NC}"
 else
     echo -e ${YELLOW}"Spokitはすでにインストールされています${NC}"
-    echo -e "${GREEN}spokit${NC} または ${GREEN}spokit setup${NC} で起動するかご確認ください"
+    echo -e "${GREEN}spokit${NC} または ${GREEN}spokit pool${NC} で起動するかご確認ください"
     echo
+    read -p "インストールを終了するにはEnterキーを押してください..."
 fi
 
 
@@ -132,7 +134,7 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
         sync_network=${NODE_CONFIG}
     else
         NODE_TYPE=$(gum choose --header.foreground="244" --header="セットアップノードタイプを選択して下さい" "ブロックプロデューサー" "リレー" --no-show-help)
-        sync_network=$(gum choose --header.foreground="244" --header="接続ネットワークを選択してください" --no-show-help "Mainnet" "Preview-Testnet" "Preprod-Testnet" "Sancho-net")
+        sync_network=$(gum choose --header.foreground="244" --header="接続ネットワークを選択してください" --no-show-help "Mainnet" "Preview-Testnet" "Preprod-Testnet")
         work_dir=$(gum input --value "${HOME}/cnode" --width=0 --no-show-help --header.foreground="244" --header="プール作業ディレクトリを作成します。デフォルトの場合はそのままEnterを押して下さい" --header.foreground="99" --placeholder "${HOME}/cnode")
     fi
 
@@ -196,12 +198,6 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             CARDANO_NODE_NETWORK_ID=1
             KOIOS_DOMAIN="https://preprod.koios.rest/api/v1"
         ;;
-        "Sancho-net" )
-            NODE_CONFIG=sanchonet
-            NODE_NETWORK='"--testnet-magic 4"'
-            CARDANO_NODE_NETWORK_ID=4
-            KOIOS_DOMAIN="https://sancho.koios.rest/api/v1"
-        ;;
     esac
 
     style "ノードタイプ:" "${NODE_TYPE}"
@@ -220,6 +216,7 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             echo export NODE_HOME="${HOME}"/cnode >> "${HOME}"/.bashrc
             echo export NODE_CONFIG="${NODE_CONFIG}" >> "${HOME}"/.bashrc
             echo export NODE_NETWORK="${NODE_NETWORK}" >> "${HOME}"/.bashrc
+            echo export CARDANO_NODE_NETWORK_ID="${CARDANO_NODE_NETWORK_ID}" >> "${HOME}"/.bashrc
             echo export CARDANO_NODE_SOCKET_PATH="$NODE_HOME/db/socket" >> $HOME/.bashrc
             echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
             echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
@@ -230,8 +227,6 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             echo alias cnstop='"sudo systemctl stop cardano-node"' >> $HOME/.bashrc
             echo alias cnreload='"pkill -HUP cardano-node"' >> $HOME/.bashrc
             echo alias glive="'cd $NODE_HOME/scripts; ./gLiveView.sh'" >> $HOME/.bashrc
-            
-
         else
             echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
             echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc

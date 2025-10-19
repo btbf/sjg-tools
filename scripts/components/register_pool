@@ -35,7 +35,10 @@ registerStakeadd(){
         txOut=$((${total_balance}-${stakeAddressDeposit}-${fee}))
         Gum_DotSpinner3 "トランザクションを構築しています"
         cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat ${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${txOut} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --certificate-file ${NODE_HOME}/${STAKE_CERT_FILENAME} --out-file ${NODE_HOME}/tx.raw
-        signStakeAddressTx
+        
+        create_airgap_script "ステークアドレス委任Tx署名ファイル作成"
+        signing_tx_file "stake_address"
+
         cd ${NODE_HOME} || exit
         tar -czvf airgap-set.tar.gz tx.raw airgap_script
         if [ $? -eq 0 ]; then
@@ -56,28 +59,36 @@ registerStakeadd(){
 
 registarPool(){
     #プールIDオンチェーン確認
-    registar_flag="new"
     poolIdInfo=$(cardano-cli query stake-pools $NODE_NETWORK | grep $(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME}) 2> /dev/null)
     if [[ "$poolIdInfo" != "" ]]; then
+        get_pooldata
         echo
-        echo "プールIDはオンチェーンに登録されています"
+        YellowStyle "オンチェーン登録情報"
+        echo "${pooldata_chk}" | jq -r '.[].meta_json.name' | awk '{print "プール名:"$0}'
         echo "プールID:$(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME})"
-        registar_flag="renew"
-        Gum_Confirm_YesNo "プール情報を変更しますか？" "Yes" "No"
-        if [[ ${iniSettings} != "Yes" ]]; then
+        echo "${pooldata_chk}" | jq -r '.[].margin' | awk '{print "マージン:"$1*100"%"}'
+        echo "${pooldata_chk}" | jq -r '.[].pledge' | awk '{print "プレッジ:"$1/1000000" ADA"}'
+        echo "${pooldata_chk}" | jq -r '.[].cost' | awk '{print "固定費:"$1/1000000" ADA"}'
+        echo "${pooldata_chk}" | jq -r '.[].meta_url' | awk '{print "メタデータURL:"$1}'
+        echo
+        if [[ ${1} == "renewal" ]]; then
+            Gum_Confirm_YesNo "プール情報を変更しますか？" "Yes" "No"
+            if [[ ${iniSettings} != "Yes" ]]; then
             echo "キャンセルされました"
             Gum_OneSelect "メニューへ戻る"
             return
+            fi
+        else
+            echo "プールIDは既にオンチェーンに登録されています"
+            Gum_OneSelect "メニューへ戻る"
+            return
         fi
-        Gum_OneSelect "メニューへ戻る"
-        return
     else
         echo
         echo "プールIDはオンチェーンに登録されていません"
         style "プールID:" "$(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME})"
         echo
         Gum_Confirm_YesNo "プール登録を続行しますか？" "Yes" "No"
-        registar_flag="new"
         if [[ ${iniSettings} != "Yes" ]]; then
             echo "キャンセルされました"
             Gum_OneSelect "メニューへ戻る"
@@ -94,7 +105,7 @@ registarPool(){
     CheckWallet
     currentSlot=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
     
-    case $registar_flag in
+    case ${1} in
     "new" )
         cat >> "${NODE_HOME}/airgap_script" << EOF
         #新規登録
@@ -105,7 +116,7 @@ registarPool(){
         txOut=\$((${total_balance}-\${poolDeposit}-\${fee}))
 EOF
     ;;
-    "renew" )
+    "renewal" )
         cat >> "${NODE_HOME}/airgap_script" << EOF
         #登録変更
         cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${total_balance} --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee 200000 --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.tmp
@@ -119,7 +130,7 @@ EOF
     sleep 3
     cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+\${txOut} --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee \${fee} --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.raw
 EOF
-    signPoolRegisterTx
+    signing_tx_file "pool_register"
     cd ${NODE_HOME} || exit
     tar -czvf airgap-set.tar.gz poolMetaDataHash.txt params.json airgap_script | awk '{print $NF}' | paste -sd " / " -
     if [ $? -eq 0 ]; then

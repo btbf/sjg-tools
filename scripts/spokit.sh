@@ -60,7 +60,7 @@ PoolSetupMenu(){
         ;;
 
         "[7] プール登録" )
-            registarPool
+            registarPool "new"
         ;;
 
         "[8] 監視ツールセットアップ" )
@@ -115,7 +115,7 @@ CnmMain(){
       do
       clear
       Header $headerTitle
-      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット管理" "[2] プール情報管理" "[3] ノードバージョンアップ" "[q] 終了")
+      selection=$(gum filter --height=12 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ウォレット管理" "[2] プール情報管理" "[q] 終了")
       case $selection in
         "[1] ウォレット管理" )
         manageWallet
@@ -124,16 +124,7 @@ CnmMain(){
         "[2] プール情報管理" )
         managePool
         ;;
-
-        "[3] ノードバージョンアップ" )
-        echo "機能実装まで今しばらくお待ち下さい"
         
-        #NodeVirsionUp
-        ;;
-
-        # "[3] ガバナンス管理" )
-        # ;;
-
         "[q] 終了" )
           tmux kill-session -t spokit
         ;;
@@ -146,14 +137,9 @@ CnmMain(){
       do
       clear
       Header $headerTitle
-      selection=$(gum filter --height=6 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] ノードバージョンアップ" "[2] トポロジー変更" "[q] 終了")
+      selection=$(gum filter --height=6 --no-show-help --header.foreground="075" --indicator=">" --placeholder="番号選択も可..." --prompt="◉ " "[1] トポロジー変更" "[q] 終了")
       case $selection in
-        "[1] ノードバージョンアップ" )
-          echo "機能実装まで今しばらくお待ち下さい"
-          #NodeVirsionUp
-        ;;
-
-        "[2] トポロジー変更" )
+        "[1] トポロジー変更" )
             topologyManagement
         ;;
 
