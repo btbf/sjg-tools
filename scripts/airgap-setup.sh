@@ -48,17 +48,16 @@ Main(){
     fi
 
     #環境変数確認
-    if [[ -z ${NODE_HOME} ]]; then
+    if [[ -d ${NODE_HOME} ]]; then
         echo export NODE_HOME=$HOME/cnode >> $HOME/.bashrc
         echo export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> $HOME/.bashrc
         echo alias airgap="'cd $NODE_HOME; tar -xOzf airgap-set.tar.gz airgap_script | bash -s verify'" >> $HOME/.bashrc
-        source $HOME/.bashrc
         echo "環境変数を設定しました。"
         mkdir -p $NODE_HOME
         echo "プール作業ディレクトリを作成しました"
         echo $NODE_HOME
     else
-        echo "環境変数は設定済みです。"
+        echo "環境変数は設定済みです"
     fi
 
     #cardano-cliインストール
@@ -79,6 +78,13 @@ Main(){
         echo -e "${RED}cardano-cliのダウンロードに失敗しました。 インターネット接続を確認してください。${NC}"
         exit 1
     fi
+
+    DotSpinner3 "エアギャップ初期設定を終了します"
+    echo
+    echo -e "${RED}①下記コマンドを実行して環境変数を再読み込みしてください${NC}"
+    echo "------------------------"
+    echo "source $HOME/.bashrc"
+    echo "------------------------"
 }
 
 Main
