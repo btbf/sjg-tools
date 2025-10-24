@@ -8,7 +8,6 @@ clear
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
 gum_version="0.16.2"
-spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
 
 source ${HOME}/.bashrc
 
@@ -69,10 +68,9 @@ view_title_logo(){
 ╚══════╝╚═╝      ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝ 
 EOF
     echo -e "${NC}"
-    echo -e "${GREEN}                   ${1}                    ${NC}"
     echo -e "${WHITE}============================================${NC}"
     echo -e "${CYAN}           Cardano SPO Tool Kit              ${NC}"
-    echo -e "${YELLOW}         ${2}                           ${NC}"
+    echo -e "${YELLOW}         ${1}                           ${NC}"
     echo -e "${WHITE}============================================${NC}"
 }
 
@@ -102,10 +100,11 @@ if [[ ! -d $SPOKIT_INST_DIR ]]; then
 cat > ~/.tmux.conf << EOF
 set -g default-terminal "screen-256color"
 EOF
-    view_title_logo "${spokit_version}" "ライブラリインストール"
+    view_title_logo "ライブラリインストール"
     #ライブラリインストール
     printf "管理者(sudo)パスワードを入力してください\n"
     echo
+    sudo apt update && sudo apt upgrade -y
     sudo apt install git jq bc ccze automake tmux htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
     if [ ! -f "/usr/bin/gum" ]; then
         sudo mkdir -p /etc/apt/keyrings
@@ -126,6 +125,7 @@ fi
 ##------初期設定
 clear
 if [ ! -d "${SPOKIT_HOME}" ]; then
+    spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | awk -F'"' '/tag_name/ {print $4}')"
     view_title_logo "${spokit_version}" "ノードセットアップ初期設定"
 
     if [ -d "${NODE_HOME}" ]; then 
@@ -142,7 +142,7 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
     UFW_STATUS=$(sudo ufw status | grep -i "Status:" | awk '{print $2}')
     if [ "${UFW_STATUS}" != "active" ]; then
         echo -e "${YELLOW}UFW(内部ファイアウォール)が無効になっています。${NC}"
-        gum confirm "UFWを有効にしますか？" --default=true --no-show-help --affirmative="はい" --negative="いいえ" && UFW_STATUS="enabled" || UFW_STATUS="disabled"
+        UFW_STATUS="disabled"
     else
         echo -e "${GREEN}UFW(内部ファイアウォール)は有効になっています${NC}"
         UFW_STATUS="enabled"
@@ -168,12 +168,11 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
     fi
     rm spokit.tar.gz
     sudo mkdir -p ${SPOKIT_INST_DIR}
-    #cd sjg-tools-${spokit_version}/scripts
-    cd $HOME/sjg-tools/scripts
+    cd sjg-tools-${spokit_version}/scripts
     sudo cp -pR ./* ${SPOKIT_INST_DIR}
 
-    chmod 755 spokit_run.sh
-    chmod 755 spokit.sh
+    chmod 755 ${SPOKIT_INST_DIR}/spokit_run.sh
+    chmod 755 ${SPOKIT_INST_DIR}/spokit.sh
 
     printf "${YELLOW}SPOKITをインストールしました${NC}\n"
     rm -rf $HOME/git/sjg-tools-${spokit_version}

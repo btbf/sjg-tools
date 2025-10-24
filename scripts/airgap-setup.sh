@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091,SC2086,SC1001,SC2317
 # shellcheck source="$HOME/.bashrc"
+shopt -s expand_aliases
+source ~/.bashrc 2>/dev/null
 
 clear
 spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
@@ -63,26 +65,53 @@ Main(){
         echo "環境変数は設定済みです"
     fi
 
+    #依存関係インストール
+    echo -e "${YELLOW}依存関係のインストールを開始します${NC}"
+    sudo apt-get update
+    sudo apt-get install -y git jq bc automake tmux htop curl build-essential pkg-config make g++ wget zstd -y
+    echo -e "${GREEN}依存関係のインストールが完了しました${NC}"
+
     #cardano-cliインストール
     source <(curl -fsSL https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/main/scripts/components/node_install)
-    nodeBinary_URL="https://github.com/IntersectMBO/cardano-node/releases/download/${recommend_node_version}/cardano-node-${recommend_node_version}-linux.tar.gz"
-    wget --spider -q "$nodeBinary_URL"
-    local status=$?
-    if [ $status -eq 0 ]; then
-        echo -e "${YELLOW}ノードインストール開始${NC}"
-        mkdir -p ${HOME}/git/cardano-node
-        cd ${HOME}/git/cardano-node || exit
-        wget -q "$nodeBinary_URL"
-        tar zxvf "cardano-node-${recommend_node_version}-linux.tar.gz" ./bin/cardano-cli > /dev/null 2>&1
-        sudo cp "$(find ${HOME}/git/cardano-node -type f -name "cardano-cli")" /usr/local/bin/cardano-cli
-        echo -e "${GREEN}cardano-cliをインストールしました${NC}"
-        echo -e "${GREEN}バージョン: $(cardano-cli --version | head -n 1)${NC}"
-    else
-        echo -e "${RED}cardano-cliのダウンロードに失敗しました。 インターネット接続を確認してください。${NC}"
+
+    echo "アーキテクチャ判定中..."
+    arch=$(uname -m)
+    case $arch in
+        x86_64)
+            nodeBinary_URL="https://github.com/IntersectMBO/cardano-node/releases/download/${recommend_node_version}/cardano-node-${recommend_node_version}-linux.tar.gz"
+            extract_cmd="tar -xzf"
+            ;;
+        aarch64 | arm64)
+            nodeBinary_URL="https://github.com/armada-alliance/cardano-node-binaries/raw/main/static-binaries/cardano-cli-10_11_0_0-aarch64-static-musl-ghc_9101.tar.zst"
+            extract_cmd="tar -I zstd -xvf"
+            ;;
+        *)
+            echo -e "${RED}サポートされていないアーキテクチャ: $arch${NC}"
+            exit 1
+            ;;
+    esac
+
+    echo "URL確認: $nodeBinary_URL"
+    if ! wget --spider -q "$nodeBinary_URL"; then
+        echo -e "${RED}cardano-cliのURL確認に失敗しました${NC}"
         exit 1
     fi
 
-    DotSpinner3 "エアギャップ初期設定を終了します"
+    echo -e "${YELLOW}cardano-cliのダウンロード開始...${NC}"
+    mkdir -p "$HOME/git/cardano-cli"
+    cd "$HOME/git/cardano-cli"
+    wget -q "$nodeBinary_URL" -O cardano-cli.tar
+
+    echo -e "${YELLOW}解凍中...${NC}"
+    $extract_cmd cardano-cli.tar
+
+    echo -e "${YELLOW}インストール中...${NC}"
+    sudo cp $(find $HOME/git/cardano-node -type f -name "cardano-cli") /usr/local/bin/cardano-cli
+
+    echo -e "${GREEN}✅ cardano-cliインストール完了${NC}"
+    cardano-cli --version
+
+    echo -e  "${YELLOW}エアギャップ初期設定を終了します${NC}"
     echo
     echo -e "${RED}①下記コマンドを実行して環境変数を再読み込みしてください${NC}"
     echo "------------------------"
