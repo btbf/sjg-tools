@@ -39,6 +39,7 @@ UbuntuSetup(){
     # ed25519 SSH鍵作成
     if [ ! -f "${HOME}/.ssh/authorized_keys" ]; then
         #SSH鍵ファイル作成選択
+        echo
         Gum_Confirm_YesNo "ed25519 SSH鍵を作成しますか?" "Yes" "No"
         if [ $iniSettings = "Yes" ]; then
             sleep 1
@@ -48,8 +49,8 @@ UbuntuSetup(){
             chmod 600 ~/.ssh/authorized_keys
             echo -e "${YELLOW}公開鍵をauthorized_keysに追加しました${NC}\n"
             chmod 700 ~/.ssh
-            echo -e "鍵ペアを作成しました。${YELLOW}~/.ssh/ssh_ed25519(秘密鍵)${NC}と${YELLOW}~/.ssh/ssh_ed25519.pub(公開鍵)${NC}に保存されています。\n"
-            echo -e "2つのファイルを安全な場所にバックアップしてください。\n"
+            echo -e "鍵ペアを作成しました。${YELLOW}~/.ssh/ssh_ed25519(秘密鍵)${NC}と${YELLOW}~/.ssh/ssh_ed25519.pub(公開鍵)${NC}に保存されています"
+            echo -e "${RED}2つのファイルを安全な場所にバックアップしてください${NC}\n"
             echo -e "次回SSH接続の際は、ターミナルソフトに${YELLOW}ssh_ed25519${NC}を設定して接続してください。\n"
             sleep 2
         else
@@ -64,14 +65,13 @@ UbuntuSetup(){
     read -p "Enterを押すと続行します..." 
 
     # chrony設定
-    if ! command -v chronyc &> /dev/null; then
-        echo -e "${YELLOW}内部クロック同期ツールchronyがインストールされていません${NC}\n"
-        echo ブロック伝播遅延や、ブロック生成ミスを防ぐためにchronyのインストールを強く推奨します
-        echo
-        Gum_Confirm_YesNo "chronyをインストールしますか?" "Yes" "No"
+    echo -e "${YELLOW}chrony設定を確認します${NC}\n"
+    sleep 2
+    cat /etc/chrony/chrony.conf | grep "makestep 0.1 -1" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo -e "${YELLOW}標準のchrony設定が適用されています${NC}"
+        Gum_Confirm_YesNo "SPOKIT推奨設定を適用しますか?" "Yes" "No"
         if [ $iniSettings = "Yes" ]; then
-            echo -e "${YELLOW}chronyをインストールします${NC}\n"
-            sudo apt install chrony -y > /dev/null 2>&1
             cat > $HOME/chrony.conf << EOF
 pool time.google.com       iburst minpoll 2 maxpoll 2 maxsources 3 maxdelay 0.3
 pool time.facebook.com     iburst minpoll 2 maxpoll 2 maxsources 3 maxdelay 0.3
@@ -256,7 +256,9 @@ EOF
             sleep 1
         fi
     else
-        echo -e "${GREEN}ufwは既に有効になっています${NC}\n"
+        sudo ufw allow ${port_number}/tcp > /dev/null 2>&1
+        sudo ufw reload > /dev/null 2>&1
+        echo -e "sshポート番号: ${GRREN}$port_number${NC} をufwに設定しました\n"
         sleep 1
     fi
 

@@ -29,7 +29,7 @@ SSD | 500GB以上 | 100GB以上 |
 
 ### インストール
 ```
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/main/scripts/install.sh)"
+wget -qO- https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/main/scripts/install.sh | bash
 ```
 
 ### 環境変数再読み込み
@@ -55,18 +55,19 @@ spokit
 
 ## エアギャップセットアップ
 
+### Win/Macの場合
 ```
-**Win/Macの場合は以下手順でUbuntu仮想環境を作成する**
+**以下手順でUbuntu仮想環境を作成する**
 仮想環境セットアップ手順
 https://docs.spojapanguild.net/setup/air-gap-guid/
 ```
 
-### インストール
+### Ubuntuの場合
+UbuntuネイティブPCの場合は以下のコマンドを実行して、初期設定を実施してください。
 ```
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/main/scripts/airgap-setup.sh)"
+wget -qO- https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/main/scripts/airgap-setup.sh | bash
 ```
-
-### 環境変数再読み込み
+環境変数再読み込み
 ```
 source $HOME/.bashrc
 ```
