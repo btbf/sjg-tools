@@ -1,0 +1,47 @@
+name: Build develop test package
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build-develop:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: |
+          spokit_version=$(cat spokit.library | tr -d '[:space:]')
+          echo "spokit_version=$spokit_version" >> $GITHUB_OUTPUT
+
+      - name: Embed version into scripts
+        run: |
+          for f in install.sh airgap-setup.sh; do
+            sed -i -E "s/^# version:.*/# version: ${{ steps.version.outputs.spokit_version }}/" "$f"
+            sed -i -E "s/^spokit_version=.*/spokit_version=\"${{ steps.version.outputs.spokit_version }}\"/" "$f"
+          done
+
+      - name: Build dist package
+        run: |
+          mkdir -p dist
+          tar -czvf dist/spokit-develop.tar.gz \
+            install.sh \
+            airgap-setup.sh \
+            spokit.sh \
+            spokit_run.sh \
+            spokit.library \
+            components/
+
+      - name: Commit dist folder
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dist/
+          git commit -m "Auto build: spokit-develop.tar.gz for ${{ steps.version.outputs.spokit_version }}" || true
+          git push || true

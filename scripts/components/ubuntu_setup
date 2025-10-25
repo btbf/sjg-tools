@@ -16,11 +16,50 @@ UbuntuSetup(){
         echo -e "${YELLOW}unattended-upgradeをインストールしました${NC}\n"
         sleep 1
     else
+        #ON/OFF設定確認
+        is_enabled=$(sudo dpkg-reconfigure -f noninteractive unattended-upgrades | grep -c 'enabled')
+        if [ $is_enabled -eq 0 ]; then
+            echo
+            echo -e "${YELLOW}unattended-upgradeが無効になっています。有効化します${NC}\n"
+            sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -f noninteractive unattended-upgrades
+            echo -e "${YELLOW}unattended-upgradeを有効化しました${NC}\n"
+            sleep 1
+        else
+            echo -e "${GREEN}unattended-upgradeは既に有効化されています${NC}\n"
+            sleep 1
+        fi
         echo -e "${GREEN}unattended-upgradeは既にインストールされています${NC}\n"
         sleep 1
     fi
 
     read -p "Enterを押すと続行します..." 
+
+    #ブラケットペーストモードOFF
+    echo -e "${YELLOW}ブラケットペーストモードを無効化します${NC}\n"
+    sleep 2
+    if ! grep -q 'set enable-bracketed-paste off' ~/.inputrc; then
+        echo 'set enable-bracketed-paste off' >> ~/.inputrc
+        echo -e "${YELLOW}ブラケットペーストモードを無効化しました${NC}\n"
+        sleep 1
+    else
+        echo -e "${GREEN}ブラケットペーストモードは既に無効化されています${NC}\n"
+        sleep 1
+    fi
+
+    #デーモン再起動自動化
+    echo -e "${YELLOW}デーモン再起動自動化設定を確認します${NC}\n"
+    sleep 2
+    if [ ! -s /etc/needrestart/conf.d/50local.conf ]; then
+        echo "\$nrconf{restart} = 'a';" | sudo tee /etc/needrestart/conf.d/50local.conf > /dev/null 2>&1
+        echo "\$nrconf{blacklist_rc} = [qr(^cardano-node\\.service$) => 0,];" | sudo tee -a /etc/needrestart/conf.d/50local.conf
+        echo "\$nrconf{blacklist_rc} = [qr(^cnode-blocknotify.service$) => 0,];" | sudo tee -a /etc/needrestart/conf.d/50local.conf
+        echo -e "${YELLOW}デーモン再起動自動化設定を適用しました${NC}\n"
+        sleep 1
+    else
+        echo -e "${GREEN}デーモン再起動自動化設定は既に適用されています${NC}\n"
+    fi
+    sleep 1
+    read -p "Enterを押すと続行します..."
 
     #共有メモリ設定強化
     if ! grep -qE '^[^#]*tmpfs[[:space:]]+/dev/shm' /etc/fstab; then
@@ -203,12 +242,20 @@ EOF
     fi
 
     #fail2ban設定
-    if ! grep -qE '^[^#]*tmpfs[[:space:]]+/dev/shm' /etc/fstab; then
+    if command -v fail2ban-client >/dev/null 2>&1; then
+        echo "✅ fail2ban はインストールされています。"
+    else
+        echo "❌ fail2ban はインストールされていません。"
         Gum_Confirm_YesNo "fail2banをインストールしますか?" "Yes" "No"
         if [ $iniSettings = "Yes" ]; then
             echo -e "${YELLOW}fail2banをインストールします${NC}\n"
             sudo apt install fail2ban -y > /dev/null 2>&1
-            sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
+        fi
+    fi
+
+    # fail2ban設定確認
+    if [ ! -s /etc/fail2ban/jail.local ]; then
+        sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
 
 [sshd]
 enabled = true
@@ -217,18 +264,13 @@ filter = sshd
 logpath = /var/log/auth.log
 maxretry = 3
 EOF
-            echo -e "${YELLOW}fail2banをインストールしました${NC}\n"
-            echo -e "ポート番号: ${GRREN}$port_number${NC} をfail2banに設定しました\n"
-            sudo systemctl restart fail2ban
-            echo -e "${YELLOW}fail2banを再起動しました${NC}\n"
-            sleep 1
-        else
-            echo -e "${YELLOW}fail2banのインストールをスキップしました${NC}\n"
-            sleep 1
-        fi
-    else
-        echo -e "${GREEN}fail2banは既にインストールされています${NC}\n"
+        echo -e "${YELLOW}fail2banを設定しました${NC}\n"
+        echo -e "ポート番号: ${GRREN}$port_number${NC} をfail2banに設定しました\n"
+        sudo systemctl restart fail2ban
+        echo -e "${YELLOW}fail2banを再起動しました${NC}\n"
         sleep 1
+    else
+        echo "✅ fail2ban設定済み"
     fi
     read -p "Enterを押すと続行します..." 
     
@@ -263,6 +305,7 @@ EOF
     fi
 
     sudo service sshd reload
+    clear
     echo -e "ssh設定を変更しました\n"
     echo -e "変更後のsshポート番号:${GREEN}$port_number${NC}\n"
     echo -e "${YELLOW}新しいssh設定で接続確認するためにsshの再接続が必要です${NC}\n"
