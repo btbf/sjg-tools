@@ -19,7 +19,11 @@ jobs:
         run: |
           spokit_version=$(grep -E '^version=' ./scripts/spokit.library | head -1 | cut -d'=' -f2 | tr -d '"')
           echo "📦 Detected version: $spokit_version"
-          echo "$spokit_version" >> $GITHUB_OUTPUT
+          {
+            echo "spokit_version<<EOF"
+            echo "$spokit_version"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Embed version into scripts
         env:
