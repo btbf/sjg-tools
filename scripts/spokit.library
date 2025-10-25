@@ -210,7 +210,7 @@ reward_Balance(){
     #pool_reward=$(cat $PARENT/stake_json.txt | grep rewardAccountBalance | awk '{ print $2 }')
     if [[ -n ${pool_reward} ]]; then
       pool_reward_Amount=$(scale1 ${pool_reward})
-      printf "報酬額:${GREEN}$pool_reward_Amount${NC} ADA ($pool_reward Lovelace)\n"
+      printf "報酬額:${GREEN}$pool_reward_Amount${NC} ADA (${pool_reward}Lovelace)\n"
       Gum_OneSelect "戻る"
     else
       echo "報酬はまだ発生していません"

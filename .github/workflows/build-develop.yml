@@ -30,13 +30,7 @@ jobs:
       - name: Build dist package
         run: |
           mkdir -p dist
-          tar -czvf dist/spokit-develop.tar.gz \
-            install.sh \
-            airgap-setup.sh \
-            spokit.sh \
-            spokit_run.sh \
-            spokit.library \
-            components/
+          tar --exclude='.git' --exclude='dist' -czvf dist/spokit-develop.tar.gz .
 
       - name: Commit dist folder
         run: |
