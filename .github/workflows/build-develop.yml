@@ -21,11 +21,7 @@ jobs:
           echo "spokit_version=$spokit_version" >> $GITHUB_OUTPUT
 
       - name: Embed version into scripts
-        run: |
-          for f in ./scripts/install.sh ./scripts/airgap-setup.sh; do
-            sed -i -E "s/^# version:.*/# version: ${{ steps.version.outputs.spokit_version }}/" "$f"
-            sed -i -E "s/^spokit_version=.*/spokit_version=\"${{ steps.version.outputs.spokit_version }}\"/" "$f"
-          done
+        run: bash .github/scripts/embed_version.sh "${{ steps.version.outputs.spokit_version }}"
 
       - name: Build dist package
         run: |
