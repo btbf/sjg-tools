@@ -8,6 +8,7 @@ clear
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
 gum_version="0.16.2"
+spokit_version="0.4.2"
 
 source ${HOME}/.bashrc
 
@@ -67,10 +68,10 @@ view_title_logo(){
 ███████║██║     ╚██████╔╝██║  ██╗██║   ██║   
 ╚══════╝╚═╝      ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝ 
 EOF
-    echo -e "${NC}"
+    echo -e "${GREEN}                   ${1}                     ${NC}"
     echo -e "${WHITE}============================================${NC}"
     echo -e "${CYAN}           Cardano SPO Tool Kit              ${NC}"
-    echo -e "${YELLOW}         ${1}                           ${NC}"
+    echo -e "${YELLOW}         ${2}                           ${NC}"
     echo -e "${WHITE}============================================${NC}"
 }
 
@@ -100,7 +101,7 @@ if [[ ! -d $SPOKIT_INST_DIR ]]; then
 cat > ~/.tmux.conf << EOF
 set -g default-terminal "screen-256color"
 EOF
-    view_title_logo "ライブラリインストール"
+    view_title_logo "${spokit_version}" "ライブラリインストール"
     #ライブラリインストール
     printf "管理者(sudo)パスワードを入力してください\n"
     echo
@@ -125,7 +126,6 @@ fi
 ##------初期設定
 clear
 if [ ! -d "${SPOKIT_HOME}" ]; then
-    spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | awk -F'"' '/tag_name/ {print $4}')"
     view_title_logo "${spokit_version}" "ノードセットアップ初期設定"
 
     if [ -d "${NODE_HOME}" ]; then 
@@ -155,7 +155,15 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
     mkdir -p $HOME/git
     cd $HOME/git
 
-    wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
+    if [[ "$SPOKIT_MODE" == "develop" ]]; then
+        echo "🧪 SPOKIT Develop Mode"
+        base_url="https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/dist/spokit-develop.tar.gz"
+    else
+        echo "🚀 SPOKIT Release Mode"
+        base_url="https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz"
+    fi
+
+    wget -q ${base_url} -O spokit.tar.gz
 
     if [ $? -ne 0 ]; then
         echo -e "${RED}SPOKITのダウンロードに失敗しました。インターネット接続を確認してください。${NC}"
