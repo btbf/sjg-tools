@@ -106,7 +106,7 @@ EOF
     printf "管理者(sudo)パスワードを入力してください\n"
     echo
     sudo apt update && sudo apt upgrade -y
-    sudo apt install git jq bc ccze automake tmux htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
+    sudo apt install jq curl wget -y
     if [ ! -f "/usr/bin/gum" ]; then
         sudo mkdir -p /etc/apt/keyrings
         curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
@@ -220,24 +220,24 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             echo PATH="$HOME/.local/bin:$PATH" >> "${HOME}"/.bashrc
             echo export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" >> "${HOME}"/.bashrc
             echo export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> "${HOME}"/.bashrc
-            echo export NODE_HOME="${HOME}"/cnode >> "${HOME}"/.bashrc
+            echo export NODE_HOME="${work_dir}" >> "${HOME}"/.bashrc
             echo export NODE_CONFIG="${NODE_CONFIG}" >> "${HOME}"/.bashrc
             echo export NODE_NETWORK="${NODE_NETWORK}" >> "${HOME}"/.bashrc
             echo export CARDANO_NODE_NETWORK_ID="${CARDANO_NODE_NETWORK_ID}" >> "${HOME}"/.bashrc
-            echo export CARDANO_NODE_SOCKET_PATH="$NODE_HOME/db/socket" >> $HOME/.bashrc
+            echo export CARDANO_NODE_SOCKET_PATH="${work_dir}/db/socket" >> "${HOME}"/.bashrc
             echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
             echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
-            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> $HOME/.bashrc
-            echo alias cnode='"journalctl -u cardano-node -f"' >> $HOME/.bashrc
-            echo alias cnstart='"sudo systemctl start cardano-node"' >> $HOME/.bashrc
-            echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> $HOME/.bashrc
-            echo alias cnstop='"sudo systemctl stop cardano-node"' >> $HOME/.bashrc
-            echo alias cnreload='"pkill -HUP cardano-node"' >> $HOME/.bashrc
-            echo alias glive="'cd $NODE_HOME/scripts; ./gLiveView.sh'" >> $HOME/.bashrc
+            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> "${HOME}"/.bashrc
+            echo alias cnode='"journalctl -u cardano-node -f"' >> "${HOME}"/.bashrc
+            echo alias cnstart='"sudo systemctl start cardano-node"' >> "${HOME}"/.bashrc
+            echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> "${HOME}"/.bashrc
+            echo alias cnstop='"sudo systemctl stop cardano-node"' >> "${HOME}"/.bashrc
+            echo alias cnreload='"pkill -HUP cardano-node"' >> "${HOME}"/.bashrc
+            echo alias glive="'cd ${work_dir}/scripts; ./gLiveView.sh'" >> "${HOME}"/.bashrc
         else
             echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
             echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
-            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> $HOME/.bashrc
+            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> "${HOME}"/.bashrc
         fi
 
 
