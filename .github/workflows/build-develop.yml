@@ -17,12 +17,12 @@ jobs:
       - name: Read version
         id: version
         run: |
-          spokit_version=$(cat spokit.library | tr -d '[:space:]')
+          spokit_version=$(cat ./scripts/spokit.library | tr -d '[:space:]')
           echo "spokit_version=$spokit_version" >> $GITHUB_OUTPUT
 
       - name: Embed version into scripts
         run: |
-          for f in install.sh airgap-setup.sh; do
+          for f in ./scripts/install.sh ./scripts/airgap-setup.sh; do
             sed -i -E "s/^# version:.*/# version: ${{ steps.version.outputs.spokit_version }}/" "$f"
             sed -i -E "s/^spokit_version=.*/spokit_version=\"${{ steps.version.outputs.spokit_version }}\"/" "$f"
           done
