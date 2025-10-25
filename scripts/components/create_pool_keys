@@ -39,7 +39,7 @@ if [[ "${3}" == "renewal" ]]; then
     echo
     echo "BP側で${NODE_CERT_FILENAME}のハッシュ値が完全一致していることを確認してください"
     echo '----------------------------------------'
-    sha256sum "${NODE_HOME}/${NODE_CERT_FILENAME}" | awk '{print \$1}'
+    sha256sum "\${NODE_HOME}/${NODE_CERT_FILENAME}" | awk '{print \$1}'
     echo '----------------------------------------'
 fi
 EOF
@@ -289,8 +289,8 @@ create_pool_keys(){
                             chmod 400 ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME}; chmod 400 ${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}
                             
                             #プールIDファイル作成
-                            cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format bech32 --out-file ${NODE_HOME}/${POOL_ID_BECH32_FILENAME}
-                            cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format hex --out-file ${NODE_HOME}/${POOL_ID_FILENAME}
+                            cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format bech32 --out-file \${NODE_HOME}/${POOL_ID_BECH32_FILENAME}
+                            cardano-cli conway stake-pool id --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --output-format hex --out-file \${NODE_HOME}/${POOL_ID_FILENAME}
                         else
                             echo "コールドキーの生成に失敗しました"
                         fi
@@ -306,30 +306,30 @@ EOF
                 ##ウォレットキー作成
                 cat >> "${NODE_HOME}/airgap_script" << EOF
                 ##ウォレットキー作成
-                if [ ! -f "${NODE_HOME}"/"${PAYMENT_SKEY_FILENAME}" ] && [ ! -f "${NODE_HOME}"/"${PAYMENT_VKEY_FILENAME}" ] && [ ! -f "${NODE_HOME}"/"${STAKE_SKEY_FILENAME}" ] && [ ! -f "${NODE_HOME}"/"${STAKE_VKEY_FILENAME}" ] ; then
+                if [ ! -f "\${NODE_HOME}"/"${PAYMENT_SKEY_FILENAME}" ] && [ ! -f "\${NODE_HOME}"/"${PAYMENT_VKEY_FILENAME}" ] && [ ! -f "\${NODE_HOME}"/"${STAKE_SKEY_FILENAME}" ] && [ ! -f "\${NODE_HOME}"/"${STAKE_VKEY_FILENAME}" ] ; then
                     echo "プール運営に必要なウォレットとステークアドレスを作成します"
                     sleep 2
                     echo
                     chmod u+rwx $HOME/cold-keys
-                    cardano-cli conway address key-gen --verification-key-file ${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
-                    cardano-cli conway stake-address key-gen --verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${STAKE_SKEY_FILENAME}
-                    cardano-cli conway address build --payment-verification-key-file ${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file ${NODE_HOME}/${PAYMENT_ADDR_FILENAME} ${NODE_NETWORK}
-                    cardano-cli conway stake-address build --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file ${NODE_HOME}/${STAKE_ADDR_FILENAME} ${NODE_NETWORK}
-                    cardano-cli conway stake-address registration-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --key-reg-deposit-amt 2000000 --out-file ${NODE_HOME}/${STAKE_CERT_FILENAME}
-                    cardano-cli conway stake-address stake-delegation-certificate --stake-verification-key-file ${NODE_HOME}/${STAKE_VKEY_FILENAME} --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --out-file ${NODE_HOME}/deleg.cert
+                    cardano-cli conway address key-gen --verification-key-file \${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
+                    cardano-cli conway stake-address key-gen --verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} --signing-key-file \${NODE_HOME}/${STAKE_SKEY_FILENAME}
+                    cardano-cli conway address build --payment-verification-key-file \${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file \${NODE_HOME}/${PAYMENT_ADDR_FILENAME} ${NODE_NETWORK}
+                    cardano-cli conway stake-address build --stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file \${NODE_HOME}/${STAKE_ADDR_FILENAME} ${NODE_NETWORK}
+                    cardano-cli conway stake-address registration-certificate --stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} --key-reg-deposit-amt 2000000 --out-file \${NODE_HOME}/${STAKE_CERT_FILENAME}
+                    cardano-cli conway stake-address stake-delegation-certificate --stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} --out-file \${NODE_HOME}/deleg.cert
 
-                    chmod 400 ${NODE_HOME}/${PAYMENT_VKEY_FILENAME}
-                    chmod 400 ${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
-                    chmod 400 ${NODE_HOME}/${STAKE_VKEY_FILENAME}
-                    chmod 400 ${NODE_HOME}/${STAKE_SKEY_FILENAME}
-                    chmod 400 ${NODE_HOME}/${STAKE_ADDR_FILENAME}
-                    chmod 400 ${NODE_HOME}/${PAYMENT_ADDR_FILENAME}
+                    chmod 400 \${NODE_HOME}/${PAYMENT_VKEY_FILENAME}
+                    chmod 400 \${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
+                    chmod 400 \${NODE_HOME}/${STAKE_VKEY_FILENAME}
+                    chmod 400 \${NODE_HOME}/${STAKE_SKEY_FILENAME}
+                    chmod 400 \${NODE_HOME}/${STAKE_ADDR_FILENAME}
+                    chmod 400 \${NODE_HOME}/${PAYMENT_ADDR_FILENAME}
 
                     printf "\${YELLOW}ウォレットキーを作成しました\${NC}\n"
-                    find ${NODE_HOME} -type f -name "${PAYMENT_VKEY_FILENAME}"
-                    find ${NODE_HOME} -type f -name "${PAYMENT_SKEY_FILENAME}"
-                    find ${NODE_HOME} -type f -name "${STAKE_VKEY_FILENAME}"
-                    find ${NODE_HOME} -type f -name "${STAKE_SKEY_FILENAME}"
+                    find \${NODE_HOME} -type f -name "${PAYMENT_VKEY_FILENAME}"
+                    find \${NODE_HOME} -type f -name "${PAYMENT_SKEY_FILENAME}"
+                    find \${NODE_HOME} -type f -name "${STAKE_VKEY_FILENAME}"
+                    find \${NODE_HOME} -type f -name "${STAKE_SKEY_FILENAME}"
 
                     echo
                     printf "\${RED}各キーファイルの取り扱いについて\${NC}\n"
@@ -349,10 +349,10 @@ EOF
                     echo -e "\${GREEN}${NODE_CERT_FILENAME}\${NC} (プール運用証明書)"
                     echo -e "\${GREEN}${POOL_ID_BECH32_FILENAME}\${NC} / \${GREEN}${POOL_ID_FILENAME}\${NC} (プールIDファイル)"
                     echo
-                    read -p "bp-set.tar.gzをブロックプロデューサー(${NODE_HOME})にコピーしたらEnterを押してください" < /dev/tty
+                    read -p "bp-set.tar.gzをブロックプロデューサー(\${NODE_HOME})にコピーしたらEnterを押してください" < /dev/tty
 
                     echo "ブロックプロデューサーにコピーしたファイルが以下のハッシュ値と一致することを確認してください"
-                    echo -e "\${GREEN}\$(sha256sum $NODE_HOME/bp-set.tar.gz | awk '{ print \$1 }' )\${NC}"
+                    echo -e "\${GREEN}\$(sha256sum \$NODE_HOME/bp-set.tar.gz | awk '{ print \$1 }' )\${NC}"
                     echo
                     echo "ブロックプロデューサーに戻ってください"
                     echo
