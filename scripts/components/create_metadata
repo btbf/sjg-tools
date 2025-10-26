@@ -60,7 +60,7 @@ createMetadata(){
         do
             GreenStyle "${metaFileName}をアップロードしたフルURLを入力してください"
             GreenStyle "キャンセルしたい場合は c を入力してください"
-            poolMetaurl=$(gum input --width=0 --value="${POOL_METADATA_URL}" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "例) https://spojapanguild.net/${metaFileName}")
+            poolMetaurl=$(gum input --width=0 --value="${POOL_METADATA_URL}" --char-limit=64 --header.foreground="99" --no-show-help --placeholder "例) https://spojapanguild.net/${metaFileName} (64byte以内)")
             httpResponsCode=$(gum spin --spinner dot --title "メタデータを検証しています" -- curl -LI "${poolMetaurl}" -o /dev/null -w '%{http_code}\n' -s)
             
             if [ "${httpResponsCode}" == "200" ]; then

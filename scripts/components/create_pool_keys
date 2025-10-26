@@ -423,7 +423,7 @@ EOF
                     while :
                     do
                         read -p "エアギャップから bp-set.tar.gz をコピーしたらEnterを押してください"
-                        if  [[ ! -e "${NODE_HOME}/bp-set.tar.gz" ]]; then
+                        if  [[ -f "${NODE_HOME}/bp-set.tar.gz" ]]; then
                             echo
                             while :
                             do 
@@ -438,13 +438,14 @@ EOF
                                     tar -xzf ${NODE_HOME}/bp-set.tar.gz -C ${NODE_HOME}
                                     echo
                                     echo "以下のファイルが作成されました"
-                                    echo -e "\${GREEN}${PAYMENT_ADDR_FILENAME}\${NC} / \${GREEN}${STAKE_ADDR_FILENAME}\${NC} (各アドレスファイル)"
-                                    echo -e "\${GREEN}${STAKE_CERT_FILENAME}\${NC} (ステーク証明書)"
-                                    echo -e "\${GREEN}${NODE_CERT_FILENAME}\${NC} (プール運用証明書)"
-                                    echo -e "\${GREEN}${POOL_ID_BECH32_FILENAME}\${NC} / \${GREEN}${POOL_ID_FILENAME}\${NC} (プールIDファイル)"
+                                    echo -e "${GREEN}${PAYMENT_ADDR_FILENAME}${NC} / ${GREEN}${STAKE_ADDR_FILENAME}${NC} (各アドレスファイル)"
+                                    echo -e "${GREEN}${STAKE_CERT_FILENAME}${NC} (ステーク証明書)"
+                                    echo -e "${GREEN}${NODE_CERT_FILENAME}${NC} (プール運用証明書)"
+                                    echo -e "${GREEN}${POOL_ID_BECH32_FILENAME}${NC} / ${GREEN}${POOL_ID_FILENAME}${NC} (プールIDファイル)"
                                     sleep 3
                                     rm ${NODE_HOME}/airgap_script
                                     rm ${NODE_HOME}/airgap-set.tar.gz
+                                    rm ${NODE_HOME}/bp-set.tar.gz
 
                                     echo "ブロックプロデューサー起動ファイルを修正します"
                                     sudo systemctl stop cardano-node
