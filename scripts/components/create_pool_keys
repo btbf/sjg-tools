@@ -185,15 +185,21 @@ ManagementKes(){
         ErrorStyle "1時間以内にブロック生成スケジュールが無いことを確認してください"
         echo
         Gum_Confirm_YesNo "KES更新作業を開始しますか？" "Yes" "最初からやり直す場合はツールを再実行してください"
-
-        #KESファイル作成
-        create_airgap_script "KES更新"
-        createKes ${1}
         if [[ $iniSettings != "Yes" ]]; then
             echo "KES更新作業を中止しました"
             Gum_OneSelect "戻る"
             return 1
         fi
+        #KESファイル作成
+        script_discription=$(cat <<EOF
+このスクリプトでは以下の処理が実行されます
+1.カウンターファイル \${GREEN}${COUNTER_FILENAME}\${NC} の作成
+2.ノード運用証明書 \${GREEN}${NODE_CERT_FILENAME}\${NC} の作成
+EOF
+)
+        create_airgap_script "KES更新" "${script_discription}"
+        createKes ${1}
+
         MagentaStyle "■エアギャップ転送ファイル作成"
         tar -czvf airgap-set.tar.gz ${KES_VKEY_FILENAME} ${KES_SKEY_FILENAME} airgap_script
         echo "エアギャップ転送ファイル(airgap-set.tar.gz)を作成しました"
@@ -237,7 +243,7 @@ ManagementKes(){
                 ;;
                 2) 
                 clear
-                echo "SPO JAPAN GUILD TOOL Closed!" 
+                echo "SPOKIT Closed!" 
                 exit ;;
             esac
             break
@@ -271,7 +277,19 @@ create_pool_keys(){
             echo
             Gum_Confirm_YesNo "作成してよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
             if [ "$iniSettings" == "Yes" ]; then
-                create_airgap_script "プール運用キー作成"
+                script_discription=$(cat <<EOF
+このスクリプトでは以下の処理が実行されます
+1.プールコールドキー \${GREEN}${COLD_VKEY_FILENAME}\${NC} / \${GREEN}${COLD_SKEY_FILENAME}\${NC} の作成
+2.プールIDファイル \${GREEN}${POOL_ID_BECH32_FILENAME}\${NC} / \${GREEN}${POOL_ID_FILENAME}\${NC} の作成
+3.ウォレットアドレスキー \${GREEN}${PAYMENT_VKEY_FILENAME}\${NC} / \${GREEN}${PAYMENT_SKEY_FILENAME}\${NC} の作成
+4.ステークアドレスキー \${GREEN}${STAKE_VKEY_FILENAME}\${NC} / \${GREEN}${STAKE_SKEY_FILENAME}\${NC} の作成
+5.アドレスファイル \${GREEN}${PAYMENT_ADDR_FILENAME}\${NC} / \${GREEN}${STAKE_ADDR_FILENAME}\${NC} の作成
+6.ステーク証明書 \${GREEN}${STAKE_CERT_FILENAME}\${NC} の作成
+7.委任証明書 \${GREEN}deleg.cert\${NC} の作成
+8.BP転送用セットファイル \${GREEN}bp-set.tar.gz\${NC} の作成
+EOF
+                )
+                create_airgap_script "プール運用キー作成" "${script_discription}"
 
                 #エアギャッププールコールドキー作成スクリプト
                 cat >> "${NODE_HOME}/airgap_script" << EOF
@@ -310,7 +328,7 @@ EOF
                     echo "プール運営に必要なウォレットとステークアドレスを作成します"
                     sleep 2
                     echo
-                    chmod u+rwx $HOME/cold-keys
+                    chmod u+rwx ${COLDKEYS_DIR}
                     cardano-cli conway address key-gen --verification-key-file \${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
                     cardano-cli conway stake-address key-gen --verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} --signing-key-file \${NODE_HOME}/${STAKE_SKEY_FILENAME}
                     cardano-cli conway address build --payment-verification-key-file \${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} --out-file \${NODE_HOME}/${PAYMENT_ADDR_FILENAME} ${NODE_NETWORK}
