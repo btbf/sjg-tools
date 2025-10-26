@@ -157,7 +157,7 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
 
     if [[ "$SPOKIT_MODE" == "develop" ]]; then
         echo "🧪 SPOKIT Develop Mode"
-        base_url="https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/dist/spokit-develop.tar.gz"
+        base_url="https://github.com/btbf/sjg-tools/raw/refs/heads/develop/dist/spokit-develop.tar.gz"
     else
         echo "🚀 SPOKIT Release Mode"
         base_url="https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz"
