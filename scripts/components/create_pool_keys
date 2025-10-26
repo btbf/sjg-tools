@@ -20,10 +20,10 @@ echo -e "${YELLOW}4. カウンター番号確認${NC}"
 echo '----------------------------------------'
 counter_value=\$(cardano-cli conway text-view decode-cbor --in-file  ${COLDKEYS_DIR}/${COUNTER_FILENAME} | grep int | head -1 | cut -d"(" -f2 | cut -d")" -f1)
 echo "カウンターファイル番号:\${counter_value}"
-echo
 cardano-cli conway node issue-op-cert --kes-verification-key-file "\${NODE_HOME}/${KES_VKEY_FILENAME}" --cold-signing-key-file "${COLDKEYS_DIR}/${COLD_SKEY_FILENAME}" --operational-certificate-issue-counter "${COLDKEYS_DIR}/${COUNTER_FILENAME}" --kes-period ${startKesPeriod} --out-file "\${NODE_HOME}/${NODE_CERT_FILENAME}"
 if [ \$? -eq 0 ]; then
-echo "\${NODE_HOME}/${NODE_CERT_FILENAME} ファイルを生成しました。"
+echo "\${NODE_HOME}/${NODE_CERT_FILENAME} ファイルを生成しました"
+echo
 chmod a-rwx "${COLDKEYS_DIR}"
 sleep 2
 else
@@ -285,8 +285,9 @@ create_pool_keys(){
 4.ステークアドレスキー \${GREEN}${STAKE_VKEY_FILENAME}\${NC} / \${GREEN}${STAKE_SKEY_FILENAME}\${NC} の作成
 5.アドレスファイル \${GREEN}${PAYMENT_ADDR_FILENAME}\${NC} / \${GREEN}${STAKE_ADDR_FILENAME}\${NC} の作成
 6.ステーク証明書 \${GREEN}${STAKE_CERT_FILENAME}\${NC} の作成
-7.委任証明書 \${GREEN}deleg.cert\${NC} の作成
-8.BP転送用セットファイル \${GREEN}bp-set.tar.gz\${NC} の作成
+7.プール運用証明書 \${GREEN}${NODE_CERT_FILENAME}\${NC} の作成
+8.委任証明書 \${GREEN}deleg.cert\${NC} の作成
+9.BP転送用セットファイル \${GREEN}bp-set.tar.gz\${NC} の作成
 EOF
                 )
                 create_airgap_script "プール運用キー作成" "${script_discription}"
@@ -327,7 +328,6 @@ EOF
                 if [ ! -f "\${NODE_HOME}"/"${PAYMENT_SKEY_FILENAME}" ] && [ ! -f "\${NODE_HOME}"/"${PAYMENT_VKEY_FILENAME}" ] && [ ! -f "\${NODE_HOME}"/"${STAKE_SKEY_FILENAME}" ] && [ ! -f "\${NODE_HOME}"/"${STAKE_VKEY_FILENAME}" ] ; then
                     echo "プール運営に必要なウォレットとステークアドレスを作成します"
                     sleep 2
-                    echo
                     chmod u+rwx ${COLDKEYS_DIR}
                     cardano-cli conway address key-gen --verification-key-file \${NODE_HOME}/${PAYMENT_VKEY_FILENAME} --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME}
                     cardano-cli conway stake-address key-gen --verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} --signing-key-file \${NODE_HOME}/${STAKE_SKEY_FILENAME}
@@ -383,7 +383,7 @@ EOF
                     printf "プールID(hex)： \$(cat "\${NODE_HOME}/${POOL_ID_FILENAME}")\n"
                     echo
                 fi
-
+                rm \${NODE_HOME}/airgap_script
                 exit 0
 EOF
 
@@ -422,8 +422,8 @@ EOF
 
                     while :
                     do
-                        read -p "エアギャップの作業が完了したらEnterを押してください"
-                        if  [[ -e "${NODE_HOME}/${PAYMENT_ADDR_FILENAME}" ]] && [[ -e "${NODE_HOME}/${STAKE_ADDR_FILENAME}" ]] && [[ -e "${NODE_HOME}/${STAKE_CERT_FILENAME}" ]]; then
+                        read -p "エアギャップから bp-set.tar.gz をコピーしたらEnterを押してください"
+                        if  [[ ! -e "${NODE_HOME}/bp-set.tar.gz" ]]; then
                             echo
                             while :
                             do 
@@ -485,12 +485,13 @@ EOF
                                     fi
                                     break 2
                                 else
-                                    echo "ハッシュ値が一致しない場合またはファイルが存在しない場合は再度コピーしてください"
+                                    echo "ハッシュ値が一致しない場合は再度コピーしてください"
                                     Gum_OneSelect "再チェック"
                                 fi
                             done
                         else
-                            echo "ファイルが見つかりません。エアギャップからコピーしてください"
+                            echo "bp-set.tar.gzが見つかりません"
+                            echo "エアギャップからbp-set.tar.gzを(${NODE_HOME})にコピーしてください"
                             Gum_OneSelect "再チェック"
                         fi
                     done
