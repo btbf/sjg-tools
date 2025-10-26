@@ -28,8 +28,14 @@ SSD | 500GB以上 | 100GB以上 |
 ## プール用サーバーセットアップ
 
 ### インストール
+安定リリース版
 ```
 wget -qO- https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/main/scripts/install.sh | bash
+```
+
+開発版
+```
+SPOKIT_MODE=develop bash <(wget -qO- https://raw.githubusercontent.com/btbf/sjg-tools/refs/heads/develop/scripts/install.sh)
 ```
 
 ### 環境変数再読み込み
