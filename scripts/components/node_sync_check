@@ -13,7 +13,9 @@ echo "$sudopass" | sudo -v || { echo "sudo 認証に失敗しました。"; exit
 declare -A error_response=(
   ["TopologyP2P"]="トポロジーファイルエラーです"
   ["GenesisReadFileError"]="ジェネシスファイルエラーです"
-  ["InvalidYaml"]="設定ファイルエラーです"
+  ["GenesisReadError"]="ジェネシスファイルエラーです"
+  ["InvalidYaml"]="設定ファイル構文エラーです"
+  ["PartialNodeConfiguration failed"]="設定ファイル読み込みエラーです"
   ["Invalid option"]="起動オプションエラーです"
   ["Invalid argument"]="起動コマンドエラーです"
   ["Address in use"]="ノードポート番号が競合しています"

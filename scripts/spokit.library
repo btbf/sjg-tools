@@ -389,11 +389,13 @@ case $1 in
     case $NODE_TYPE in
       "ブロックプロデューサー" )
         local loop_count=5
+        local header="ブロックプロデューサー起動に使用する任意のポートを設定してください"
         port_set=""
       ;;
 
       "リレー" )
         local loop_count=3
+        local header="リレーノード起動に使用する任意のポートを設定してください"
         port_set="3000 3001 6000 6001"
       ;;
     esac
@@ -402,6 +404,7 @@ case $1 in
       local min_range=57344
       local max_range=65535
       local loop_count=5
+      local header="SSHに使用する任意のポートを設定してください"
       port_set=""
     ;;
 esac
@@ -412,7 +415,7 @@ esac
 
     port_set="$port_set カスタム"
 
-  port_number=$(gum choose --header.foreground="244" --header="任意ポート番号を設定してください" --no-show-help $port_set)
+  port_number=$(gum choose --header.foreground="244" --header="${header}" --no-show-help $port_set)
   if [[ $port_number == "カスタム" ]]; then
     while :
     do
