@@ -9,7 +9,7 @@ create_airgap_script(){
 # shellcheck source="\$HOME/.bashrc"
 
 clear
-script_title=${1}
+script_title="${1}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -62,8 +62,10 @@ Verify(){
 
 Main(){
   echo
-  echo "\${script_title}処理を開始してもよろしいですか?"
+  echo -e"\${GREEN}\${script_title}${NC}\n"
+  echo -e "${2}\n"
   echo
+  echo "処理を実行しますか?"
   echo "[1] はい [2] いいえ"
   if ! yes_no; then
       exit 0
@@ -242,7 +244,13 @@ EOF
   echo
   Gum_Confirm_YesNo "この値で${POOL_CERT_FILENAME}を生成しますか？" "Yes" "再度入力してください"
   if [[ ${iniSettings} == "Yes" ]]; then
-    create_airgap_script "プール登録証明書作成"
+    script_discription=$(cat <<EOF
+このスクリプトでは以下の処理が実行されます
+1.プール登録証明書 \${GREEN}${POOL_CERT_FILENAME}\${NC} の作成
+2.トランザクション署名ファイル \${GREEN}tx.signed\${NC} の作成
+EOF
+    )
+    create_airgap_script "プール登録証明書作成" "${script_discription}"
     cat >> "${NODE_HOME}/airgap_script" << EOF
     echo
     chmod u+rwx ${COLDKEYS_DIR}

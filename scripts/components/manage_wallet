@@ -252,8 +252,12 @@ manageWallet(){
 
               #最終トランザクションファイル作成
               cardano-cli conway transaction build-raw ${tx_in} --tx-out $(cat $NODE_HOME/$PAYMENT_ADDR_FILENAME)+${txOut} --tx-out ${destinationAddress}+${amountToSend} --invalid-hereafter $(( ${currentSlot} + 10000)) --fee ${fee} --out-file $NODE_HOME/tx.raw
-              
-              create_airgap_script "paymentアドレス引き出しTx署名ファイル作成"
+              script_discription=$(cat <<EOF
+このスクリプトでは以下の処理が実行されます
+1.トランザクション署名ファイル \${GREEN}tx.signed\${NC} の作成
+EOF
+              )
+              create_airgap_script "paymentアドレス引き出しTx署名ファイル作成" "${script_discription}"
               signing_tx_file "payment_address"
 
               cd ${NODE_HOME} || exit
