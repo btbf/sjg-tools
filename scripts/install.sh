@@ -26,7 +26,7 @@ cat <<-EOF > ${SPOKIT_HOME}/env
 
 NODE_TYPE="${1}"
 SYNC_NETWORK="${2}"
-COLDKEYS_DIR="\\${HOME}/cold-keys"
+COLDKEYS_DIR='\${HOME}/cold-keys'
 COLD_SKEY_FILENAME="node.skey"
 COLD_VKEY_FILENAME="node.vkey"
 COUNTER_FILENAME="node.counter"
