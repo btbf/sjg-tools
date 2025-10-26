@@ -36,8 +36,11 @@ jobs:
 
       - name: Build dist package
         run: |
+          version=${{ steps.version.outputs.spokit_version }}
           mkdir -p dist
-          tar --exclude='.git' --exclude='dist' -czvf dist/spokit-develop.tar.gz .
+          tar --exclude='.git' --exclude='dist' \
+              --transform "s,^,sjg-tools-${version}/," \
+              -czvf "dist/spokit-develop.tar.gz" .
 
       - name: Commit dist folder
         run: |
