@@ -46,6 +46,7 @@ Verify(){
   echo "[1] 一致する [2] 一致しない"
   
   if yes_no; then
+      #airgap-set.tar.gz解凍
       tar -xzf \${NODE_HOME}/airgap-set.tar.gz -C \${NODE_HOME}
       if [ $? -ne 0 ]; then
           echo -e "\${RED}airgap-set.tar.gzの解凍に失敗しました。\${NC}"
@@ -62,9 +63,8 @@ Verify(){
 
 Main(){
   echo
-  echo -e"\${GREEN}\${script_title}${NC}\n"
+  echo -e "\${GREEN}\${script_title}${NC}\n"
   echo -e "${2}\n"
-  echo
   echo "処理を実行しますか?"
   echo "[1] はい [2] いいえ"
   if ! yes_no; then

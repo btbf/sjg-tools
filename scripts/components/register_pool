@@ -113,6 +113,8 @@ registarPool(){
     "new" )
         cat >> "${NODE_HOME}/airgap_script" << EOF
         #新規登録
+        echo "トランザクションファイルを構築しています"
+        sleep 2
         poolDeposit=\$(cat \${NODE_HOME}/params.json | jq -r '.stakePoolDeposit')
         echo -e "プール登録料: \${GREEN}\${poolDeposit}\${NC} Lovelace"
         cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+\$(( ${total_balance} -   \${poolDeposit})) --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee 200000 --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.tmp
@@ -123,6 +125,8 @@ EOF
     "renewal" )
         cat >> "${NODE_HOME}/airgap_script" << EOF
         #登録変更
+        echo "トランザクションファイルを構築しています"
+        sleep 2
         cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+${total_balance} --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee 200000 --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.tmp
         fee=\$(cardano-cli conway transaction calculate-min-fee --tx-body-file \${NODE_HOME}/tx.tmp --witness-count 3 --output-text --protocol-params-file \${NODE_HOME}/params.json | awk '{ print \$1 }')
         txOut=\$((${total_balance}-\${fee}))
@@ -130,8 +134,8 @@ EOF
     ;;
     esac
     cat >> "${NODE_HOME}/airgap_script" << EOF
-    echo "トランザクションを構築しています"
-    sleep 3
+    echo "トランザクションファイルを構築しています"
+    sleep 2
     cardano-cli conway transaction build-raw ${tx_in} --tx-out \$(cat \${NODE_HOME}/${PAYMENT_ADDR_FILENAME})+\${txOut} --invalid-hereafter \$(( ${currentSlot} + 10000)) --fee \${fee} --certificate-file \${NODE_HOME}/${POOL_CERT_FILENAME} --certificate-file \${NODE_HOME}/deleg.cert --out-file \${NODE_HOME}/tx.raw
 EOF
     signing_tx_file "pool_register"
