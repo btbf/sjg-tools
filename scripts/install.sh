@@ -209,7 +209,7 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
 
     style "ノードタイプ:" "${NODE_TYPE}"
     style "ネットワーク:" "${sync_network}"
-    style "プール作業ディレクトリ:" "${work_dir}"
+    style "作業ディレクトリ:" "${work_dir}"
     style "UFWステータス:" "${UFW_STATUS}"
     echo
     gum confirm "この設定でよろしいですか？" --default=true --no-show-help --affirmative="はい" --negative="いいえ" && iniSettings="Yes" || iniSettings="No"
