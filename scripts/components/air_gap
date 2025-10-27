@@ -117,6 +117,7 @@ chmod 755 ${NODE_HOME}/airgap_script
 
 
 CreatePoolCert(){
+  source ${env_path}
   while :
   do
   inputPledge=$(gum input --width=0 --header="Pledge誓約ADAを整数で入力して下さい(例:10000)" --char-limit=7 --header.foreground="99" --no-show-help --placeholder "Pledge")
@@ -225,18 +226,18 @@ CreatePoolCert(){
   echo "コマンド上の入力数字はLovelace形式です"
   cmdPoolCert=$(cat << EOF
   cardano-cli conway stake-pool registration-certificate \
-  --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} \
-  --vrf-verification-key-file \${NODE_HOME}/${VRF_VKEY_FILENAME} \
-  --pool-pledge $(echo "${inputPledge}000000") \
-  --pool-cost $(echo "${inputFixCost}000000") \
-  --pool-margin $(echo 0)$(echo "scale=3; ${inputFixMargin} / 100" | bc) \
-  --pool-reward-account-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
-  --pool-owner-stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
-  $NODE_NETWORK \
-  $poolRelaySet \
-  --metadata-url ${POOL_METADATA_URL} \
-  --metadata-hash \$(cat ${NODE_HOME}/poolMetaDataHash.txt) \
-  --out-file ${NODE_HOME}/${POOL_CERT_FILENAME}
+    --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} \
+    --vrf-verification-key-file \${NODE_HOME}/${VRF_VKEY_FILENAME} \
+    --pool-pledge $(echo "${inputPledge}000000") \
+    --pool-cost $(echo "${inputFixCost}000000") \
+    --pool-margin $(echo 0)$(echo "scale=3; ${inputFixMargin} / 100" | bc) \
+    --pool-reward-account-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+    --pool-owner-stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+    $NODE_NETWORK \
+    $poolRelaySet \
+    --metadata-url ${POOL_METADATA_URL} \
+    --metadata-hash \$(cat \${NODE_HOME}/poolMetaDataHash.txt) \
+    --out-file \${NODE_HOME}/${POOL_CERT_FILENAME}
 EOF
 )
   echo
