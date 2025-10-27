@@ -185,7 +185,7 @@ GliveViewDowndload(){
 
 #ノードインストール
 NodeInstall(){
-
+  node_path=$(which cardano-node)
   if [ ! -e "${node_path}" ]; then
   clear
   case "$NODE_TYPE" in
