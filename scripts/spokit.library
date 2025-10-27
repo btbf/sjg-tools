@@ -1,12 +1,6 @@
 #!/bin/bash
 version="0.4.2"
-
 env_path=$HOME/spokit/env
-node_path=$(which cardano-node)
-cli_path=$(which cardano-cli)
-
-node_version=$(cardano-node version | head -1 | cut -d' ' -f2)
-cli_version=$(cardano-cli version | head -1 | cut -d' ' -f2)
 
 
 # フォアグラウンドカラー
@@ -270,6 +264,7 @@ Cli_TxSubmit(){
     echo 'Tx送信結果'
     echo '----------------------------------------'
     if [[ -n $tx_result ]]; then
+      node_version=$(cardano-node version | head -1 | cut -d' ' -f2)
       if dpkg --compare-versions "$node_version" ge "10.2.1"; then
         tx_id=$(echo $tx_result | jq .txhash | sed 's/"//g')
       else
