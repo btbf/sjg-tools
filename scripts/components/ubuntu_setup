@@ -37,33 +37,37 @@ UbuntuSetup(){
     #ブラケットペーストモードOFF
     echo -e "${YELLOW}ブラケットペーストモードを無効化します${NC}\n"
     sleep 2
-    if ! grep -q 'set enable-bracketed-paste off' ~/.inputrc; then
-        echo 'set enable-bracketed-paste off' >> ~/.inputrc
-        echo -e "${YELLOW}ブラケットペーストモードを無効化しました${NC}\n"
-        sleep 1
+    # ~/.inputrc が存在しない場合
+    if [ ! -f "$HOME/.inputrc" ]; then
+        echo 'set enable-bracketed-paste off' > "$HOME/.inputrc"
+        echo "✅ ~/.inputrc を新規作成し、設定を追加しました。"
+
+    # 存在する場合
+    elif ! grep -Fxq 'set enable-bracketed-paste off' "$HOME/.inputrc"; then
+        echo 'set enable-bracketed-paste off' >> "$HOME/.inputrc"
+        echo "✅ ~/.inputrc に設定を追記しました。"
     else
-        echo -e "${GREEN}ブラケットペーストモードは既に無効化されています${NC}\n"
-        sleep 1
+        echo "✅ ブラケットペーストモードは既に無効化されています。"
     fi
 
-    #デーモン再起動自動化
-    echo -e "${YELLOW}デーモン再起動自動化設定を確認します${NC}\n"
+    #デーモン自動再起動回避
+    echo -e "${YELLOW}デーモン自動再起動回避設定を確認します${NC}\n"
     sleep 2
-    if [ ! -s /etc/needrestart/conf.d/50local.conf ]; then
+    if [[ -e /etc/needrestart/ ]]; then
         echo "\$nrconf{restart} = 'a';" | sudo tee /etc/needrestart/conf.d/50local.conf > /dev/null 2>&1
         echo "\$nrconf{blacklist_rc} = [qr(^cardano-node\\.service$) => 0,];" | sudo tee -a /etc/needrestart/conf.d/50local.conf
         echo "\$nrconf{blacklist_rc} = [qr(^cnode-blocknotify.service$) => 0,];" | sudo tee -a /etc/needrestart/conf.d/50local.conf
-        echo -e "${YELLOW}デーモン再起動自動化設定を適用しました${NC}\n"
+        echo -e "${YELLOW}デーモン再起動回避設定を適用しました${NC}\n"
         sleep 1
     else
-        echo -e "${GREEN}デーモン再起動自動化設定は既に適用されています${NC}\n"
+        echo -e "${GREEN}needrestartはインストールされていません。必要に応じて個別に設定してください。${NC}\n"
     fi
     sleep 1
     read -p "Enterを押すと続行します..."
 
     #共有メモリ設定強化
     if ! grep -qE '^[^#]*tmpfs[[:space:]]+/dev/shm' /etc/fstab; then
-        echo -e "${YELLOW}セキュアな共有メモリ領域設定${NC}\n"
+        echo -e "${YELLOW}セキュアな共有メモリ領域設定${NC}"
         echo -e "fstabにtmpfsを設定します\n"
         sleep 2
         echo "tmpfs   /dev/shm    tmpfs   rw,noexec,nosuid,nodev   0 0" | sudo tee -a /etc/fstab
@@ -102,8 +106,19 @@ UbuntuSetup(){
     fi
 
     read -p "Enterを押すと続行します..." 
-
+    # chronyインストール
+    echo
+    if ! command -v chronyd &> /dev/null; then
+        echo -e "${YELLOW}chronyをインストールします${NC}\n"
+        sudo apt install chrony -y > /dev/null 2>&1
+        echo -e "${YELLOW}chronyをインストールしました${NC}\n"
+        sleep 1
+    else
+        echo -e "${GREEN}chronyは既にインストールされています${NC}\n"
+        sleep 1
+    fi
     # chrony設定
+    echo
     echo -e "${YELLOW}chrony設定を確認します${NC}\n"
     sleep 2
     cat /etc/chrony/chrony.conf | grep "makestep 0.1 -1" > /dev/null 2>&1
@@ -151,14 +166,14 @@ local stratum 10
 EOF
             sudo mv $HOME/chrony.conf /etc/chrony/chrony.conf
             sudo systemctl restart chrony
-            echo -e "${YELLOW}chronyをインストールしました${NC}\n"
+            echo -e "${YELLOW}chronyを再起動しました${NC}\n"
             sleep 1
         else
-            echo -e "${YELLOW}chronyのインストールをスキップしました${NC}\n"
+            echo -e "${YELLOW}chromeを標準設定で運用します${NC}\n"
             sleep 1
         fi
     else
-        echo -e "${GREEN}chronyは既にインストールされています${NC}\n"
+        echo -e "${GREEN}既にSPOKIT推奨設定が適用されています${NC}\n"
         sleep 1
     fi
     read -p "Enterを押すと続行します..."
