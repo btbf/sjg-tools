@@ -72,7 +72,7 @@ registarPool(){
         echo "プールID:$(cat ${NODE_HOME}/${POOL_ID_BECH32_FILENAME})"
         echo "${pooldata_chk}" | jq -r '.[].margin' | awk '{print "マージン:"$1*100"%"}'
         echo "${pooldata_chk}" | jq -r '.[].pledge' | awk '{print "プレッジ:"$1/1000000" ADA"}'
-        echo "${pooldata_chk}" | jq -r '.[].cost' | awk '{print "固定費:"$1/1000000" ADA"}'
+        echo "${pooldata_chk}" | jq -r '.[].fixed_cost' | awk '{print "固定費:"$1/1000000" ADA"}'
         echo "${pooldata_chk}" | jq -r '.[].meta_url' | awk '{print "メタデータURL:"$1}'
         echo
         if [[ ${1} == "renewal" ]]; then
