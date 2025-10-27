@@ -31,7 +31,7 @@ send_address(){
       elif [ "$destinationAddress" == "1" ]; then
         printf "${YELLOW}出金手続きをキャンセルしました${NC}\n"
         Gum_OneSelect "戻る"
-        manageWallet
+        return 1
       elif [ -z $destinationAddress ]; then
         printf "\n${RED}出金先アドレスを再度入力してください${NC}\n\n"
       else
@@ -104,7 +104,7 @@ manageWallet(){
             echo "資金移動"
             echo -e ">> ${YELLOW}$STAKE_ADDR_FILENAME${NC} から ${YELLOW}任意のアドレス(ADAHandle)${NC} への出金"
             echo
-            echo "■ 注意 ■"
+            echo -e "${RED}■ 注意 ■${NC}"
             echo "報酬は全額引き出しのみとなります"
             echo '------------------------------------------------------------------------'
             
@@ -113,12 +113,16 @@ manageWallet(){
               echo
               reward_Balance
 							if [[ -z ${pool_reward} ]] || [[ $pool_reward == 0 ]]; then
+                printf "\n${YELLOW}報酬が発生していないため出金できません${NC}\n"
+                Gum_OneSelect "戻る"
 								break 1
 							fi
               printf "\n${YELLOW}出金をキャンセルする場合は 1 を入力してEnterを押してください${NC}\n"
               #出金先アドレスチェック
               send_address
-
+              if [ $? -eq 1 ]; then
+                break 1
+              fi
               Gum_DotSpinner3 "トランザクションを構築しています"
               
               #現在のスロット
@@ -185,7 +189,7 @@ manageWallet(){
             echo "資金移動"
             echo -e ">> ${YELLOW}$PAYMENT_ADDR_FILENAME${NC} から ${YELLOW}任意のアドレス(ADAHandle)${NC} への出金"
             echo
-            echo -e"${RED}■ 注意 ■${NC}"
+            echo -e "${RED}■ 注意 ■${NC}"
             echo "$PAYMENT_ADDR_FILENAMEには誓約で設定した額以上のADAが入金されてる必要があります"
             echo "出金には十分ご注意ください"
             echo '------------------------------------------------------------------------'
@@ -193,7 +197,9 @@ manageWallet(){
             if [ -f "$NODE_HOME/$PAYMENT_ADDR_FILENAME" ]; then
               #出金先アドレスチェック
               send_address
-              
+              if [ $? -eq 1 ]; then
+                break 1
+              fi
               #出金額指定
               clear
               echo '------------------------------------------------------------------------'
@@ -277,7 +283,7 @@ EOF
 
             ;;
             "[b] 戻る" )
-            break
+            break 1
             ;;
 
             "[q] 終了" )

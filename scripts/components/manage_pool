@@ -83,7 +83,7 @@ blockGenerateCheck(){
     
     koios_stake_total=$(curl -s -X POST "$KOIOS_API/account_info" -H "Accept: application/json" -H "content-type: application/json" -d "{\"_stake_addresses\":[\"$(cat $NODE_HOME/$STAKE_ADDR_FILENAME)\"]}" | jq -r '.[].total_balance')
 
-    if [ $active_epoch -gt $current_epoch ] && [ $future_pledge -ne $current_pledge ]; then
+    if [ ! $future_pledge == null ] && [ "$active_epoch" -gt "$current_epoch" ] && [ "$future_pledge" -ne "$current_pledg" ]; then
       pledge=$current_pledge
       pledge_scale=$(scale1 $pledge)
       future_pledge_scale=$(scale1 $future_pledge)
