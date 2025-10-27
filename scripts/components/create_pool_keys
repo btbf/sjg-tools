@@ -263,17 +263,21 @@ create_pool_keys(){
     "ブロックプロデューサー" )
         if [ ! -f "${NODE_HOME}"/"${KES_SKEY_FILENAME}" ] && [ ! -e "${NODE_HOME}"/"${VRF_SKEY_FILENAME}" ]; then
             echo
-            echo "この作業では以下のキーと証明書を作成します"
+            echo "この作業では以下のファイルを作成します"
             echo
-            YellowStyle "ブロックプロデューサー"
+            YellowStyle "ブロックプロデューサー側"
             echo -e "${GREEN}${KES_SKEY_FILENAME}${NC} / ${GREEN}${KES_VKEY_FILENAME}${NC} (KESセキュリティキー)"
             echo -e "${GREEN}${VRF_SKEY_FILENAME}${NC} / ${GREEN}${VRF_VKEY_FILENAME}${NC} (VRFランダム関数キー)"
+            echo -e "${GREEN}airgap_script${NC} (エアギャップキー発行スクリプト)"
+            echo -e "${GREEN}airgap-set.tar.gz${NC} (エアギャップ転送用セットファイル)"
             echo
-            YellowStyle "エアギャップ"
+            YellowStyle "エアギャップ側"
             echo -e "${GREEN}${COLD_SKEY_FILENAME}${NC} / ${GREEN}${COLD_VKEY_FILENAME}${NC} (プール運用コールドキー)"
-            echo -e "${GREEN}${NODE_CERT_FILENAME}${NC} (プール運用証明書)"
             echo -e "${GREEN}${PAYMENT_SKEY_FILENAME}${NC} / ${GREEN}${PAYMENT_VKEY_FILENAME}${NC} (Paymentウォレットキー)"
             echo -e "${GREEN}${STAKE_SKEY_FILENAME}${NC} / ${GREEN}${STAKE_VKEY_FILENAME}${NC} (Stakeアドレスキー)"
+            echo -e "${GREEN}${NODE_CERT_FILENAME}${NC} (プール運用証明書)"
+            echo -e "${GREEN}deleg.cert${NC} (委任証明書)"
+            echo -e "${GREEN}bp-set.tar.gz${NC} (BP転送用セットファイル)"
             echo
             Gum_Confirm_YesNo "作成してよろしいですか？" "Yes" "最初からやり直す場合はツールを再実行してください"
             if [ "$iniSettings" == "Yes" ]; then
