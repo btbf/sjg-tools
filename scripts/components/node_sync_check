@@ -13,7 +13,9 @@ echo "$sudopass" | sudo -v || { echo "sudo 認証に失敗しました。"; exit
 declare -A error_response=(
   ["TopologyP2P"]="トポロジーファイルエラーです"
   ["GenesisReadFileError"]="ジェネシスファイルエラーです"
-  ["InvalidYaml"]="設定ファイルエラーです"
+  ["GenesisReadError"]="ジェネシスファイルエラーです"
+  ["InvalidYaml"]="設定ファイル構文エラーです"
+  ["PartialNodeConfiguration failed"]="設定ファイル読み込みエラーです"
   ["Invalid option"]="起動オプションエラーです"
   ["Invalid argument"]="起動コマンドエラーです"
   ["Address in use"]="ノードポート番号が競合しています"
@@ -61,7 +63,7 @@ stop_spinner() {
 #####################################
 # 6. メイン処理開始
 #####################################
-LglayStyle "ノード同期チェック開始..."
+LglayStyle "ノード同期チェック中、しばらくお待ち下さい..."
 # 初回のスピナー開始（Ledger DB待ち状態）
 start_spinner
 

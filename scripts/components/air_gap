@@ -9,7 +9,7 @@ create_airgap_script(){
 # shellcheck source="\$HOME/.bashrc"
 
 clear
-script_title=${1}
+script_title="${1}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -46,6 +46,7 @@ Verify(){
   echo "[1] 一致する [2] 一致しない"
   
   if yes_no; then
+      #airgap-set.tar.gz解凍
       tar -xzf \${NODE_HOME}/airgap-set.tar.gz -C \${NODE_HOME}
       if [ $? -ne 0 ]; then
           echo -e "\${RED}airgap-set.tar.gzの解凍に失敗しました。\${NC}"
@@ -62,8 +63,9 @@ Verify(){
 
 Main(){
   echo
-  echo "\${script_title}処理を開始してもよろしいですか?"
-  echo
+  echo -e "\${GREEN}\${script_title}${NC}\n"
+  echo -e "${2}\n"
+  echo "処理を実行しますか?"
   echo "[1] はい [2] いいえ"
   if ! yes_no; then
       exit 0
@@ -115,6 +117,7 @@ chmod 755 ${NODE_HOME}/airgap_script
 
 
 CreatePoolCert(){
+  source ${env_path}
   while :
   do
   inputPledge=$(gum input --width=0 --header="Pledge誓約ADAを整数で入力して下さい(例:10000)" --char-limit=7 --header.foreground="99" --no-show-help --placeholder "Pledge")
@@ -223,18 +226,18 @@ CreatePoolCert(){
   echo "コマンド上の入力数字はLovelace形式です"
   cmdPoolCert=$(cat << EOF
   cardano-cli conway stake-pool registration-certificate \
-  --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} \
-  --vrf-verification-key-file \${NODE_HOME}/${VRF_VKEY_FILENAME} \
-  --pool-pledge $(echo "${inputPledge}000000") \
-  --pool-cost $(echo "${inputFixCost}000000") \
-  --pool-margin $(echo 0)$(echo "scale=3; ${inputFixMargin} / 100" | bc) \
-  --pool-reward-account-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
-  --pool-owner-stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
-  $NODE_NETWORK \
-  $poolRelaySet \
-  --metadata-url ${POOL_METADATA_URL} \
-  --metadata-hash \$(cat ${NODE_HOME}/poolMetaDataHash.txt) \
-  --out-file ${NODE_HOME}/${POOL_CERT_FILENAME}
+    --cold-verification-key-file ${COLDKEYS_DIR}/${COLD_VKEY_FILENAME} \
+    --vrf-verification-key-file \${NODE_HOME}/${VRF_VKEY_FILENAME} \
+    --pool-pledge $(echo "${inputPledge}000000") \
+    --pool-cost $(echo "${inputFixCost}000000") \
+    --pool-margin $(echo 0)$(echo "scale=3; ${inputFixMargin} / 100" | bc) \
+    --pool-reward-account-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+    --pool-owner-stake-verification-key-file \${NODE_HOME}/${STAKE_VKEY_FILENAME} \
+    $NODE_NETWORK \
+    $poolRelaySet \
+    --metadata-url ${POOL_METADATA_URL} \
+    --metadata-hash \$(cat \${NODE_HOME}/poolMetaDataHash.txt) \
+    --out-file \${NODE_HOME}/${POOL_CERT_FILENAME}
 EOF
 )
   echo
@@ -242,7 +245,13 @@ EOF
   echo
   Gum_Confirm_YesNo "この値で${POOL_CERT_FILENAME}を生成しますか？" "Yes" "再度入力してください"
   if [[ ${iniSettings} == "Yes" ]]; then
-    create_airgap_script "プール登録証明書作成"
+    script_discription=$(cat <<EOF
+このスクリプトでは以下の処理が実行されます
+1.プール登録証明書 \${GREEN}${POOL_CERT_FILENAME}\${NC} の作成
+2.トランザクション署名ファイル \${GREEN}tx.signed\${NC} の作成
+EOF
+    )
+    create_airgap_script "プール登録証明書作成" "${script_discription}"
     cat >> "${NODE_HOME}/airgap_script" << EOF
     echo
     chmod u+rwx ${COLDKEYS_DIR}

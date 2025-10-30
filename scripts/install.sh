@@ -8,6 +8,7 @@ clear
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
 gum_version="0.16.2"
+spokit_version="0.4.2"
 
 source ${HOME}/.bashrc
 
@@ -25,7 +26,7 @@ cat <<-EOF > ${SPOKIT_HOME}/env
 
 NODE_TYPE="${1}"
 SYNC_NETWORK="${2}"
-COLDKEYS_DIR="${HOME}/cold-keys"
+COLDKEYS_DIR='\${HOME}/cold-keys'
 COLD_SKEY_FILENAME="node.skey"
 COLD_VKEY_FILENAME="node.vkey"
 COUNTER_FILENAME="node.counter"
@@ -67,10 +68,10 @@ view_title_logo(){
 ███████║██║     ╚██████╔╝██║  ██╗██║   ██║   
 ╚══════╝╚═╝      ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝ 
 EOF
-    echo -e "${NC}"
+    echo -e "${GREEN}                   ${1}                     ${NC}"
     echo -e "${WHITE}============================================${NC}"
     echo -e "${CYAN}           Cardano SPO Tool Kit              ${NC}"
-    echo -e "${YELLOW}         ${1}                           ${NC}"
+    echo -e "${YELLOW}         ${2}                           ${NC}"
     echo -e "${WHITE}============================================${NC}"
 }
 
@@ -100,12 +101,12 @@ if [[ ! -d $SPOKIT_INST_DIR ]]; then
 cat > ~/.tmux.conf << EOF
 set -g default-terminal "screen-256color"
 EOF
-    view_title_logo "ライブラリインストール"
+    view_title_logo "${spokit_version}" "ライブラリインストール"
     #ライブラリインストール
     printf "管理者(sudo)パスワードを入力してください\n"
     echo
     sudo apt update && sudo apt upgrade -y
-    sudo apt install git jq bc ccze automake tmux htop curl build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ wget libncursesw5 libtool autoconf liblmdb-dev chrony fail2ban -y
+    sudo apt install jq curl wget -y
     if [ ! -f "/usr/bin/gum" ]; then
         sudo mkdir -p /etc/apt/keyrings
         curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
@@ -125,7 +126,6 @@ fi
 ##------初期設定
 clear
 if [ ! -d "${SPOKIT_HOME}" ]; then
-    spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | awk -F'"' '/tag_name/ {print $4}')"
     view_title_logo "${spokit_version}" "ノードセットアップ初期設定"
 
     if [ -d "${NODE_HOME}" ]; then 
@@ -155,7 +155,15 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
     mkdir -p $HOME/git
     cd $HOME/git
 
-    wget -q https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz -O spokit.tar.gz
+    if [[ "$SPOKIT_MODE" == "develop" ]]; then
+        echo "🧪 SPOKIT Develop Mode"
+        base_url="https://github.com/btbf/sjg-tools/raw/refs/heads/develop/dist/spokit-develop.tar.gz"
+    else
+        echo "🚀 SPOKIT Release Mode"
+        base_url="https://github.com/btbf/sjg-tools/archive/refs/tags/${spokit_version}.tar.gz"
+    fi
+
+    wget -q ${base_url} -O spokit.tar.gz
 
     if [ $? -ne 0 ]; then
         echo -e "${RED}SPOKITのダウンロードに失敗しました。インターネット接続を確認してください。${NC}"
@@ -201,7 +209,7 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
 
     style "ノードタイプ:" "${NODE_TYPE}"
     style "ネットワーク:" "${sync_network}"
-    style "プール作業ディレクトリ:" "${work_dir}"
+    style "作業ディレクトリ:" "${work_dir}"
     style "UFWステータス:" "${UFW_STATUS}"
     echo
     gum confirm "この設定でよろしいですか？" --default=true --no-show-help --affirmative="はい" --negative="いいえ" && iniSettings="Yes" || iniSettings="No"
@@ -212,24 +220,24 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             echo PATH="$HOME/.local/bin:$PATH" >> "${HOME}"/.bashrc
             echo export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" >> "${HOME}"/.bashrc
             echo export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> "${HOME}"/.bashrc
-            echo export NODE_HOME="${HOME}"/cnode >> "${HOME}"/.bashrc
+            echo export NODE_HOME="${work_dir}" >> "${HOME}"/.bashrc
             echo export NODE_CONFIG="${NODE_CONFIG}" >> "${HOME}"/.bashrc
             echo export NODE_NETWORK="${NODE_NETWORK}" >> "${HOME}"/.bashrc
             echo export CARDANO_NODE_NETWORK_ID="${CARDANO_NODE_NETWORK_ID}" >> "${HOME}"/.bashrc
-            echo export CARDANO_NODE_SOCKET_PATH="$NODE_HOME/db/socket" >> $HOME/.bashrc
+            echo export CARDANO_NODE_SOCKET_PATH="${work_dir}/db/socket" >> "${HOME}"/.bashrc
             echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
             echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
-            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> $HOME/.bashrc
-            echo alias cnode='"journalctl -u cardano-node -f"' >> $HOME/.bashrc
-            echo alias cnstart='"sudo systemctl start cardano-node"' >> $HOME/.bashrc
-            echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> $HOME/.bashrc
-            echo alias cnstop='"sudo systemctl stop cardano-node"' >> $HOME/.bashrc
-            echo alias cnreload='"pkill -HUP cardano-node"' >> $HOME/.bashrc
-            echo alias glive="'cd $NODE_HOME/scripts; ./gLiveView.sh'" >> $HOME/.bashrc
+            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> "${HOME}"/.bashrc
+            echo alias cnode='"journalctl -u cardano-node -f"' >> "${HOME}"/.bashrc
+            echo alias cnstart='"sudo systemctl start cardano-node"' >> "${HOME}"/.bashrc
+            echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> "${HOME}"/.bashrc
+            echo alias cnstop='"sudo systemctl stop cardano-node"' >> "${HOME}"/.bashrc
+            echo alias cnreload='"pkill -HUP cardano-node"' >> "${HOME}"/.bashrc
+            echo alias glive="'cd ${work_dir}/scripts; ./gLiveView.sh'" >> "${HOME}"/.bashrc
         else
             echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
             echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
-            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> $HOME/.bashrc
+            echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> "${HOME}"/.bashrc
         fi
 
 

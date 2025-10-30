@@ -5,7 +5,7 @@ shopt -s expand_aliases
 source ~/.bashrc 2>/dev/null
 
 clear
-spokit_version="$(curl -s https://api.github.com/repos/btbf/sjg-tools/releases/latest | jq -r '.tag_name')"
+spokit_version="0.4.2"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

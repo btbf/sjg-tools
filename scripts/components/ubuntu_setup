@@ -8,23 +8,76 @@ UbuntuSetup(){
     sudopass=$(InputSudoPass)
     echo $sudopass | sudo -S -v
     # パッケージ自動更新ツールインストール
-    if ! command -v unattended-upgrade &> /dev/null; then
+    if ! command -v unattended-upgrades &> /dev/null; then
         echo
-        echo -e "${YELLOW}セキュリティアップデート自動適用ツール(unattended-upgrade)をインストールします${NC}\n"
+        echo -e "${YELLOW}セキュリティアップデート自動適用ツール(unattended-upgrades)をインストールします${NC}\n"
         sudo apt install unattended-upgrades -y > /dev/null 2>&1
         sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -f noninteractive unattended-upgrades
-        echo -e "${YELLOW}unattended-upgradeをインストールしました${NC}\n"
+        echo -e "${YELLOW}unattended-upgradesをインストールしました${NC}\n"
         sleep 1
     else
-        echo -e "${GREEN}unattended-upgradeは既にインストールされています${NC}\n"
+        # ON/OFF設定確認
+        auto_conf="/etc/apt/apt.conf.d/20auto-upgrades"
+        if [ -f "$auto_conf" ]; then
+            is_enabled=$(grep -c 'Unattended-Upgrade "1"' "$auto_conf")
+        else
+            is_enabled=0
+        fi
+
+        if [ "$is_enabled" -eq 0 ]; then
+            echo
+            echo -e "${YELLOW}unattended-upgradesが無効になっています。有効化します${NC}\n"
+            sudo bash -c 'cat > /etc/apt/apt.conf.d/20auto-upgrades <<EOF
+    APT::Periodic::Update-Package-Lists "1";
+    APT::Periodic::Unattended-Upgrade "1";
+    EOF'
+            echo -e "${GREEN}unattended-upgradesを有効化しました${NC}\n"
+        else
+            echo -e "${GREEN}unattended-upgradesは既に有効化されています${NC}\n"
+        fi
+        echo -e "${GREEN}unattended-upgradesは既にインストールされています${NC}\n"
         sleep 1
     fi
-
     read -p "Enterを押すと続行します..." 
+    echo
+
+    #ブラケットペーストモードOFF
+    echo -e "${YELLOW}ブラケットペーストモードを無効化します${NC}\n"
+    sleep 2
+    # ~/.inputrc が存在しない場合
+    if [ ! -f "$HOME/.inputrc" ]; then
+        echo 'set enable-bracketed-paste off' > "$HOME/.inputrc"
+        echo "✅ ~/.inputrc を新規作成し、設定を追加しました。"
+
+    # 存在する場合
+    elif ! grep -Fxq 'set enable-bracketed-paste off' "$HOME/.inputrc"; then
+        echo 'set enable-bracketed-paste off' >> "$HOME/.inputrc"
+        echo "✅ ~/.inputrc に設定を追記しました。"
+    else
+        echo "✅ ブラケットペーストモードは既に無効化されています。"
+    fi
+    echo
+
+
+    #デーモン自動再起動回避
+    echo -e "${YELLOW}デーモン自動再起動回避設定を確認します${NC}\n"
+    sleep 2
+    if [[ -e /etc/needrestart/ ]]; then
+        echo "\$nrconf{restart} = 'a';" | sudo tee /etc/needrestart/conf.d/50local.conf > /dev/null 2>&1
+        echo "\$nrconf{blacklist_rc} = [qr(^cardano-node\\.service$) => 0,];" | sudo tee -a /etc/needrestart/conf.d/50local.conf
+        echo "\$nrconf{blacklist_rc} = [qr(^cnode-blocknotify.service$) => 0,];" | sudo tee -a /etc/needrestart/conf.d/50local.conf
+        echo -e "${YELLOW}デーモン再起動回避設定を適用しました${NC}\n"
+        sleep 1
+    else
+        echo -e "${GREEN}needrestartはインストールされていません。必要に応じて個別に設定してください。${NC}\n"
+    fi
+    sleep 1
+    read -p "Enterを押すと続行します..."
+    echo
 
     #共有メモリ設定強化
     if ! grep -qE '^[^#]*tmpfs[[:space:]]+/dev/shm' /etc/fstab; then
-        echo -e "${YELLOW}セキュアな共有メモリ領域設定${NC}\n"
+        echo -e "${YELLOW}セキュアな共有メモリ領域設定${NC}"
         echo -e "fstabにtmpfsを設定します\n"
         sleep 2
         echo "tmpfs   /dev/shm    tmpfs   rw,noexec,nosuid,nodev   0 0" | sudo tee -a /etc/fstab
@@ -35,11 +88,11 @@ UbuntuSetup(){
         sleep 1
     fi
     read -p "Enterを押すと続行します..."
+    echo
 
     # ed25519 SSH鍵作成
     if [ ! -f "${HOME}/.ssh/authorized_keys" ]; then
         #SSH鍵ファイル作成選択
-        echo
         Gum_Confirm_YesNo "ed25519 SSH鍵を作成しますか?" "Yes" "No"
         if [ $iniSettings = "Yes" ]; then
             sleep 1
@@ -50,7 +103,7 @@ UbuntuSetup(){
             echo -e "${YELLOW}公開鍵をauthorized_keysに追加しました${NC}\n"
             chmod 700 ~/.ssh
             echo -e "鍵ペアを作成しました。${YELLOW}~/.ssh/ssh_ed25519(秘密鍵)${NC}と${YELLOW}~/.ssh/ssh_ed25519.pub(公開鍵)${NC}に保存されています"
-            echo -e "${RED}2つのファイルを安全な場所にバックアップしてください${NC}\n"
+            echo -e "${RED}2つのファイルをダウンロードし安全な場所にバックアップしてください${NC}\n"
             echo -e "次回SSH接続の際は、ターミナルソフトに${YELLOW}ssh_ed25519${NC}を設定して接続してください。\n"
             sleep 2
         else
@@ -63,8 +116,19 @@ UbuntuSetup(){
     fi
 
     read -p "Enterを押すと続行します..." 
-
+    # chronyインストール
+    echo
+    if ! command -v chronyd &> /dev/null; then
+        echo -e "${YELLOW}chronyをインストールします${NC}\n"
+        sudo apt install chrony -y > /dev/null 2>&1
+        echo -e "${YELLOW}chronyをインストールしました${NC}\n"
+        sleep 1
+    else
+        echo -e "${GREEN}chronyは既にインストールされています${NC}\n"
+        sleep 1
+    fi
     # chrony設定
+    echo
     echo -e "${YELLOW}chrony設定を確認します${NC}\n"
     sleep 2
     cat /etc/chrony/chrony.conf | grep "makestep 0.1 -1" > /dev/null 2>&1
@@ -112,14 +176,14 @@ local stratum 10
 EOF
             sudo mv $HOME/chrony.conf /etc/chrony/chrony.conf
             sudo systemctl restart chrony
-            echo -e "${YELLOW}chronyをインストールしました${NC}\n"
+            echo -e "${YELLOW}chronyを再起動しました${NC}\n"
             sleep 1
         else
-            echo -e "${YELLOW}chronyのインストールをスキップしました${NC}\n"
+            echo -e "${YELLOW}chromeを標準設定で運用します${NC}\n"
             sleep 1
         fi
     else
-        echo -e "${GREEN}chronyは既にインストールされています${NC}\n"
+        echo -e "${GREEN}既にSPOKIT推奨設定が適用されています${NC}\n"
         sleep 1
     fi
     read -p "Enterを押すと続行します..."
@@ -203,12 +267,20 @@ EOF
     fi
 
     #fail2ban設定
-    if ! grep -qE '^[^#]*tmpfs[[:space:]]+/dev/shm' /etc/fstab; then
+    if command -v fail2ban-client >/dev/null 2>&1; then
+        echo "✅ fail2ban はインストールされています。"
+    else
+        echo "❌ fail2ban はインストールされていません。"
         Gum_Confirm_YesNo "fail2banをインストールしますか?" "Yes" "No"
         if [ $iniSettings = "Yes" ]; then
             echo -e "${YELLOW}fail2banをインストールします${NC}\n"
             sudo apt install fail2ban -y > /dev/null 2>&1
-            sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
+        fi
+    fi
+
+    # fail2ban設定確認
+    if [ ! -s /etc/fail2ban/jail.local ]; then
+        sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
 
 [sshd]
 enabled = true
@@ -217,18 +289,13 @@ filter = sshd
 logpath = /var/log/auth.log
 maxretry = 3
 EOF
-            echo -e "${YELLOW}fail2banをインストールしました${NC}\n"
-            echo -e "ポート番号: ${GRREN}$port_number${NC} をfail2banに設定しました\n"
-            sudo systemctl restart fail2ban
-            echo -e "${YELLOW}fail2banを再起動しました${NC}\n"
-            sleep 1
-        else
-            echo -e "${YELLOW}fail2banのインストールをスキップしました${NC}\n"
-            sleep 1
-        fi
-    else
-        echo -e "${GREEN}fail2banは既にインストールされています${NC}\n"
+        echo -e "${YELLOW}fail2banを設定しました${NC}\n"
+        echo -e "ポート番号: ${GRREN}$port_number${NC} をfail2banに設定しました\n"
+        sudo systemctl restart fail2ban
+        echo -e "${YELLOW}fail2banを再起動しました${NC}\n"
         sleep 1
+    else
+        echo "✅ fail2ban設定済み"
     fi
     read -p "Enterを押すと続行します..." 
     
@@ -263,6 +330,7 @@ EOF
     fi
 
     sudo service sshd reload
+    clear
     echo -e "ssh設定を変更しました\n"
     echo -e "変更後のsshポート番号:${GREEN}$port_number${NC}\n"
     echo -e "${YELLOW}新しいssh設定で接続確認するためにsshの再接続が必要です${NC}\n"
@@ -277,3 +345,30 @@ EOF
     read -p "Enterを押すとセッションを終了します..."
     tmux kill-session -t spokit
 }
+
+
+#Ubuntuセキュリティ設定開始確認
+#設定内容列挙
+echo -e "${YELLOW}このモードでは以下のUbuntu初期設定を行います${NC}\n"
+echo -e "1.セキュリティアップデート自動適用ツール(unattended-upgrade)インストールと有効化"
+echo -e "2.ブラケットペーストモード無効化"
+echo -e "3.デーモン自動再起動回避設定"
+echo -e "4./dev/shmにtmpfsを設定"
+echo -e "5.ed25519 SSH鍵作成"
+echo -e "6.chronyインストールとSPOKIT推奨設定適用"
+echo -e "7.ssh設定変更(選択制)"
+echo -e "  ・KbdInteractiveAuthentication無効化"
+echo -e "  ・PasswordAuthentication無効化"
+echo -e "  ・PermitRootLogin無効化"
+echo -e "  ・PermitEmptyPasswords無効化"
+echo -e "  ・ssh Port番号変更"
+echo -e "8.fail2banインストールと設定"
+echo -e "9.ufw有効化とsshポート許可設定\n"
+sleep 2
+Gum_Confirm_YesNo "Ubuntu初期設定を開始しますか?" "Yes" "No"
+if [ $iniSettings = "Yes" ]; then
+    UbuntuSetup
+else
+    echo -e "${YELLOW}Ubuntu初期設定をスキップしました${NC}\n"
+    sleep 1
+fi

@@ -1,0 +1,51 @@
+name: Build develop test package
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-develop:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: |
+          spokit_version=$(grep -E '^version=' ./scripts/spokit.library | head -1 | cut -d'=' -f2 | tr -d '"')
+          echo "📦 Detected version: $spokit_version"
+          {
+            echo "spokit_version<<EOF"
+            echo "$spokit_version"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Embed version into scripts
+        env:
+          SPOKIT_VERSION: ${{ steps.version.outputs.spokit_version }}
+        run: |
+          bash .github/scripts/embed_version.sh "$SPOKIT_VERSION"
+
+      - name: Build dist package
+        run: |
+          version=${{ steps.version.outputs.spokit_version }}
+          mkdir -p dist
+          tar --exclude='.git' --exclude='dist' \
+              --transform "s,^,sjg-tools-${version}/," \
+              -czvf "dist/spokit-develop.tar.gz" .
+
+      - name: Commit dist folder
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dist/
+          git commit -m "Auto build: spokit-develop.tar.gz for ${{ steps.version.outputs.spokit_version }}" || true
+          git push || true
