@@ -1,6 +1,6 @@
 #!/bin/bash
 
-recommend_node_version="10.5.1"
+recommend_node_version="10.5.3"
 recommend_cli_version="10.11.0.0"
 recommend_cabal_vrtsion="3.12.1.0"
 recommend_ghc_vrtsion="9.6.5"
