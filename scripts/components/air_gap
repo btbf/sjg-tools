@@ -118,6 +118,36 @@ chmod 755 ${NODE_HOME}/airgap_script
 
 CreatePoolCert(){
   source ${env_path}
+  local -a relayHosts relayPorts
+  local existingRelayCount=0
+  local key value idx
+  local existingRelayAddress existingRelayPort
+  local hasRelayPortEntries=0
+
+  if [[ -f "${env_path}" ]]; then
+    while IFS='=' read -r key value; do
+      value=${value%$'\r'}
+      if [[ $key =~ ^RELAY([0-9]+)_HOST$ ]]; then
+        idx=${BASH_REMATCH[1]}
+        relayHosts[$idx]="${value}"
+      elif [[ $key =~ ^RELAY([0-9]+)_PORT$ ]]; then
+        idx=${BASH_REMATCH[1]}
+        relayPorts[$idx]="${value}"
+        hasRelayPortEntries=1
+      fi
+    done < "${env_path}"
+
+    for idx in "${!relayHosts[@]}"; do
+      if [[ -n "${relayHosts[$idx]}" ]]; then
+        ((existingRelayCount++))
+      fi
+    done
+  fi
+
+  local defaultRelayNum="${existingRelayCount}"
+  if [[ ${hasRelayPortEntries} -eq 0 ]]; then
+    defaultRelayNum="2"
+  fi
   while :
   do
   inputPledge=$(gum input --width=0 --header="Pledge誓約ADAを整数で入力して下さい(例:10000)" --char-limit=7 --header.foreground="99" --no-show-help --placeholder "Pledge")
@@ -136,7 +166,7 @@ CreatePoolCert(){
 
   while :
   do
-    inputRelayNum=$(gum input --value="2" --width=0 --header="オンチェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
+    inputRelayNum=$(gum input --value="${defaultRelayNum}" --width=0 --header="オンチェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
       # 入力が数字かどうかを確認
     if [[ "$inputRelayNum" =~ ^[0-9]+$ ]]; then
       # 配列を使用して変数を管理
@@ -152,7 +182,8 @@ CreatePoolCert(){
 
         while :
         do
-          inputRelayAddress=$(gum input --width=0 --header="リレー${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
+          existingRelayAddress="${relayHosts[$i]}"
+          inputRelayAddress=$(gum input --value="${existingRelayAddress}" --width=0 --header="リレー${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
           # 正規表現でIPv4アドレスの形式をチェック
           if [[ $inputRelayAddress =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
               # 各オクテットが0〜255の範囲内であることをチェック
@@ -182,7 +213,8 @@ CreatePoolCert(){
 
         while :
         do
-        inputRelayPort=$(gum input --value="6000" --width=0 --header="リレー${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Realy Port")
+        existingRelayPort="${relayPorts[$i]}"
+        inputRelayPort=$(gum input --value="${existingRelayPort}" --width=0 --header="リレー${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Realy Port")
         if [[ "$inputRelayPort" =~ ^([0-9]{1,5})$ ]]; then
           if (( inputRelayPort >= 1 && inputRelayPort <= 65535 )); then
           poolRelaySet+="   --pool-relay-port ${inputRelayPort}"

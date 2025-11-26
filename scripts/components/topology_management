@@ -2,7 +2,27 @@
 # shellcheck disable=SC1091,SC2086,SC1001,SC2317
 # shellcheck source="$HOME/.bashrc"
 
+update_env_value(){
+local key="$1"
+local value="$2"
+local tmp_file
+
+if [[ -f "${env_path}" ]] && grep -q "^${key}=" "${env_path}"; then
+    tmp_file=$(mktemp)
+    awk -v k="${key}" -v v="${value}" 'BEGIN{FS=OFS="="} $1==k {$0=k"="v} {print}' "${env_path}" > "${tmp_file}"
+    mv "${tmp_file}" "${env_path}"
+else
+    echo "${key}=${value}" >> "${env_path}"
+fi
+}
+
 inputConnections(){
+local -a relayHosts relayPorts
+local existingHostCount=0
+local key value idx
+local existingHost existingPort
+local hasRelayPortEntries=0
+
 #topologyファイル有無確認
 if [ -f $NODE_HOME/${NODE_CONFIG}-topology.json ]; then
     YellowStyle "$NODE_HOME/${NODE_CONFIG}-topology.json は既に存在します。"
@@ -17,10 +37,35 @@ if [ -f $NODE_HOME/${NODE_CONFIG}-topology.json ]; then
         return 1
     fi
 fi
+
+if [[ -f "${env_path}" ]]; then
+    while IFS='=' read -r key value; do
+        value=${value%$'\r'}
+        if [[ $key =~ ^RELAY([0-9]+)_HOST$ ]]; then
+            idx=${BASH_REMATCH[1]}
+            relayHosts[$idx]="${value}"
+        elif [[ $key =~ ^RELAY([0-9]+)_PORT$ ]]; then
+            idx=${BASH_REMATCH[1]}
+            relayPorts[$idx]="${value}"
+            hasRelayPortEntries=1
+        fi
+    done < "${env_path}"
+
+    for idx in "${!relayHosts[@]}"; do
+        if [[ -n "${relayHosts[$idx]}" ]]; then
+            ((existingHostCount++))
+        fi
+    done
+fi
+
+local defaultConnectionNum="${existingHostCount}"
+if [[ ${hasRelayPortEntries} -eq 0 ]]; then
+    defaultConnectionNum="2"
+fi
 topologyAccessPoints=""
 while :
 do
-    inputConnectionNum=$(gum input --value="2" --width=0 --header="接続する${1}数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Connections")
+    inputConnectionNum=$(gum input --value="${defaultConnectionNum}" --width=0 --header="接続する${1}数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Connections")
     # 入力が数字かどうかを確認
     if [[ "$inputConnectionNum" =~ ^[0-9]+$ ]]; then
     # 配列を使用して変数を管理
@@ -32,7 +77,8 @@ do
 
         while :
         do 
-            inputAddress=$(gum input --width=0 --header="${1}${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
+            existingHost="${relayHosts[$i]}"
+            inputAddress=$(gum input --value="${existingHost}" --width=0 --header="${1}${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
 
             # IPv4アドレスの正規表現
             regex="^([0-9]{1,3}\.){3}[0-9]{1,3}$"
@@ -42,6 +88,7 @@ do
                 # IP の範囲が 0〜255 かチェック
                 IFS='.' read -r a b c d <<< "$inputAddress"
                 if ((a <= 255 && b <= 255 && c <= 255 && d <= 255)); then
+                    update_env_value "RELAY${i}_HOST" "${inputAddress}"
                     break 1
                 else
                     echo "$inputAddress は無効な IP アドレスです（範囲外）"
@@ -49,6 +96,7 @@ do
             else
                 # IPでなければ DNS として nslookup でチェック
                 if nslookup "$inputAddress" >/dev/null 2>&1; then
+                    update_env_value "RELAY${i}_HOST" "${inputAddress}"
                     break 1
                 else
                     echo "$inputAddress は無効なドメインです（DNS解決不可）"
@@ -56,7 +104,9 @@ do
             fi
 
         done
-        inputPort=$(gum input --value="6000" --width=0 --header="${1}${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Port")
+        existingPort="${relayPorts[$i]}"
+        inputPort=$(gum input --value="${existingPort}" --width=0 --header="${1}${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Port")
+        update_env_value "RELAY${i}_PORT" "${inputPort}"
         newEntry=$(cat <<EOF
     {
         "address": "${inputAddress}",
