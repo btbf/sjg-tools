@@ -51,7 +51,7 @@ Main(){
 
     #環境変数確認
     if ! alias airgap >/dev/null 2>&1; then
-        echo alias airgap="'cd $HOME/cnode; tar -xOzf airgap-set.tar.gz airgap_script | bash -s verify'" >> $HOME/.bashrc
+        echo alias airgap="'cd $HOME/cnode && [ -f airgap-set.tar.gz ] && tar -xOzf airgap-set.tar.gz airgap_script | bash -s verify || echo "airgap-set.tar.gz が見つかりません"'" >> $HOME/.bashrc
         if [[ ! -d $HOME/cnode ]]; then
             echo PATH="$HOME/.local/bin:$PATH" >> $HOME/.bashrc
             echo export NODE_HOME=$HOME/cnode >> $HOME/.bashrc

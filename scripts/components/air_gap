@@ -37,52 +37,52 @@ yes_no(){
 
 Verify(){
   echo
-  echo "BPからコピーしたairgap-set.tar.gzのハッシュを確認してください"
+  echo "BPに表示されているairgap-set.tar.gzのハッシュを確認してください"
   hash_value=\$(sha256sum \${NODE_HOME}/airgap-set.tar.gz | awk '{print \$1}')
   echo -e "ハッシュ値：\${YELLOW}\${hash_value}\${NC}"
   echo
   echo "上記のハッシュ値をBPに表示されてるハッシュ値と照合してください"
   echo
   echo "[1] 一致する [2] 一致しない"
-  
+
   if yes_no; then
-      #airgap-set.tar.gz解凍
-      tar -xzf \${NODE_HOME}/airgap-set.tar.gz -C \${NODE_HOME}
-      if [ $? -ne 0 ]; then
-          echo -e "\${RED}airgap-set.tar.gzの解凍に失敗しました。\${NC}"
-          exit 1
+      echo
+      echo "\${script_title}処理を実行しますか？"
+      echo "[1] はい [2] いいえ"
+
+      if yes_no; then
+          tar -xzf \${NODE_HOME}/airgap-set.tar.gz --exclude="airgap_script" -C \${NODE_HOME}
+          if [ \$? -ne 0 ]; then
+              echo -e "\${RED}airgap-set.tar.gzの解凍に失敗しました。\${NC}"
+              rm \${NODE_HOME}/airgap_script
+              exit 1
+          fi
+          return 0   # 正常終了で関数を抜ける
+      else
+          echo "処理をキャンセルしました。"
+          exit 0
       fi
-      rm -f \${NODE_HOME}/airgap-set.tar.gz
-      bash \${NODE_HOME}/airgap_script
   else
-      echo "ハッシュ値が一致しません。再度BPからairgap-set.tar.gzをコピーしてください"
+      echo "再度BPからairgap-set.tar.gzをコピーしてください"
       sleep 2
       exit 1
   fi
 }
-
-Main(){
-  echo
-  echo -e "\${GREEN}\${script_title}${NC}\n"
-  echo -e "${2}\n"
-  echo "処理を実行しますか?"
-  echo "[1] はい [2] いいえ"
-  if ! yes_no; then
-      exit 0
-  fi
-}
-
 
 case \$1 in
   "verify" )
     Verify
   ;;
 
-  "" )
-    Main
+  "*" )
+    echo "不正な引数です"
+    rm \${NODE_HOME}/airgap_script
     exit 0
   ;;
 esac
+
+#------------------------------------------
+
 
 EOF
 }

@@ -38,7 +38,8 @@ UbuntuSetup(){
         echo -e "${GREEN}unattended-upgradesは既にインストールされています${NC}\n"
         sleep 1
     fi
-    read -p "Enterを押すと続行します..." 
+    echo "次はブラケットペーストモード無効化に進みます"
+    read -p "Enter..." 
     echo
 
     #ブラケットペーストモードOFF
@@ -72,7 +73,8 @@ UbuntuSetup(){
         echo -e "${GREEN}needrestartはインストールされていません。必要に応じて個別に設定してください。${NC}\n"
     fi
     sleep 1
-    read -p "Enterを押すと続行します..."
+    echo "次は/dev/shmにtmpfsを設定します"
+    read -p "Enter..."
     echo
 
     #共有メモリ設定強化
@@ -87,7 +89,8 @@ UbuntuSetup(){
         echo -e "${GREEN}/dev/shmにはすでにtmpfsが設定されています${NC}\n"
         sleep 1
     fi
-    read -p "Enterを押すと続行します..."
+    echo "次はSSH鍵(ed25519)作成に進みます"
+    read -p "Enter..."
     echo
 
     # ed25519 SSH鍵作成
@@ -103,8 +106,9 @@ UbuntuSetup(){
             echo -e "${YELLOW}公開鍵をauthorized_keysに追加しました${NC}\n"
             chmod 700 ~/.ssh
             echo -e "鍵ペアを作成しました。${YELLOW}~/.ssh/ssh_ed25519(秘密鍵)${NC}と${YELLOW}~/.ssh/ssh_ed25519.pub(公開鍵)${NC}に保存されています"
+            echo -e "${YELLOW}秘密鍵を紛失した場合、サーバーにSSH接続できなくなりますのでご注意ください${NC}\n"
             echo -e "${RED}2つのファイルをダウンロードし安全な場所にバックアップしてください${NC}\n"
-            echo -e "次回SSH接続の際は、ターミナルソフトに${YELLOW}ssh_ed25519${NC}を設定して接続してください。\n"
+            read -p "ダウンロードしたらEnterを押して続行してください..."
             sleep 2
         else
             echo -e "${YELLOW}ed25519 SSH鍵の作成をスキップしました${NC}\n"
@@ -114,8 +118,9 @@ UbuntuSetup(){
         echo -e "${GREEN}ed25519 SSH鍵は既に存在します${NC}\n"
         sleep 1
     fi
+    echo "次はchronyインストールと設定に進みます"
+    read -p "Enter..." 
 
-    read -p "Enterを押すと続行します..." 
     # chronyインストール
     echo
     if ! command -v chronyd &> /dev/null; then
@@ -186,7 +191,8 @@ EOF
         echo -e "${GREEN}既にSPOKIT推奨設定が適用されています${NC}\n"
         sleep 1
     fi
-    read -p "Enterを押すと続行します..."
+    echo "次はssh設定変更に進みます"
+    read -p "Enter..."
 
 
     # ssh設定変更
@@ -200,6 +206,7 @@ EOF
     PermitEmptyPasswords=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i permitemptypasswords| awk '{print $2}')
 
     if [[ $KbdInteractiveAuthentication != "no" ]]; then
+        echo -e "対話式認証（ワンタイムパスワード・PAMなど）設定"
         echo -e "現在値 ${YELLOW}KbdInteractiveAuthentication: ${RED}$KbdInteractiveAuthentication${NC}\n"
         echo -e "推奨値 ${YELLOW}KbdInteractiveAuthentication:${NC} ${GREEN}no${NC}\n"
 
@@ -211,6 +218,7 @@ EOF
     fi
 
     if [[ $PasswordAuthentication != "no" ]]; then
+        echo -e "パスワード認証設定"
         echo -e "現在値 ${YELLOW}PasswordAuthentication: ${RED}$PasswordAuthentication${NC}"
         echo -e "推奨値 ${YELLOW}PasswordAuthentication:${NC} ${GREEN}no${NC}\n"
 
@@ -222,6 +230,7 @@ EOF
     fi
 
     if [[ $PermitRootLogin != "no" ]]; then
+        echo -e "rootログイン設定"
         echo -e "現在値 ${YELLOW}PermitRootLogin: ${RED}$PermitRootLogin${NC}"
         echo -e "推奨値 ${YELLOW}PermitRootLogin:${NC} ${GREEN}no${NC}\n"
 
@@ -233,6 +242,7 @@ EOF
     fi
 
     if [[ $PermitEmptyPasswords != "no" ]]; then
+        echo -e "空パスワード許可設定"
         echo -e "現在値 ${YELLOW}PermitEmptyPasswords: ${RED}$PermitEmptyPasswords${NC}"
         echo -e "推奨値 ${YELLOW}PermitEmptyPasswords:${NC} ${GREEN}no${NC}\n"
 
@@ -270,6 +280,7 @@ EOF
     if command -v fail2ban-client >/dev/null 2>&1; then
         echo "✅ fail2ban はインストールされています。"
     else
+        echo "不正アクセス対策ツール"
         echo "❌ fail2ban はインストールされていません。"
         Gum_Confirm_YesNo "fail2banをインストールしますか?" "Yes" "No"
         if [ $iniSettings = "Yes" ]; then
