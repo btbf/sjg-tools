@@ -67,8 +67,8 @@ Main(){
 
     #依存関係インストール
     echo -e "${YELLOW}依存関係のインストールを開始します${NC}"
-    sudo apt-get update
-    sudo apt-get install -y git jq bc automake tmux htop curl build-essential pkg-config make g++ wget zstd -y
+    sudo apt update
+    sudo apt install -y git nano jq bc automake tmux htop curl build-essential pkg-config make g++ wget zstd -y
     echo -e "${GREEN}依存関係のインストールが完了しました${NC}"
 
     #cardano-cliインストール
@@ -78,12 +78,10 @@ Main(){
     arch=$(uname -m)
     case $arch in
         x86_64)
-            nodeBinary_URL="https://github.com/IntersectMBO/cardano-node/releases/download/${recommend_node_version}/cardano-node-${recommend_node_version}-linux.tar.gz"
-            extract_cmd="tar -xzf"
+            cliBinary_URL="https://github.com/IntersectMBO/cardano-cli/releases/download/cardano-cli-${recommend_cli_version}/cardano-cli-${recommend_cli_version}-x86_64-linux.tar.gz"
             ;;
         aarch64 | arm64)
-            nodeBinary_URL="https://github.com/armada-alliance/cardano-node-binaries/raw/main/static-binaries/cardano-cli-10_11_0_0-aarch64-static-musl-ghc_9101.tar.zst"
-            extract_cmd="tar -I zstd -xvf"
+            cliBinary_URL="https://github.com/IntersectMBO/cardano-cli/releases/download/cardano-cli-${recommend_cli_version}/cardano-cli-${recommend_cli_version}-aarch64-linux.tar.gz"
             ;;
         *)
             echo -e "${RED}サポートされていないアーキテクチャ: $arch${NC}"
@@ -91,8 +89,8 @@ Main(){
             ;;
     esac
 
-    echo "URL確認: $nodeBinary_URL"
-    if ! wget --spider -q "$nodeBinary_URL"; then
+    echo "URL確認: $cliBinary_URL"
+    if ! wget --spider -q "$cliBinary_URL"; then
         echo -e "${RED}cardano-cliのURL確認に失敗しました${NC}"
         exit 1
     fi
@@ -100,13 +98,13 @@ Main(){
     echo -e "${YELLOW}cardano-cliのダウンロード開始...${NC}"
     mkdir -p "$HOME/git/cardano-cli"
     cd "$HOME/git/cardano-cli"
-    wget -q "$nodeBinary_URL" -O cardano-cli.tar
+    wget -q "$cliBinary_URL" -O cardano-cli.tar
 
     echo -e "${YELLOW}解凍中...${NC}"
-    $extract_cmd cardano-cli.tar
+    tar -xzf cardano-cli.tar
 
     echo -e "${YELLOW}インストール中...${NC}"
-    sudo cp $(find $HOME/git/cardano-node -type f -name "cardano-cli") /usr/local/bin/cardano-cli
+    sudo cp $(find $HOME/git/cardano-cli -type f -name "cardano-cli") /usr/local/bin/cardano-cli
 
     echo -e "${GREEN}✅ cardano-cliインストール完了${NC}"
     cardano-cli --version
