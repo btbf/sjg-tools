@@ -100,6 +100,186 @@ signing_tx_file(){
       sing_cli="cardano-cli conway transaction sign --tx-body-file \${NODE_HOME}/tx.raw --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME} $NODE_NETWORK --out-file \${NODE_HOME}/tx.signed"
     ;;
   esac
+  cat >> "${NODE_HOME}/airgap_script" <<'EOF'
+echo
+echo "tx.rawをデコードして処理内容を確認します"
+decode_tmp=$(mktemp)
+decode_log=$(mktemp)
+
+if ! cardano-cli debug transaction view --tx-body-file ${NODE_HOME}/tx.raw > "${decode_tmp}" 2> "${decode_log}"; then
+  echo -e "${RED}tx.rawのデコードに失敗しました${NC}"
+  cat "${decode_log}"
+  rm -f "${decode_log}" "${decode_tmp}"
+  rm -f ${NODE_HOME}/airgap_script
+  exit 1
+fi
+rm -f "${decode_log}"
+
+if command -v jq >/dev/null 2>&1; then
+  echo
+  echo "------ tx.raw 主な項目 ------"
+  if ! jq '{fee, certificates, withdrawals, outputs}' "${decode_tmp}"; then
+    cat "${decode_tmp}"
+  fi
+  echo "--------------------------------"
+else
+  cat "${decode_tmp}"
+fi
+
+operation_label="処理内容: 判別できません"
+destination_lines=""
+fee_line=""
+pool_deposit_line=""
+
+if command -v jq >/dev/null 2>&1; then
+  summary_json=$(jq -c '
+    def lovelace_amount($value):
+      if $value == null then 0
+      elif ($value | type) == "number" then $value
+      elif ($value | type) == "string" then
+        ((match("[0-9]+")?.string) | tonumber // 0)
+      elif ($value | type) == "object" then
+        ($value.lovelace // $value.coin // $value.amount // ($value.ada?.lovelace) // ($value.contents? | lovelace_amount(.)) // 0)
+      else 0
+      end;
+
+    def find_fee:
+      (
+        [ .. | objects | select(has("fee")) | lovelace_amount(.fee) ]
+        | map(select(. != 0))
+        | .[0]
+      );
+
+    def find_outputs:
+      [ .. | objects
+        | select((has("address") or has("addressShelley") or has("addressBech32")) and (has("value") or has("amount")))
+        | {address: (.address // .addressShelley // .addressBech32 // .value.address // ""), lovelace: lovelace_amount(.value // .amount)}
+      ]
+      | map(select(.address != ""))
+      | unique_by(.address + "|" + (.lovelace | tostring));
+
+    def find_withdrawals:
+      [ .. | objects
+        | select(has("withdrawals"))
+        | .withdrawals
+        | (if type == "object" then
+             (to_entries | map({address: .key, lovelace: lovelace_amount(.value // 0)}))
+           elif type == "array" then
+             (map({address: (.address // ""), lovelace: lovelace_amount(.amount // 0)}))
+           else []
+           end)
+        | .[]
+        | select(.address != "")
+      ];
+
+    def find_certificate:
+      (
+        [ .. | objects
+          | if has("certificate") then .certificate
+            elif has("certType") then .certType
+            elif has("type") then .type
+            elif (keys_unsorted | map(select(test("(?i)(stake|pool)"))) | length) > 0 then
+              (keys_unsorted | map(select(test("(?i)(stake|pool)"))) | .[0])
+            else empty
+            end
+          | tostring
+          | select(test("(?i)(stake|pool)"))
+        ]
+      | .[0]);
+
+    {
+      fee: find_fee,
+      outputs: find_outputs,
+      withdrawals: find_withdrawals,
+      certificate: find_certificate
+    }
+  ' "${decode_tmp}" 2>/dev/null)
+
+  if [[ -n "${summary_json}" && "${summary_json}" != "null" ]]; then
+    tx_fee=$(echo "${summary_json}" | jq -r '.fee // empty')
+    certificate_name=$(echo "${summary_json}" | jq -r '.certificate // empty')
+    withdrawal_count=$(echo "${summary_json}" | jq -r '.withdrawals | length // 0')
+    outputs_count=$(echo "${summary_json}" | jq -r '.outputs | length // 0')
+    payment_addr=""
+    if [[ -f "${NODE_HOME}/${PAYMENT_ADDR_FILENAME}" ]]; then
+      payment_addr=$(tr -d "\n" < "${NODE_HOME}/${PAYMENT_ADDR_FILENAME}")
+    fi
+    destination_lines=$(echo "${summary_json}" | jq -r --arg myaddr "${payment_addr}" '
+      .outputs
+      | map(select(.address != "" and (.address != $myaddr or $myaddr == "")))
+      | map("送金先: \(.address)\n送金額: \(.lovelace) Lovelace\n")
+      | .[]
+    ' 2>/dev/null)
+
+    if [[ -n "${tx_fee}" && "${tx_fee}" != "null" ]]; then
+      fee_line="手数料: ${tx_fee} Lovelace"
+    fi
+
+    if [[ -n "${certificate_name}" && "${certificate_name}" != "null" ]]; then
+      lower_cert=$(echo "${certificate_name}" | tr '[:upper:]' '[:lower:]')
+      if [[ "${lower_cert}" == *"pool"* && "${lower_cert}" == *"reg"* ]]; then
+        operation_label="処理内容: プール登録/情報変更"
+      elif [[ "${lower_cert}" == *"pool"* && ( "${lower_cert}" == *"retire"* || "${lower_cert}" == *"retir"* ) ]]; then
+        operation_label="処理内容: プールリタイア"
+      elif [[ "${lower_cert}" == *"stake"* && "${lower_cert}" == *"dereg"* ]]; then
+        operation_label="処理内容: ステークアドレス解除"
+      elif [[ "${lower_cert}" == *"stake"* && "${lower_cert}" == *"reg"* ]]; then
+        operation_label="処理内容: ステークアドレス登録"
+      fi
+    fi
+
+    if [[ "${withdrawal_count}" -gt 0 ]]; then
+      operation_label="処理内容: ステークアドレス出金"
+      destination_lines=$(echo "${summary_json}" | jq -r '
+        .withdrawals[]
+        | "出金先(ステークアドレス): \(.address)\n出金額: \(.lovelace) Lovelace\n"
+      ' 2>/dev/null)
+    elif [[ -n "${destination_lines}" ]]; then
+      operation_label="処理内容: payment.addr出金"
+    elif [[ "${operation_label}" == "処理内容: 判別できません" && "${outputs_count}" -gt 1 ]]; then
+      operation_label="処理内容: payment.addr出金"
+    fi
+
+    if [[ "${operation_label}" == "処理内容: プール登録/情報変更" ]]; then
+      pool_deposit_value=""
+      if [[ -f "${NODE_HOME}/params.json" ]]; then
+        pool_deposit_value=$(jq -r '.stakePoolDeposit // empty' "${NODE_HOME}/params.json" 2>/dev/null)
+      fi
+      if [[ -n "${pool_deposit_value}" && "${pool_deposit_value}" =~ ^[0-9]+$ ]]; then
+        pool_deposit_ada=$((pool_deposit_value / 1000000))
+      else
+        pool_deposit_ada=500
+      fi
+      pool_deposit_line="プール登録料: ${pool_deposit_ada} ADA"
+    fi
+  fi
+fi
+
+echo
+echo "-------- トランザクション要約 --------"
+echo "${operation_label}"
+if [[ -n "${destination_lines}" ]]; then
+  printf "%s\n" "${destination_lines}"
+fi
+if [[ -n "${fee_line}" ]]; then
+  echo "${fee_line}"
+fi
+if [[ -n "${pool_deposit_line}" ]]; then
+  echo "${pool_deposit_line}"
+fi
+echo "--------------------------------------"
+echo
+echo "この内容で署名しますか？ [1] はい [2] いいえ"
+
+if ! yes_no; then
+  echo "署名をキャンセルしました"
+  rm -f "${decode_tmp}"
+  rm -f ${NODE_HOME}/airgap_script
+  exit 0
+fi
+
+rm -f "${decode_tmp}"
+EOF
   cat >> "${NODE_HOME}/airgap_script" << EOF 
 $sing_cli
 echo
