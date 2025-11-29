@@ -89,35 +89,7 @@ UbuntuSetup(){
         echo -e "${GREEN}/dev/shmにはすでにtmpfsが設定されています${NC}\n"
         sleep 1
     fi
-    echo "次はSSH鍵(ed25519)作成に進みます"
-    read -p "Enter..."
-    echo
 
-    # ed25519 SSH鍵作成
-    if [ ! -f "${HOME}/.ssh/authorized_keys" ]; then
-        #SSH鍵ファイル作成選択
-        Gum_Confirm_YesNo "ed25519 SSH鍵を作成しますか?" "Yes" "No"
-        if [ $iniSettings = "Yes" ]; then
-            sleep 1
-            ssh-keygen -t ed25519 -N '' -C ssh_connect -f ~/.ssh/ssh_ed25519
-            echo -e "${YELLOW}SSH鍵を作成しました${NC}\n"
-            cat ~/.ssh/ssh_ed25519.pub >> ~/.ssh/authorized_keys
-            chmod 600 ~/.ssh/authorized_keys
-            echo -e "${YELLOW}公開鍵をauthorized_keysに追加しました${NC}\n"
-            chmod 700 ~/.ssh
-            echo -e "鍵ペアを作成しました。${YELLOW}~/.ssh/ssh_ed25519(秘密鍵)${NC}と${YELLOW}~/.ssh/ssh_ed25519.pub(公開鍵)${NC}に保存されています"
-            echo -e "${YELLOW}秘密鍵を紛失した場合、サーバーにSSH接続できなくなりますのでご注意ください${NC}\n"
-            echo -e "${RED}2つのファイルをダウンロードし安全な場所にバックアップしてください${NC}\n"
-            read -p "ダウンロードしたらEnterを押して続行してください..."
-            sleep 2
-        else
-            echo -e "${YELLOW}ed25519 SSH鍵の作成をスキップしました${NC}\n"
-            sleep 1
-        fi
-    else
-        echo -e "${GREEN}ed25519 SSH鍵は既に存在します${NC}\n"
-        sleep 1
-    fi
     echo "次はchronyインストールと設定に進みます"
     read -p "Enter..." 
 
@@ -199,6 +171,8 @@ EOF
     iniSettings=""
     echo -e "${YELLOW}ssh設定を確認します${NC}\n"
     sleep 2
+
+    mkdir -p $HOME/.ssh
 
     KbdInteractiveAuthentication=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i kbdinteractiveauthentication | awk '{print $2}')
     PasswordAuthentication=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i passwordauthentication | awk '{print $2}')
@@ -349,8 +323,10 @@ EOF
     echo -e "${RED}ssh再接続に関する注意事項${NC}\n"
     echo -e "1.現在の接続を維持しながら新しいウィンドウで再接続してください${NC}\n"
     echo -e "2.再接続する際には新しいポート番号${YELLOW}$port_number${NC}に変更してください\n"
-    echo -e "${YELLOW}3.接続プロファイルに${YELLOW}ssh_ed25519${NC}を設定して接続してください\n"
-    echo -e "${YELLOW}4.再接続できない場合はこのウィンドウでSSH設定またはFW設定を確認してください${NC}\n"
+    echo -e "ssh鍵認証を使用する場合"
+    echo -e "1.${GREEN}$HOME/.ssh${NC}に事前に作成した${YELLOW}authorized_keys${NC}をアップロードしてください\n"
+    echo -e "2.接続プロファイルに${YELLOW}ssh_ed25519${NC}を設定して接続してください\n"
+    echo -e "3.再接続できない場合はこのウィンドウでSSH設定またはFW設定を確認してください\n"
     echo
     echo -e "新しいウィンドウで再接続できたらこのウィンドウでEnterを押してください${NC}"
     read -p "Enterを押すとセッションを終了します..."
@@ -365,9 +341,8 @@ echo -e "1.セキュリティアップデート自動適用ツール(unattended-
 echo -e "2.ブラケットペーストモード無効化"
 echo -e "3.デーモン自動再起動回避設定"
 echo -e "4./dev/shmにtmpfsを設定"
-echo -e "5.ed25519 SSH鍵作成"
-echo -e "6.chronyインストールとSPOKIT推奨設定適用"
-echo -e "7.ssh設定変更(選択制)"
+echo -e "5.chronyインストールとSPOKIT推奨設定適用"
+echo -e "6.ssh設定変更(選択制)"
 echo -e "  ・KbdInteractiveAuthentication無効化"
 echo -e "  ・PasswordAuthentication無効化"
 echo -e "  ・PermitRootLogin無効化"
