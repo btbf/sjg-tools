@@ -38,7 +38,8 @@ UbuntuSetup(){
         echo -e "${GREEN}unattended-upgradesは既にインストールされています${NC}\n"
         sleep 1
     fi
-    read -p "Enterを押すと続行します..." 
+    echo "次はブラケットペーストモード無効化に進みます"
+    read -p "Enter..." 
     echo
 
     #ブラケットペーストモードOFF
@@ -72,7 +73,8 @@ UbuntuSetup(){
         echo -e "${GREEN}needrestartはインストールされていません。必要に応じて個別に設定してください。${NC}\n"
     fi
     sleep 1
-    read -p "Enterを押すと続行します..."
+    echo "次は/dev/shmにtmpfsを設定します"
+    read -p "Enter..."
     echo
 
     #共有メモリ設定強化
@@ -87,35 +89,10 @@ UbuntuSetup(){
         echo -e "${GREEN}/dev/shmにはすでにtmpfsが設定されています${NC}\n"
         sleep 1
     fi
-    read -p "Enterを押すと続行します..."
-    echo
 
-    # ed25519 SSH鍵作成
-    if [ ! -f "${HOME}/.ssh/authorized_keys" ]; then
-        #SSH鍵ファイル作成選択
-        Gum_Confirm_YesNo "ed25519 SSH鍵を作成しますか?" "Yes" "No"
-        if [ $iniSettings = "Yes" ]; then
-            sleep 1
-            ssh-keygen -t ed25519 -N '' -C ssh_connect -f ~/.ssh/ssh_ed25519
-            echo -e "${YELLOW}SSH鍵を作成しました${NC}\n"
-            cat ~/.ssh/ssh_ed25519.pub >> ~/.ssh/authorized_keys
-            chmod 600 ~/.ssh/authorized_keys
-            echo -e "${YELLOW}公開鍵をauthorized_keysに追加しました${NC}\n"
-            chmod 700 ~/.ssh
-            echo -e "鍵ペアを作成しました。${YELLOW}~/.ssh/ssh_ed25519(秘密鍵)${NC}と${YELLOW}~/.ssh/ssh_ed25519.pub(公開鍵)${NC}に保存されています"
-            echo -e "${RED}2つのファイルをダウンロードし安全な場所にバックアップしてください${NC}\n"
-            echo -e "次回SSH接続の際は、ターミナルソフトに${YELLOW}ssh_ed25519${NC}を設定して接続してください。\n"
-            sleep 2
-        else
-            echo -e "${YELLOW}ed25519 SSH鍵の作成をスキップしました${NC}\n"
-            sleep 1
-        fi
-    else
-        echo -e "${GREEN}ed25519 SSH鍵は既に存在します${NC}\n"
-        sleep 1
-    fi
+    echo "次はchronyインストールと設定に進みます"
+    read -p "Enter..." 
 
-    read -p "Enterを押すと続行します..." 
     # chronyインストール
     echo
     if ! command -v chronyd &> /dev/null; then
@@ -186,7 +163,8 @@ EOF
         echo -e "${GREEN}既にSPOKIT推奨設定が適用されています${NC}\n"
         sleep 1
     fi
-    read -p "Enterを押すと続行します..."
+    echo "次はssh設定変更に進みます"
+    read -p "Enter..."
 
 
     # ssh設定変更
@@ -194,12 +172,15 @@ EOF
     echo -e "${YELLOW}ssh設定を確認します${NC}\n"
     sleep 2
 
+    mkdir -p $HOME/.ssh
+
     KbdInteractiveAuthentication=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i kbdinteractiveauthentication | awk '{print $2}')
     PasswordAuthentication=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i passwordauthentication | awk '{print $2}')
     PermitRootLogin=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i permitrootlogin | awk '{print $2}')
     PermitEmptyPasswords=$(echo "$sudopass" | sudo -S /usr/sbin/sshd -T | grep -i permitemptypasswords| awk '{print $2}')
 
     if [[ $KbdInteractiveAuthentication != "no" ]]; then
+        echo -e "対話式認証（ワンタイムパスワード・PAMなど）設定"
         echo -e "現在値 ${YELLOW}KbdInteractiveAuthentication: ${RED}$KbdInteractiveAuthentication${NC}\n"
         echo -e "推奨値 ${YELLOW}KbdInteractiveAuthentication:${NC} ${GREEN}no${NC}\n"
 
@@ -211,6 +192,7 @@ EOF
     fi
 
     if [[ $PasswordAuthentication != "no" ]]; then
+        echo -e "パスワード認証設定"
         echo -e "現在値 ${YELLOW}PasswordAuthentication: ${RED}$PasswordAuthentication${NC}"
         echo -e "推奨値 ${YELLOW}PasswordAuthentication:${NC} ${GREEN}no${NC}\n"
 
@@ -222,6 +204,7 @@ EOF
     fi
 
     if [[ $PermitRootLogin != "no" ]]; then
+        echo -e "rootログイン設定"
         echo -e "現在値 ${YELLOW}PermitRootLogin: ${RED}$PermitRootLogin${NC}"
         echo -e "推奨値 ${YELLOW}PermitRootLogin:${NC} ${GREEN}no${NC}\n"
 
@@ -233,6 +216,7 @@ EOF
     fi
 
     if [[ $PermitEmptyPasswords != "no" ]]; then
+        echo -e "空パスワード許可設定"
         echo -e "現在値 ${YELLOW}PermitEmptyPasswords: ${RED}$PermitEmptyPasswords${NC}"
         echo -e "推奨値 ${YELLOW}PermitEmptyPasswords:${NC} ${GREEN}no${NC}\n"
 
@@ -270,6 +254,7 @@ EOF
     if command -v fail2ban-client >/dev/null 2>&1; then
         echo "✅ fail2ban はインストールされています。"
     else
+        echo "不正アクセス対策ツール"
         echo "❌ fail2ban はインストールされていません。"
         Gum_Confirm_YesNo "fail2banをインストールしますか?" "Yes" "No"
         if [ $iniSettings = "Yes" ]; then
@@ -338,8 +323,10 @@ EOF
     echo -e "${RED}ssh再接続に関する注意事項${NC}\n"
     echo -e "1.現在の接続を維持しながら新しいウィンドウで再接続してください${NC}\n"
     echo -e "2.再接続する際には新しいポート番号${YELLOW}$port_number${NC}に変更してください\n"
-    echo -e "${YELLOW}3.接続プロファイルに${YELLOW}ssh_ed25519${NC}を設定して接続してください\n"
-    echo -e "${YELLOW}4.再接続できない場合はこのウィンドウでSSH設定またはFW設定を確認してください${NC}\n"
+    echo -e "ssh鍵認証を使用する場合"
+    echo -e "1.${GREEN}$HOME/.ssh${NC}に事前に作成した${YELLOW}authorized_keys${NC}をアップロードしてください\n"
+    echo -e "2.接続プロファイルに${YELLOW}ssh_ed25519${NC}を設定して接続してください\n"
+    echo -e "3.再接続できない場合はこのウィンドウでSSH設定またはFW設定を確認してください\n"
     echo
     echo -e "新しいウィンドウで再接続できたらこのウィンドウでEnterを押してください${NC}"
     read -p "Enterを押すとセッションを終了します..."
@@ -354,9 +341,8 @@ echo -e "1.セキュリティアップデート自動適用ツール(unattended-
 echo -e "2.ブラケットペーストモード無効化"
 echo -e "3.デーモン自動再起動回避設定"
 echo -e "4./dev/shmにtmpfsを設定"
-echo -e "5.ed25519 SSH鍵作成"
-echo -e "6.chronyインストールとSPOKIT推奨設定適用"
-echo -e "7.ssh設定変更(選択制)"
+echo -e "5.chronyインストールとSPOKIT推奨設定適用"
+echo -e "6.ssh設定変更(選択制)"
 echo -e "  ・KbdInteractiveAuthentication無効化"
 echo -e "  ・PasswordAuthentication無効化"
 echo -e "  ・PermitRootLogin無効化"

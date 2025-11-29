@@ -35,7 +35,6 @@ if [[ "${3}" == "renewal" ]]; then
     echo '----------------------------------------'
     echo ">> [エアギャップ] ⇒ ${NODE_CERT_FILENAME} ⇒ [BP]"
     echo '----------------------------------------'
-    read -p "コピーしたらEnterを押してください"
     echo
     echo "BP側で${NODE_CERT_FILENAME}のハッシュ値が完全一致していることを確認してください"
     echo '----------------------------------------'
@@ -86,61 +85,6 @@ slotNo=$(cardano-cli query tip $NODE_NETWORK | jq -r '.slot')
 slotsPerKESPeriod=$(cat ${NODE_HOME}/${NODE_CONFIG}-shelley-genesis.json | jq -r '.slotsPerKESPeriod')
 kesPeriod=$(( ${slotNo} / ${slotsPerKESPeriod} ))
 startKesPeriod=${kesPeriod}
-
-kesfolder="${NODE_HOME}/kes-backup"
-if [ ! -e "${kesfolder}" ]; then
-    mkdir -p $kesfolder
-    echo "$kesfolderディレクトリを作成しました"
-fi
-
-date=$(date +\%Y\%m\%d\%H\%M)
-if [ -f "${NODE_HOME}/${KES_SKEY_FILENAME}" ]; then
-    MagentaStyle "■旧KESファイルのバックアップ..."
-    cp ${NODE_HOME}/${KES_VKEY_FILENAME} $kesfolder/$date-${KES_VKEY_FILENAME}
-    YellowStyle "${NODE_HOME}/${KES_VKEY_FILENAME} を $kesfolder/$date-${KES_VKEY_FILENAME}へコピーしました"
-    cp ${NODE_HOME}/${KES_SKEY_FILENAME} $kesfolder/$date-${KES_SKEY_FILENAME}
-    YellowStyle "${NODE_HOME}/${KES_SKEY_FILENAME} を $kesfolder/$date-${KES_SKEY_FILENAME}へコピーしました"
-    cp ${NODE_HOME}/${NODE_CERT_FILENAME} $kesfolder/$date-${NODE_CERT_FILENAME}
-    YellowStyle "${NODE_HOME}/${NODE_CERT_FILENAME} を $kesfolder/$date-${NODE_CERT_FILENAME}へコピーしました"
-
-    # チェックするディレクトリを指定
-    # 特定のファイル名に含まれる文字列を指定（3種類）
-    oldKessKey="*${KES_SKEY_FILENAME}"
-    oldKesvKey="*${KES_VKEY_FILENAME}"
-    oldNodecertKey="*${NODE_CERT_FILENAME}"
-
-    # 関数: 古いファイルを削除する
-    KesCleanupFiles() {
-    local pattern=${1}
-    local dir=${2}
-    
-    # 該当するファイルをリストアップ
-    file_list=$(ls -1t ${dir} | grep ${pattern})
-    
-    # 該当するファイル数を取得
-    file_count=$(echo "${file_list}" | wc -l)
-    
-    # ファイルが5つ以上ある場合
-    if [ "$file_count" -ge 5 ]; then
-        # 古いファイルをリストアップし、5番目のファイル以降を削除
-        echo "$file_list" | tail -n +6 | while read -r file; do
-        rm "$dir/$file"
-        done
-    fi
-    }
-
-    # 各パターンについて関数を呼び出す
-    KesCleanupFiles "$oldKessKey" "$kesfolder"
-    KesCleanupFiles "$oldKesvKey" "$kesfolder"
-    KesCleanupFiles "$oldNodecertKey" "$kesfolder"
-
-    MagentaStyle "${MAGENTA}■旧KESファイルの削除...${NC}"
-    sleep 2
-    rm ${NODE_HOME}/${KES_VKEY_FILENAME}
-    YellowStyle "${NODE_HOME}/${KES_VKEY_FILENAME} を削除しました"
-    rm ${NODE_HOME}/${KES_SKEY_FILENAME}
-    YellowStyle "${NODE_HOME}/${KES_SKEY_FILENAME} を削除しました"
-fi
 
 PinkStyle "■新しいKESファイルの作成..."
 cardano-cli conway node key-gen-KES --verification-key-file ${NODE_HOME}/${KES_VKEY_FILENAME} --signing-key-file ${NODE_HOME}/${KES_SKEY_FILENAME}

@@ -8,7 +8,7 @@ clear
 SPOKIT_INST_DIR=/opt/spokit
 SPOKIT_HOME=$HOME/spokit
 gum_version="0.16.2"
-spokit_version="0.4.2"
+spokit_version="0.4.3"
 
 source ${HOME}/.bashrc
 
@@ -228,7 +228,7 @@ if [ ! -d "${SPOKIT_HOME}" ]; then
             echo export SPOKIT_INST_DIR="${SPOKIT_INST_DIR}" >> "${HOME}"/.bashrc
             echo export SPOKIT_HOME="${SPOKIT_HOME}" >> "${HOME}"/.bashrc
             echo alias spokit="'${SPOKIT_INST_DIR}/spokit_run.sh'" >> "${HOME}"/.bashrc
-            echo alias cnode='"journalctl -u cardano-node -f"' >> "${HOME}"/.bashrc
+            echo alias cnode='"sudo journalctl -u cardano-node -f --output=cat | ccze -A"' >> "${HOME}"/.bashrc
             echo alias cnstart='"sudo systemctl start cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnrestart='"sudo systemctl reload-or-restart cardano-node"' >> "${HOME}"/.bashrc
             echo alias cnstop='"sudo systemctl stop cardano-node"' >> "${HOME}"/.bashrc

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-recommend_node_version="10.5.1"
+recommend_node_version="10.5.3"
+recommend_cli_version="10.11.0.0"
 recommend_cabal_vrtsion="3.12.1.0"
 recommend_ghc_vrtsion="9.6.5"
 
@@ -174,7 +175,7 @@ GliveViewDowndload(){
   chmod 755 gLiveView.sh
 
   sed -i ${NODE_HOME}/scripts/env \
-  -e '1,73s!#CNODE_HOME="/opt/cardano/cnode"!CNODE_HOME=${NODE_HOME}!' \
+  -e '1,73s!#CNODE_HOME="/opt/cardano/cnode"!CNODE_HOME="'${NODE_HOME}'"!' \
   -e '1,73s!#CNODE_PORT=6000!CNODE_PORT='"${1}"'!' \
   -e '1,73s!#UPDATE_CHECK="Y"!UPDATE_CHECK="N"!' \
   -e '1,73s!#PROM_HOST=127.0.0.1!PROM_HOST=127.0.0.1!' \

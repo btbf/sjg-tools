@@ -37,52 +37,51 @@ yes_no(){
 
 Verify(){
   echo
-  echo "BPからコピーしたairgap-set.tar.gzのハッシュを確認してください"
+  echo "BPに表示されているairgap-set.tar.gzのハッシュを確認してください"
   hash_value=\$(sha256sum \${NODE_HOME}/airgap-set.tar.gz | awk '{print \$1}')
   echo -e "ハッシュ値：\${YELLOW}\${hash_value}\${NC}"
   echo
   echo "上記のハッシュ値をBPに表示されてるハッシュ値と照合してください"
   echo
   echo "[1] 一致する [2] 一致しない"
-  
+
   if yes_no; then
-      #airgap-set.tar.gz解凍
-      tar -xzf \${NODE_HOME}/airgap-set.tar.gz -C \${NODE_HOME}
-      if [ $? -ne 0 ]; then
-          echo -e "\${RED}airgap-set.tar.gzの解凍に失敗しました。\${NC}"
-          exit 1
+      echo
+      echo "\${script_title}処理を実行しますか？"
+      echo "[1] はい [2] いいえ"
+
+      if yes_no; then
+          tar -xzf \${NODE_HOME}/airgap-set.tar.gz --exclude="airgap_script" -C \${NODE_HOME}
+          if [ \$? -ne 0 ]; then
+              echo -e "\${RED}airgap-set.tar.gzの解凍に失敗しました。\${NC}"
+              rm \${NODE_HOME}/airgap_script
+              exit 1
+          fi
+          return 0   # 正常終了で関数を抜ける
+      else
+          echo "処理をキャンセルしました。"
+          exit 0
       fi
-      rm -f \${NODE_HOME}/airgap-set.tar.gz
-      bash \${NODE_HOME}/airgap_script
   else
-      echo "ハッシュ値が一致しません。再度BPからairgap-set.tar.gzをコピーしてください"
+      echo "再度BPからairgap-set.tar.gzをコピーしてください"
       sleep 2
       exit 1
   fi
 }
-
-Main(){
-  echo
-  echo -e "\${GREEN}\${script_title}${NC}\n"
-  echo -e "${2}\n"
-  echo "処理を実行しますか?"
-  echo "[1] はい [2] いいえ"
-  if ! yes_no; then
-      exit 0
-  fi
-}
-
 
 case \$1 in
   "verify" )
     Verify
   ;;
 
-  "" )
-    Main
+  "*" )
+    echo "不正な引数です"
+    rm \${NODE_HOME}/airgap_script
     exit 0
   ;;
 esac
+
+#------------------------------------------
 
 EOF
 }
@@ -100,6 +99,184 @@ signing_tx_file(){
       sing_cli="cardano-cli conway transaction sign --tx-body-file \${NODE_HOME}/tx.raw --signing-key-file \${NODE_HOME}/${PAYMENT_SKEY_FILENAME} $NODE_NETWORK --out-file \${NODE_HOME}/tx.signed"
     ;;
   esac
+  cat >> "${NODE_HOME}/airgap_script" <<EOF
+PAYMENT_ADDR_FILE="${PAYMENT_ADDR_FILENAME}"
+EOF
+  cat >> "${NODE_HOME}/airgap_script" <<'EOF'
+echo
+echo "tx.rawをデコードして処理内容を確認します"
+decode_tmp=$(mktemp)
+decode_log=$(mktemp)
+
+if ! cardano-cli debug transaction view --tx-body-file ${NODE_HOME}/tx.raw > "${decode_tmp}" 2> "${decode_log}"; then
+  echo -e "${RED}tx.rawのデコードに失敗しました${NC}"
+  cat "${decode_log}"
+  rm -f "${decode_log}" "${decode_tmp}"
+  rm -f ${NODE_HOME}/airgap_script
+  exit 1
+fi
+rm -f "${decode_log}"
+
+payment_addr=""
+if [[ -f "${NODE_HOME}/${PAYMENT_ADDR_FILE}" ]]; then
+  payment_addr=$(tr -d ' \t\r\n' < "${NODE_HOME}/${PAYMENT_ADDR_FILE}")
+fi
+
+summary_json=""
+if command -v jq >/dev/null 2>&1; then
+  summary_json=$(jq -c --arg myaddr "${payment_addr}" '
+    def lovelace_amount($value):
+      if $value == null then 0
+      elif ($value | type) == "number" then $value
+      elif ($value | type) == "string" then
+        (( ($value | split(" ")[0]) | tonumber? ) // 0)
+      elif ($value | type) == "object" then
+        ($value.lovelace // $value.coin // $value.amount // ($value.ada?.lovelace) // ($value.contents? | lovelace_amount(.)) // 0)
+      else 0
+      end;
+
+    def normalize_outputs:
+      (.outputs // [])
+      | map({
+          address: (.address // .addressShelley // .addressBech32 // .value.address // ""),
+          lovelace: lovelace_amount(.amount // .value)
+        })
+      | map(select(.address != ""))
+      | (if $myaddr != "" then
+           map(select(.address != $myaddr))
+         else
+           (if length > 1 then .[1:] else [] end)
+         end);
+
+    def normalize_withdrawals:
+      if (.withdrawals // null) == null then []
+      elif (.withdrawals | type) == "object" then
+        (.withdrawals | to_entries | map({address: .key, lovelace: lovelace_amount(.value)}))
+      elif (.withdrawals | type) == "array" then
+        (.withdrawals | map({address: (.address // .stake_address // .stake // ""), lovelace: lovelace_amount(.amount // .value)}))
+      else []
+      end;
+
+    def first_certificate:
+      (.certificates // [])
+      | map(select(type == "object"))
+      | map(keys_unsorted[0])
+      | .[0];
+
+    {
+      fee: lovelace_amount(.fee),
+      certificate: first_certificate,
+      withdrawals: normalize_withdrawals,
+      outputs: normalize_outputs
+    }
+  ' "${decode_tmp}" 2>/dev/null)
+  if [[ "${summary_json}" == "null" ]]; then
+    summary_json=""
+  fi
+fi
+
+echo
+echo "payment.addr: ${payment_addr:-N/A}"
+if command -v jq >/dev/null 2>&1; then
+  if jq '(.certificates // null) != null' "${decode_tmp}" >/dev/null 2>&1; then
+    echo "tx.raw certificates (raw):"
+    jq '.certificates' "${decode_tmp}" 2>/dev/null  || echo "(certificates取得に失敗)"
+  else
+    echo "tx.raw outputs (raw):"
+    jq '.outputs | map({address, amount})' "${decode_tmp}" 2>/dev/null || echo "(outputs取得に失敗)"
+  fi
+else
+  echo "tx.raw outputs (raw):"
+  sed -n '/"outputs":/,/]/p' "${decode_tmp}"
+fi
+
+echo
+echo "------ トランザクション内容 ------"
+if [[ -n "${summary_json}" && "${summary_json}" != "{}" ]]; then
+  operation_label="payment.addr出金"
+  certificate_name=$(echo "${summary_json}" | jq -r '.certificate // empty')
+  withdrawals_count=$(echo "${summary_json}" | jq -r '.withdrawals // [] | length')
+  outputs_count=$(echo "${summary_json}" | jq -r '.outputs // [] | length')
+  fee_value=$(echo "${summary_json}" | jq -r '.fee // empty')
+  fee_ada=""
+  if [[ -n "${fee_value}" && "${fee_value}" != "0" ]]; then
+    fee_ada=$(awk -v val="${fee_value}" 'BEGIN { printf "%.6f", val / 1000000 }')
+  fi
+
+  if [[ ${withdrawals_count} -gt 0 ]]; then
+    operation_label="ステークアドレス出金"
+  elif [[ -n "${certificate_name}" ]]; then
+    case "${certificate_name}" in
+      "Stake address registration")
+        operation_label="ステークアドレス登録"
+        ;;
+      "Stake address deregistration")
+        operation_label="ステークアドレス解除"
+        ;;
+      "Pool registration")
+        operation_label="プール登録/情報変更"
+        ;;
+      "Pool retirement")
+        operation_label="プールリタイア"
+        ;;
+      *)
+        operation_label="証明付きトランザクション"
+        ;;
+    esac
+  fi
+
+  echo "処理内容: ${operation_label}"
+  echo
+  if [[ ${withdrawals_count} -gt 0 ]]; then
+    while IFS=$'\t' read -r stake_addr stake_lovelace; do
+      [[ -z "${stake_addr}" ]] && continue
+      stake_ada=$(awk -v val="${stake_lovelace}" 'BEGIN { printf "%.6f", val / 1000000 }')
+      echo -e "出金先: ${GREEN}${stake_addr}${NC}"
+      echo -e "出金額: ${GREEN}${stake_ada}${NC} ADA (${stake_lovelace} Lovelace)"
+      echo
+    done < <(echo "${summary_json}" | jq -r '
+      (.withdrawals // [])
+      | map("\(.address)\t\(.lovelace)")
+      | .[]
+    ')
+  elif [[ "${operation_label}" == "payment.addr出金" && ${outputs_count} -gt 0 ]]; then
+    while IFS=$'\t' read -r out_addr out_lovelace; do
+      [[ -z "${out_addr}" ]] && continue
+      out_ada=$(awk -v val="${out_lovelace}" 'BEGIN { printf "%.6f", val / 1000000 }')
+      echo -e "送金先: ${GREEN}${out_addr}${NC}"
+      echo -e "送金額: ${GREEN}${out_ada}${NC} ADA (${out_lovelace} Lovelace)"
+    done < <(echo "${summary_json}" | jq -r '
+      (.outputs // [])
+      | map("\(.address)\t\(.lovelace)")
+      | .[]
+    ')
+  elif [[ -n "${certificate_name}" ]]; then
+    echo "証明タイプ: ${certificate_name}"
+  fi
+
+  if [[ -n "${fee_value}" && "${fee_value}" != "0" ]]; then
+    echo -e "手数料: ${GREEN}${fee_ada}${NC} ADA (${fee_value} Lovelace)"
+  fi
+else
+  if command -v jq >/dev/null 2>&1; then
+    jq '. | {fee, certificates, withdrawals, outputs}' "${decode_tmp}" || cat "${decode_tmp}"
+  else
+    cat "${decode_tmp}"
+  fi
+fi
+echo "--------------------------------"
+
+echo "この内容で署名しますか？ [1] はい [2] いいえ"
+
+if ! yes_no; then
+  echo "署名をキャンセルしました"
+  rm -f "${decode_tmp}"
+  rm -f ${NODE_HOME}/airgap_script
+  exit 0
+fi
+
+rm -f "${decode_tmp}"
+EOF
   cat >> "${NODE_HOME}/airgap_script" << EOF 
 $sing_cli
 echo
@@ -118,6 +295,36 @@ chmod 755 ${NODE_HOME}/airgap_script
 
 CreatePoolCert(){
   source ${env_path}
+  local -a relayHosts relayPorts
+  local existingRelayCount=0
+  local key value idx
+  local existingRelayAddress existingRelayPort
+  local hasRelayPortEntries=0
+
+  if [[ -f "${env_path}" ]]; then
+    while IFS='=' read -r key value; do
+      value=${value%$'\r'}
+      if [[ $key =~ ^RELAY([0-9]+)_HOST$ ]]; then
+        idx=${BASH_REMATCH[1]}
+        relayHosts[$idx]="${value}"
+      elif [[ $key =~ ^RELAY([0-9]+)_PORT$ ]]; then
+        idx=${BASH_REMATCH[1]}
+        relayPorts[$idx]="${value}"
+        hasRelayPortEntries=1
+      fi
+    done < "${env_path}"
+
+    for idx in "${!relayHosts[@]}"; do
+      if [[ -n "${relayHosts[$idx]}" ]]; then
+        ((existingRelayCount++))
+      fi
+    done
+  fi
+
+  local defaultRelayNum="${existingRelayCount}"
+  if [[ ${hasRelayPortEntries} -eq 0 ]]; then
+    defaultRelayNum="2"
+  fi
   while :
   do
   inputPledge=$(gum input --width=0 --header="Pledge誓約ADAを整数で入力して下さい(例:10000)" --char-limit=7 --header.foreground="99" --no-show-help --placeholder "Pledge")
@@ -136,7 +343,7 @@ CreatePoolCert(){
 
   while :
   do
-    inputRelayNum=$(gum input --value="2" --width=0 --header="オンチェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
+    inputRelayNum=$(gum input --value="${defaultRelayNum}" --width=0 --header="オンチェーンに登録するリレー数を入力してください" --char-limit=1 --header.foreground="99" --no-show-help --placeholder "Number Of Relay")
       # 入力が数字かどうかを確認
     if [[ "$inputRelayNum" =~ ^[0-9]+$ ]]; then
       # 配列を使用して変数を管理
@@ -152,7 +359,8 @@ CreatePoolCert(){
 
         while :
         do
-          inputRelayAddress=$(gum input --width=0 --header="リレー${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
+          existingRelayAddress="${relayHosts[$i]}"
+          inputRelayAddress=$(gum input --value="${existingRelayAddress}" --width=0 --header="リレー${i}のIPまたはDNSアドレスを入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "IP Address or DNS Name")
           # 正規表現でIPv4アドレスの形式をチェック
           if [[ $inputRelayAddress =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
               # 各オクテットが0〜255の範囲内であることをチェック
@@ -182,7 +390,8 @@ CreatePoolCert(){
 
         while :
         do
-        inputRelayPort=$(gum input --value="6000" --width=0 --header="リレー${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Realy Port")
+        existingRelayPort="${relayPorts[$i]}"
+        inputRelayPort=$(gum input --value="${existingRelayPort}" --width=0 --header="リレー${i}のポート番号を入力してください" --char-limit=255 --header.foreground="99" --no-show-help --placeholder "Realy Port")
         if [[ "$inputRelayPort" =~ ^([0-9]{1,5})$ ]]; then
           if (( inputRelayPort >= 1 && inputRelayPort <= 65535 )); then
           poolRelaySet+="   --pool-relay-port ${inputRelayPort}"
