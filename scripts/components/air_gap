@@ -83,7 +83,6 @@ esac
 
 #------------------------------------------
 
-
 EOF
 }
 
@@ -179,12 +178,18 @@ fi
 echo
 echo "payment.addr: ${payment_addr:-N/A}"
 if command -v jq >/dev/null 2>&1; then
-  echo "tx.raw outputs (raw):"
-  jq '.outputs | map({address, amount})' "${decode_tmp}" 2>/dev/null || echo "(outputs取得に失敗)"
+  if jq '(.certificates // null) != null' "${decode_tmp}" >/dev/null 2>&1; then
+    echo "tx.raw certificates (raw):"
+    jq '.certificates' "${decode_tmp}" 2>/dev/null  || echo "(certificates取得に失敗)"
+  else
+    echo "tx.raw outputs (raw):"
+    jq '.outputs | map({address, amount})' "${decode_tmp}" 2>/dev/null || echo "(outputs取得に失敗)"
+  fi
 else
   echo "tx.raw outputs (raw):"
   sed -n '/"outputs":/,/]/p' "${decode_tmp}"
 fi
+
 echo
 echo "------ トランザクション内容 ------"
 if [[ -n "${summary_json}" && "${summary_json}" != "{}" ]]; then
