@@ -157,6 +157,10 @@ clear
 #env再読み込み
 source ${env_path}
 
+if [[ -z "$1" || "$1" == "pool" ]]; then
+  SpokitUpdateCheck
+fi
+
 case $1 in
   "ubuntu" )
     source ${SPOKIT_INST_DIR}/components/ubuntu_setup
